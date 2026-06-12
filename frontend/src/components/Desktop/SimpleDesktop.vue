@@ -303,32 +303,16 @@ import QuickShortcutsWidget from '../../widgets/QuickShortcutsWidget.vue'
 import NotificationToast from '../NotificationSystem/NotificationToast.vue'
 import NotificationCenter from '../NotificationSystem/NotificationCenter.vue'
 import { useNotificationStore } from '../../stores/notification'
-import { useAuthStore } from '../../stores/auth'
 import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/outline'
 
-interface Window {
-  id: string
-  appId: string
-  title: string
-  position: { x: number; y: number }
-  size: { width: number; height: number }
-  minimized: boolean
-  maximized: boolean
-  focused: boolean
-  zIndex: number
-}
+// ... (existing interfaces)
 
-const windows = ref<Window[]>([])
-const nextZIndex = ref(1000)
-const windowMenuVisible = ref(false)
-
-// 通知系统
 const notificationStore = useNotificationStore()
 const notificationUnreadCount = computed(() => notificationStore.unreadCount)
+const isNotificationCenterOpen = computed(() => notificationStore.isCenterOpen)
 
-// 显示通知中心
-const showNotificationCenter = () => {
-  notificationStore.showCenter()
+const closeNotificationCenter = () => {
+  notificationStore.hideCenter()
 }
 
 // 认证和用户信息

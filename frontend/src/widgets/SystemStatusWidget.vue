@@ -65,21 +65,21 @@ const updateStats = async () => {
   try {
     // 获取CPU信息
     const cpuResponse = await monitorApi.getCPU()
-    if (cpuResponse.data?.usage !== undefined) {
-      cpuUsage.value = Math.round(cpuResponse.data.usage * 100)
+    if (cpuResponse.usage !== undefined) {
+      cpuUsage.value = Math.round(cpuResponse.usage * 100)
     }
 
     // 获取内存信息
     const memResponse = await monitorApi.getMemory()
-    if (memResponse.data?.percent !== undefined) {
-      memoryUsage.value = Math.round(memResponse.data.percent)
+    if (memResponse.percent !== undefined) {
+      memoryUsage.value = Math.round(memResponse.percent)
     }
 
     // 获取磁盘信息
     const diskResponse = await monitorApi.getDisk()
-    if (diskResponse.data?.disks && diskResponse.data.disks.length > 0) {
+    if (diskResponse.disks && diskResponse.disks.length > 0) {
       // 计算主要磁盘的使用率
-      const mainDisk = diskResponse.data.disks[0]
+      const mainDisk = diskResponse.disks[0]
       if (mainDisk.usedPercent !== undefined) {
         diskUsage.value = Math.round(mainDisk.usedPercent)
       }

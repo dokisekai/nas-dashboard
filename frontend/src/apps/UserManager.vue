@@ -443,7 +443,7 @@ const loadUsers = async () => {
   loading.value = true
   try {
     const response = await userApi.getUsers()
-    users.value = response.data
+    users.value = response.users || response  // axios拦截器已返回response.data
   } catch (error: any) {
     console.error('Failed to load users:', error)
     users.value = [
@@ -481,7 +481,7 @@ const loadSSHKeys = async () => {
   loadingSSH.value = true
   try {
     const response = await userApi.getSSHKeys()
-    sshKeys.value = response.data
+    sshKeys.value = response.keys || response  // axios拦截器已返回response.data
   } catch (error: any) {
     console.error('Failed to load SSH keys:', error)
     sshKeys.value = [
@@ -509,7 +509,7 @@ const loadGroups = async () => {
   loadingGroups.value = true
   try {
     const response = await groupApi.getGroups()
-    groups.value = response.data
+    groups.value = response.groups || response  // axios拦截器已返回response.data
   } catch (error: any) {
     console.error('Failed to load groups:', error)
     groups.value = [

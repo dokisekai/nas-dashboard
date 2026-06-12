@@ -571,7 +571,7 @@ const updateStats = async () => {
   try {
     // Fetch CPU stats
     const cpuResponse = await monitorApi.getCPU()
-    const cpuData = cpuResponse.data
+    const cpuData = cpuResponse  // axios拦截器已返回response.data
     cpuUsage.value = Math.round(cpuData.usage * 100)
     cpuCores.value = cpuData.cores
     cpuTemperature.value = Math.round(cpuData.usage * 100) // Using usage as temp proxy
@@ -579,7 +579,7 @@ const updateStats = async () => {
 
     // Fetch memory stats
     const memoryResponse = await monitorApi.getMemory()
-    const memoryData = memoryResponse.data
+    const memoryData = memoryResponse  // axios拦截器已返回response.data
     memoryUsage.value = Math.round(memoryData.percent)
     memoryTotal.value = memoryData.total
     memoryUsed.value = memoryData.used
@@ -589,7 +589,7 @@ const updateStats = async () => {
 
     // Fetch disk stats
     const diskResponse = await monitorApi.getDisk()
-    const diskData = diskResponse.data
+    const diskData = diskResponse  // axios拦截器已返回response.data
     if (diskData.usage && diskData.usage.length > 0) {
       const mainDisk = diskData.usage[0]
       diskUsage.value = Math.round(mainDisk.percent)
@@ -605,7 +605,7 @@ const updateStats = async () => {
 
     // Fetch network stats
     const networkResponse = await monitorApi.getNetwork()
-    const networkData = networkResponse.data
+    const networkData = networkResponse  // axios拦截器已返回response.data
     if (networkData.interfaces && networkData.interfaces.length > 0) {
       const mainInterface = networkData.interfaces[0]
       networkSpeed.value = Math.round((mainInterface.rx_bytes + mainInterface.tx_bytes) / 1024)

@@ -140,10 +140,28 @@
     <div v-if="activeTab === 'info'" class="tab-content">
       <div class="section-header">
         <h2>系统信息</h2>
-        <button class="action-btn" @click="refreshSystemInfo">
-          <ArrowPathIcon class="w-4 h-4" />
-          刷新
-        </button>
+        <div class="header-actions">
+          <div v-if="isLoadingInfo" class="loading-indicator">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            正在获取真实数据...
+          </div>
+          <button class="action-btn" @click="refreshSystemInfo" :disabled="isLoadingInfo">
+            <ArrowPathIcon class="w-4 h-4" :class="{ 'animate-spin': isLoadingInfo }" />
+            {{ isLoadingInfo ? '刷新中...' : '刷新' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="info-status-bar" v-if="showInfoStatus">
+        <div class="status-content">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>系统信息来自真实的硬件检测结果，非模拟数据</span>
+        </div>
       </div>
 
       <div class="system-info-grid">
@@ -513,6 +531,8 @@ const proxyConfig = ref({
 })
 
 // System Info
+const isLoadingInfo = ref(false)
+const showInfoStatus = ref(true)
 const systemInfo = ref<any>({
   hostname: '',
   cpu: '',
@@ -596,37 +616,67 @@ const editInterface = (iface: any) => {
 }
 
 const refreshSystemInfo = async () => {
+  isLoadingInfo.value = true
+
   try {
     const response = await systemApi.getInfo()
-    const info = response.data.info
+    const info = response.info  // axios拦截器已经返回了response.data
 
     // 解析真实的系统信息
     const unameParts = info.system?.uname?.split(' ') || []
     const osName = unameParts.slice(0, 3).join(' ')
 
+    // 显示真实的硬件信息
     systemInfo.value = {
       hostname: info.hostname || 'Unknown',
-      cpu: info.cpu ? `${info.cpu.model} @ ${info.cpu.mhz}MHz` : 'Unknown CPU',
-      memory: info.memory ? `${formatMemory(info.memory.total)} DDR4` : 'Unknown',
+      cpu: info.cpu ? `${info.cpu.model} (${info.cpu.cores}核心) @ ${info.cpu.mhz}MHz` : 'Unknown CPU',
+      memory: info.memory ? `${formatMemory(info.memory.total)} 总内存, ${formatMemory(info.memory.used)} 已使用` : 'Unknown',
       storage: info.disks && info.disks.length > 0 ? formatStorage(info.disks) : 'Unknown',
       os: osName || 'Unknown OS',
       uptime: info.uptime || 'Unknown',
       kernel: extractKernelVersion(info.system?.uname) || 'Unknown',
       architecture: extractArchitecture(info.system?.uname) || 'Unknown'
     }
+
+    console.log('✅ 系统信息获取成功:', {
+      cpu: info.cpu?.model,
+      memory: formatMemory(info.memory?.total),
+      disks: info.disks?.length,
+      hostname: info.hostname
+    })
+
+    // 3秒后隐藏状态栏
+    setTimeout(() => {
+      showInfoStatus.value = false
+    }, 3000)
+
   } catch (error: any) {
-    console.error('Failed to fetch system info:', error)
-    // 如果API调用失败，显示错误状态而不是假数据
+    console.error('❌ 获取系统信息失败:', error)
+
+    // 显示用户友好的错误信息
+    const errorMessage = error.response?.status === 401
+      ? '请先登录以查看系统信息'
+      : error.response?.status === 403
+      ? '没有权限访问系统信息'
+      : '网络连接错误，请检查服务器连接'
+
     systemInfo.value = {
-      hostname: '无法获取',
-      cpu: 'API调用失败',
-      memory: 'API调用失败',
-      storage: 'API调用失败',
-      os: 'API调用失败',
-      uptime: 'API调用失败',
-      kernel: 'API调用失败',
-      architecture: 'API调用失败'
+      hostname: errorMessage,
+      cpu: errorMessage,
+      memory: errorMessage,
+      storage: errorMessage,
+      os: errorMessage,
+      uptime: errorMessage,
+      kernel: errorMessage,
+      architecture: errorMessage
     }
+
+    // 如果是认证错误，提示用户登录
+    if (error.response?.status === 401) {
+      console.warn('⚠️ 需要登录才能查看系统信息')
+    }
+  } finally {
+    isLoadingInfo.value = false
   }
 }
 
@@ -655,21 +705,43 @@ const formatMemory = (bytes: number) => {
 
 // 格式化存储信息
 const formatStorage = (disks: any[]) => {
-  const physicalDisks = disks.filter(d => d.mountpoint && d.mountpoint.includes('/mnt/.physical'))
-  if (physicalDisks.length === 0) {
-    return `${disks.length} 个磁盘`
+  if (!disks || disks.length === 0) {
+    return '无磁盘信息'
   }
 
-  const totalStorage = physicalDisks.reduce((sum, disk) => sum + disk.total, 0)
-  const totalStorageTB = totalStorage / (1024 * 1024 * 1024 * 1024)
+  // 过滤出物理磁盘（包含实际存储信息的磁盘）
+  const storageDisks = disks.filter(d => d.mountpoint && d.fstype)
 
-  return `${physicalDisks.length} 个磁盘，总计 ${totalStorageTB.toFixed(1)} TB`
+  if (storageDisks.length === 0) {
+    return `${disks.length} 个磁盘（无详细信息）`
+  }
+
+  // 计算总存储容量和已使用空间
+  const totalStorage = storageDisks.reduce((sum, disk) => sum + disk.total, 0)
+  const totalUsed = storageDisks.reduce((sum, disk) => sum + disk.used, 0)
+  const totalStorageGB = totalStorage / (1024 * 1024 * 1024)
+  const totalUsedGB = totalUsed / (1024 * 1024 * 1024)
+  const usedPercent = ((totalUsed / totalStorage) * 100).toFixed(1)
+
+  // 根据大小选择合适单位
+  let totalStr, usedStr
+  if (totalStorageGB >= 1024) {
+    const totalTB = totalStorageGB / 1024
+    const usedTB = totalUsedGB / 1024
+    totalStr = `${totalTB.toFixed(1)} TB`
+    usedStr = `${usedTB.toFixed(1)} TB`
+  } else {
+    totalStr = `${totalStorageGB.toFixed(0)} GB`
+    usedStr = `${totalUsedGB.toFixed(0)} GB`
+  }
+
+  return `${storageDisks.length} 个磁盘，总计 ${totalStr} (已用 ${usedStr}, ${usedPercent}%)`
 }
 
 const loadServices = async () => {
   try {
     const response = await serviceApi.getServices()
-    services.value = response.data
+    services.value = response.services || response  // axios拦截器已经返回了response.data
   } catch (error: any) {
     console.error('Failed to load services:', error)
     services.value = [
@@ -1342,5 +1414,64 @@ onMounted(() => {
 .backup-actions {
   display: flex;
   gap: 8px;
+}
+
+/* 状态栏样式 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.info-status-bar {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -33,6 +33,7 @@
         v-for="app in filteredApps"
         :key="app.id"
         class="app-card"
+        :class="{ 'app-installed': isAppInstalled(app.id) }"
       >
         <div class="app-icon" :style="{ background: app.color }">
           <component :is="getAppIcon(app.icon) as any" class="w-8 h-8" />
@@ -48,6 +49,40 @@
           </span>
         </div>
         <div class="app-actions">
+          <button
+            v-if="isAppInstalled(app.id)"
+            class="action-btn secondary"
+            @click="launchApp(app)"
+            :disabled="!app.launchable"
+          >
+            <PlayIcon class="w-4 h-4" />
+            {{ app.launchable ? '打开' : '已安装' }}
+          </button>
+          <button
+            v-else
+            class="action-btn primary"
+            @click="installApp(app)"
+            :disabled="installingApp === app.id"
+          >
+            <DownloadIcon class="w-4 h-4" />
+            {{ installingApp === app.id ? '安装中...' : '安装' }}
+          </button>
+          <button
+            v-if="isAppInstalled(app.id)"
+            class="action-btn danger"
+            @click="uninstallApp(app)"
+            :disabled="uninstallingApp === app.id"
+          >
+            <TrashIcon class="w-4 h-4" />
+            {{ uninstallingApp === app.id ? '卸载中...' : '卸载' }}
+          </button>
+          <button class="action-btn" @click="showAppDetails(app)">
+            <InformationCircleIcon class="w-4 h-4" />
+            详情
+          </button>
+        </div>
+      </div>
+    </div>
           <button class="action-btn secondary" @click="viewAppDetails(app)">
             <EyeIcon class="w-4 h-4" />
             详情
@@ -274,6 +309,8 @@ const apps = ref([
     category: 'storage',
     version: '2.1.0',
     installed: true,
+    launching: true,
+    appId: 'storage-manager',
     rating: 4.8,
     ratingCount: 234,
     downloads: 15234,
@@ -289,6 +326,8 @@ const apps = ref([
     category: 'system',
     version: '1.8.2',
     installed: true,
+    launching: true,
+    appId: 'system-monitor',
     rating: 4.9,
     ratingCount: 456,
     downloads: 28901,
@@ -304,6 +343,8 @@ const apps = ref([
     category: 'system',
     version: '3.0.1',
     installed: true,
+    launching: true,
+    appId: 'file-browser',
     rating: 4.7,
     ratingCount: 189,
     downloads: 12345,
@@ -319,6 +360,8 @@ const apps = ref([
     category: 'system',
     version: '1.5.0',
     installed: true,
+    launching: true,
+    appId: 'user-manager',
     rating: 4.6,
     ratingCount: 98,
     downloads: 8765,
@@ -334,6 +377,8 @@ const apps = ref([
     category: 'network',
     version: '2.0.3',
     installed: false,
+    launching: false,
+    appId: '',
     rating: 4.5,
     ratingCount: 67,
     downloads: 5432,
@@ -349,6 +394,8 @@ const apps = ref([
     category: 'security',
     version: '1.2.0',
     installed: false,
+    launching: false,
+    appId: '',
     rating: 4.4,
     ratingCount: 45,
     downloads: 3210,
@@ -391,6 +438,26 @@ const getCategoryName = (categoryId: string) => {
 const viewAppDetails = (app: any) => {
   selectedApp.value = app
   showAppDetails.value = true
+}
+
+// 检查应用是否已安装
+const isAppInstalled = (appId: string) => {
+  const app = apps.value.find(a => a.id === appId)
+  return app?.installed || false
+}
+
+// 启动应用
+const launchApp = (app: any) => {
+  if (!app.launching || !app.appId) {
+    alert('此应用暂不支持启动')
+    return
+  }
+
+  // 通过事件总线发送启动应用的消息
+  const event = new CustomEvent('launch-app', {
+    detail: { appId: app.appId, appName: app.name }
+  })
+  window.dispatchEvent(event)
 }
 
 const closeAppDetails = () => {

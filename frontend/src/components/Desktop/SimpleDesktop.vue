@@ -979,25 +979,14 @@ onUnmounted(() => {
 
 .welcome-message {
   position: absolute;
-  top: 15%;
+  top: calc(15% + 48px);
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
   color: white;
   z-index: 1;
   pointer-events: none;
-  margin-top: 48px; /* 为系统栏留出空间 */
-}
-
-.welcome-message {
-  position: absolute;
-  top: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  color: white;
-  z-index: 1;
-  pointer-events: none;
+  margin-top: 0;
 }
 
 .welcome-message h1 {
@@ -1044,13 +1033,16 @@ onUnmounted(() => {
 
 .desktop-widgets {
   position: absolute;
-  top: 20px;
+  top: 64px;
   right: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   z-index: 5;
-  max-width: 400px;
+  max-width: 450px;
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
 .widget {
@@ -1069,11 +1061,11 @@ onUnmounted(() => {
 }
 
 .clock-widget {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 
 .system-widget {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 
 .weather-widget {
@@ -1086,6 +1078,75 @@ onUnmounted(() => {
 
 .shortcuts-widget {
   grid-column: span 2;
+}
+
+/* 通知触发器样式 */
+.widget-notification-trigger {
+  position: relative;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.widget-notification-trigger:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.widget-notification-icon {
+  color: white;
+  width: 24px;
+  height: 24px;
+}
+
+.widget-notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: rgba(239, 68, 68, 0.9);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 响应式调整 - 小屏幕单列显示 */
+@media (max-width: 768px) {
+  .desktop-widgets {
+    top: 64px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .clock-widget,
+  .system-widget,
+  .weather-widget,
+  .calendar-widget,
+  .shortcuts-widget {
+    grid-column: span 1;
+  }
 }
 
 .quick-access {

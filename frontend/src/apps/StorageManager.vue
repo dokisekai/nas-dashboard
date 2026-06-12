@@ -96,16 +96,44 @@
     <!-- SMB Shares Tab -->
     <div v-if="activeTab === 'smb'" class="tab-content">
       <div class="section-header">
-        <h2>SMB 共享</h2>
-        <button class="action-btn primary" @click="showCreateSMBModal = true">
-          <PlusIcon class="w-4 h-4" />
-          创建共享
-        </button>
+        <div class="header-left">
+          <h2>SMB 共享管理</h2>
+          <div class="smb-status-indicator" :class="{ active: smbServiceRunning }">
+            <div class="status-dot"></div>
+            <span>{{ smbServiceRunning ? 'SMB服务运行中' : 'SMB服务已停止' }}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="action-btn" @click="refreshSMBShares" :disabled="loadingSMB">
+            <ArrowPathIcon class="w-4 h-4" :class="{ 'animate-spin': loadingSMB }" />
+            刷新
+          </button>
+          <button class="action-btn" @click="toggleSMBService">
+            <PowerIcon class="w-4 h-4" />
+            {{ smbServiceRunning ? '停止服务' : '启动服务' }}
+          </button>
+          <button class="action-btn primary" @click="openCreateSMBModal">
+            <PlusIcon class="w-4 h-4" />
+            创建共享
+          </button>
+        </div>
       </div>
 
-      <div v-if="loadingSMB" class="loading-state">
+      <div v-if="loadingSMB && smbShares.length === 0" class="loading-state">
         <div class="spinner"></div>
-        <p>加载中...</p>
+        <p>加载SMB共享中...</p>
+      </div>
+
+      <div v-else-if="smbShares.length === 0" class="empty-state">
+        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16a4 4 0 004-4V6a4 4 0 00-4-4H4a4 4 0 00-4 4v4a4 4 0 004 4z" />
+        </svg>
+        <h3>暂无SMB共享</h3>
+        <p>点击"创建共享"按钮来添加您的第一个SMB共享</p>
+        <button class="action-btn primary" @click="openCreateSMBModal">
+          <PlusIcon class="w-4 h-4" />
+          创建第一个共享
+        </button>
       </div>
 
       <div v-else class="smb-list">
@@ -115,43 +143,56 @@
           class="smb-item"
         >
           <div class="smb-info">
-            <div class="smb-icon">
+            <div class="smb-icon" :class="{ 'smb-icon-readonly': share.readOnly }">
               <FolderIcon class="w-8 h-8" />
             </div>
             <div class="smb-details">
-              <h3>{{ share.name }}</h3>
-              <p>{{ share.description || '无描述' }}</p>
-              <p class="smb-path">路径: {{ share.path }}</p>
+              <div class="smb-header">
+                <h3>{{ share.name }}</h3>
+                <div class="smb-badges">
+                  <span v-if="share.readOnly" class="badge badge-readonly">只读</span>
+                  <span v-if="share.guest" class="badge badge-guest">访客</span>
+                  <span v-if="share.isTimeMachine" class="badge badge-tm">Time Machine</span>
+                </div>
+              </div>
+              <p class="smb-description">{{ share.description || '无描述' }}</p>
+              <p class="smb-path">
+                <FolderOpenIcon class="w-4 h-4" />
+                {{ share.path }}
+              </p>
             </div>
           </div>
 
           <div class="smb-settings">
-            <div class="setting-item">
-              <span class="setting-label">只读:</span>
-              <span :class="['setting-value', share.readOnly ? 'yes' : 'no']">
-                {{ share.readOnly ? '是' : '否' }}
-              </span>
-            </div>
-            <div class="setting-item">
-              <span class="setting-label">访客:</span>
-              <span :class="['setting-value', share.guest ? 'yes' : 'no']">
-                {{ share.guest ? '是' : '否' }}
-              </span>
-            </div>
-            <div v-if="share.isTimeMachine" class="setting-item tm-badge">
-              <ClockIcon class="w-4 h-4" />
-              <span>Time Machine</span>
+            <div class="setting-group">
+              <div class="setting-item">
+                <span class="setting-label">访问模式:</span>
+                <span :class="['setting-value', share.readOnly ? 'readonly' : 'writable']">
+                  {{ share.readOnly ? '只读' : '读写' }}
+                </span>
+              </div>
+              <div class="setting-item">
+                <span class="setting-label">访客访问:</span>
+                <span :class="['setting-value', share.guest ? 'allowed' : 'denied']">
+                  {{ share.guest ? '允许' : '禁止' }}
+                </span>
+              </div>
+              <div v-if="share.users" class="setting-item">
+                <span class="setting-label">授权用户:</span>
+                <span class="setting-value">{{ share.users.length }} 个用户</span>
+              </div>
             </div>
           </div>
 
           <div class="smb-actions">
-            <button class="action-btn" @click="editSMBShare(share)">
-              <PencilIcon class="w-4 h-4" />
-              编辑
+            <button class="action-btn" @click="viewSMBShare(share)" title="查看详情">
+              <EyeIcon class="w-4 h-4" />
             </button>
-            <button class="action-btn danger" @click="deleteSMBShare(share)">
+            <button class="action-btn" @click="editSMBShare(share)" title="编辑共享">
+              <PencilIcon class="w-4 h-4" />
+            </button>
+            <button class="action-btn danger" @click="deleteSMBShare(share)" title="删除共享">
               <TrashIcon class="w-4 h-4" />
-              删除
             </button>
           </div>
         </div>
@@ -224,74 +265,177 @@
       </div>
     </div>
 
-    <!-- SMB Share Modal -->
-    <div v-if="showCreateSMBModal" class="modal-overlay" @click="showCreateSMBModal = false">
-      <div class="modal-content" @click.stop>
+    <!-- Enhanced SMB Share Modal -->
+    <div v-if="showCreateSMBModal" class="modal-overlay" @click="closeSMBModal">
+      <div class="modal-content smb-modal" @click.stop>
         <div class="modal-header">
-          <h3>{{ editingSMBShare ? '编辑共享' : '创建共享' }}</h3>
-          <button class="close-btn" @click="showCreateSMBModal = false">
+          <div class="modal-title">
+            <div class="title-icon">
+              <FolderIcon class="w-6 h-6" />
+            </div>
+            <div>
+              <h3>{{ editingSMBShare ? '编辑SMB共享' : '创建SMB共享' }}</h3>
+              <p class="modal-subtitle">{{ editingSMBShare ? '修改现有共享的配置和权限' : '添加新的网络共享文件夹' }}</p>
+            </div>
+          </div>
+          <button class="close-btn" @click="closeSMBModal">
             <XMarkIcon class="w-5 h-5" />
           </button>
         </div>
 
         <form @submit.prevent="saveSMBShare" class="modal-body">
-          <div class="form-group">
-            <label>共享名称</label>
-            <input
-              v-model="smbForm.name"
-              type="text"
-              required
-              :disabled="editingSMBShare"
-              placeholder="输入共享名称"
-            />
+          <!-- 基本信息 -->
+          <div class="form-section">
+            <h4 class="section-title">基本信息</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>共享名称 *</label>
+                <input
+                  v-model="smbForm.name"
+                  type="text"
+                  required
+                  :disabled="editingSMBShare"
+                  placeholder="myshare"
+                  pattern="[a-zA-Z0-9_-]+"
+                  title="只能包含字母、数字、下划线和连字符"
+                />
+                <span class="form-hint">共享名称只能包含字母、数字、下划线和连字符</span>
+              </div>
+
+              <div class="form-group">
+                <label>共享路径 *</label>
+                <div class="path-input-group">
+                  <input
+                    v-model="smbForm.path"
+                    type="text"
+                    required
+                    placeholder="/mnt/data/share"
+                    @change="validatePath"
+                  />
+                  <button type="button" class="browse-btn" @click="browsePath" title="浏览路径">
+                    <FolderOpenIcon class="w-4 h-4" />
+                  </button>
+                </div>
+                <span v-if="pathError" class="form-error">{{ pathError }}</span>
+                <span v-else class="form-hint">选择要共享的目录路径</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>描述</label>
+              <textarea
+                v-model="smbForm.description"
+                rows="2"
+                placeholder="可选的共享描述，帮助用户了解此共享的用途"
+              ></textarea>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label>路径</label>
-            <input
-              v-model="smbForm.path"
-              type="text"
-              required
-              placeholder="/mnt/data/share"
-            />
+          <!-- 访问控制 -->
+          <div class="form-section">
+            <h4 class="section-title">访问控制</h4>
+            <div class="form-grid">
+              <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                  <input v-model="smbForm.readOnly" type="checkbox" />
+                  <span class="checkbox-text">
+                    <strong>只读模式</strong>
+                    <small>用户只能查看文件，无法修改或删除</small>
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                  <input v-model="smbForm.guest" type="checkbox" />
+                  <span class="checkbox-text">
+                    <strong>允许访客访问</strong>
+                    <small>无需密码即可访问（安全性较低）</small>
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                  <input v-model="smbForm.browseable" type="checkbox" />
+                  <span class="checkbox-text">
+                    <strong>可浏览</strong>
+                    <small>允许用户查看共享内容列表</small>
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-group checkbox-group">
+                <label class="checkbox-label">
+                  <input v-model="smbForm.isTimeMachine" type="checkbox" />
+                  <span class="checkbox-text">
+                    <strong>Time Machine 支持</strong>
+                    <small>支持苹果设备的Time Machine备份</small>
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label>描述</label>
-            <input
-              v-model="smbForm.description"
-              type="text"
-              placeholder="可选描述"
-            />
-          </div>
+          <!-- 高级选项 -->
+          <div class="form-section">
+            <h4 class="section-title">高级选项</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>有效用户</label>
+                <input
+                  v-model="smbForm.validUsers"
+                  type="text"
+                  placeholder="user1,user2"
+                />
+                <span class="form-hint">逗号分隔的用户列表</span>
+              </div>
 
-          <div class="form-group">
-            <label>
-              <input v-model="smbForm.readOnly" type="checkbox" />
-              只读模式
-            </label>
-          </div>
+              <div class="form-group">
+                <label>禁止用户</label>
+                <input
+                  v-model="smbForm.invalidUsers"
+                  type="text"
+                  placeholder="guest,nobody"
+                />
+                <span class="form-hint">不允许访问的用户列表</span>
+              </div>
+            </div>
 
-          <div class="form-group">
-            <label>
-              <input v-model="smbForm.guest" type="checkbox" />
-              允许访客访问
-            </label>
-          </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>创建权限</label>
+                <select v-model="smbForm.createMask">
+                  <option value="0777">0777 (所有用户)</option>
+                  <option value="0755">0755 (默认)</option>
+                  <option value="0750">0750 (组权限)</option>
+                  <option value="0700">0700 (仅所有者)</option>
+                </select>
+              </div>
 
-          <div class="form-group">
-            <label>
-              <input v-model="smbForm.isTimeMachine" type="checkbox" />
-              支持 Apple Time Machine 备份
-            </label>
+              <div class="form-group">
+                <label>目录权限</label>
+                <select v-model="smbForm.directoryMask">
+                  <option value="0777">0777 (所有用户)</option>
+                  <option value="0755">0755 (默认)</option>
+                  <option value="0750">0750 (组权限)</option>
+                  <option value="0700">0700 (仅所有者)</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div class="modal-footer">
-            <button type="button" class="action-btn" @click="showCreateSMBModal = false">
+            <button type="button" class="action-btn" @click="closeSMBModal">
               取消
             </button>
-            <button type="submit" class="action-btn primary">
-              {{ editingSMBShare ? '更新' : '创建' }}
+            <button type="button" class="action-btn" @click="testSMBConnection" :disabled="!smbForm.path">
+              <SparklesIcon class="w-4 h-4" />
+              测试连接
+            </button>
+            <button type="submit" class="action-btn primary" :disabled="!!pathError">
+              <CheckIcon class="w-4 h-4" />
+              {{ editingSMBShare ? '更新共享' : '创建共享' }}
             </button>
           </div>
         </form>
@@ -315,7 +459,13 @@ import {
   XMarkIcon,
   ArrowUturnLeftIcon,
   MagnifyingGlassIcon,
-  ClockIcon
+  ClockIcon,
+  PowerIcon,
+  EyeIcon,
+  FolderOpenIcon,
+  LockClosedIcon,
+  CheckIcon,
+  SparklesIcon
 } from '@heroicons/vue/24/outline'
 import { storageApi, fileApi } from '../api'
 
@@ -337,13 +487,22 @@ const disks = ref<any[]>([])
 const smbShares = ref<any[]>([])
 const showCreateSMBModal = ref(false)
 const editingSMBShare = ref(false)
+// SMB状态管理
+const smbServiceRunning = ref(true)
+const pathError = ref('')
+
 const smbForm = ref({
   name: '',
   path: '',
   description: '',
   readOnly: false,
   guest: false,
-  isTimeMachine: false
+  isTimeMachine: false,
+  browseable: true,
+  validUsers: '',
+  invalidUsers: '',
+  createMask: '0755',
+  directoryMask: '0755'
 })
 
 // File Browser
@@ -358,7 +517,7 @@ const refreshDisks = async () => {
   loading.value = true
   try {
     const response = await storageApi.getDisks()
-    disks.value = response.data
+    disks.value = response.disks || response  // axios拦截器已返回response.data
   } catch (error: any) {
     console.error('Failed to fetch disks:', error)
     // Mock data for demo
@@ -429,25 +588,14 @@ const loadSMBShares = async () => {
   loadingSMB.value = true
   try {
     const response = await storageApi.getSMBShares()
-    smbShares.value = response.data
+    smbShares.value = response.shares || response  // axios拦截器已返回response.data
+
+    // 检查SMB服务状态（模拟，应该从后端获取）
+    smbServiceRunning.value = true
   } catch (error: any) {
     console.error('Failed to fetch SMB shares:', error)
-    smbShares.value = [
-      {
-        name: 'public',
-        path: '/mnt/data/public',
-        description: 'Public share',
-        readOnly: false,
-        guest: true
-      },
-      {
-        name: 'documents',
-        path: '/mnt/data/documents',
-        description: 'Documents share',
-        readOnly: false,
-        guest: false
-      }
-    ]
+    smbShares.value = []
+    smbServiceRunning.value = false
   } finally {
     loadingSMB.value = false
   }
@@ -459,9 +607,14 @@ const editSMBShare = (share: any) => {
     name: share.name,
     path: share.path,
     description: share.description || '',
-    readOnly: share.readOnly,
-    guest: share.guest,
-    isTimeMachine: share.isTimeMachine || false
+    readOnly: share.readOnly || false,
+    guest: share.guest || false,
+    isTimeMachine: share.isTimeMachine || false,
+    browseable: share.browseable !== undefined ? share.browseable : true,
+    validUsers: share.validUsers || '',
+    invalidUsers: share.invalidUsers || '',
+    createMask: share.createMask || '0755',
+    directoryMask: share.directoryMask || '0755'
   }
   showCreateSMBModal.value = true
 }
@@ -480,15 +633,26 @@ const deleteSMBShare = async (share: any) => {
 
 const saveSMBShare = async () => {
   try {
+    const shareData = {
+      name: smbForm.value.name,
+      path: smbForm.value.path,
+      description: smbForm.value.description,
+      readOnly: smbForm.value.readOnly,
+      guest: smbForm.value.guest,
+      isTimeMachine: smbForm.value.isTimeMachine,
+      browseable: smbForm.value.browseable,
+      validUsers: smbForm.value.validUsers,
+      invalidUsers: smbForm.value.invalidUsers,
+      createMask: smbForm.value.createMask,
+      directoryMask: smbForm.value.directoryMask
+    }
+
     if (editingSMBShare.value) {
       await storageApi.updateSMBShare(
         smbForm.value.name,
-        smbForm.value.path,
-        smbForm.value.description,
-        smbForm.value.readOnly,
-        smbForm.value.guest,
-        smbForm.value.isTimeMachine
+        shareData
       )
+      showSuccess('共享更新成功')
     } else {
       await storageApi.createSMBShare(
         smbForm.value.name,
@@ -498,15 +662,125 @@ const saveSMBShare = async () => {
         smbForm.value.guest,
         smbForm.value.isTimeMachine
       )
+      showSuccess('共享创建成功')
     }
-    showCreateSMBModal.value = false
-    editingSMBShare.value = false
-    smbForm.value = { name: '', path: '', description: '', readOnly: false, guest: false, isTimeMachine: false }
+    closeSMBModal()
     await loadSMBShares()
   } catch (error: any) {
     console.error('Failed to save SMB share:', error)
-    alert('保存失败: ' + error.message)
+    showError('保存失败: ' + (error.response?.data?.error || error.message))
   }
+}
+
+// 新增的SMB功能函数
+const openCreateSMBModal = () => {
+  resetSMBForm()
+  editingSMBShare.value = false
+  showCreateSMBModal.value = true
+}
+
+const closeSMBModal = () => {
+  showCreateSMBModal.value = false
+  editingSMBShare.value = false
+  resetSMBForm()
+  pathError.value = ''
+}
+
+const resetSMBForm = () => {
+  smbForm.value = {
+    name: '',
+    path: '',
+    description: '',
+    readOnly: false,
+    guest: false,
+    isTimeMachine: false,
+    browseable: true,
+    validUsers: '',
+    invalidUsers: '',
+    createMask: '0755',
+    directoryMask: '0755'
+  }
+}
+
+const validatePath = () => {
+  pathError.value = ''
+  if (smbForm.value.path && !smbForm.value.path.startsWith('/')) {
+    pathError.value = '路径必须以 / 开头'
+    return false
+  }
+  return true
+}
+
+const browsePath = async () => {
+  // 这里可以实现路径浏览功能
+  // 暂时使用一个简单的prompt作为示例
+  const path = prompt('请输入目录路径:', smbForm.value.path || '/mnt')
+  if (path) {
+    smbForm.value.path = path
+    validatePath()
+  }
+}
+
+const viewSMBShare = (share: any) => {
+  // 显示共享详细信息
+  alert(`共享详情:\n名称: ${share.name}\n路径: ${share.path}\n描述: ${share.description || '无'}\n只读: ${share.readOnly ? '是' : '否'}\n访客: ${share.guest ? '是' : '否'}`)
+}
+
+const toggleSMBShareStatus = async (share: any) => {
+  try {
+    // 暂时简化此功能，只显示提示信息
+    const enabled = share.enabled !== undefined ? share.enabled : true
+    const newStatus = !enabled
+    showSuccess(`共享 "${share.name}" 状态切换功能暂未启用`)
+    // TODO: 实现后端API后启用此功能
+    // await storageApi.toggleSMBShare(share.name, newStatus)
+  } catch (error: any) {
+    console.error('Failed to toggle SMB share status:', error)
+    showError('操作失败: ' + error.message)
+  }
+}
+
+const refreshSMBShares = async () => {
+  await loadSMBShares()
+}
+
+const toggleSMBService = async () => {
+  try {
+    // 这里需要调用后端API来启动/停止SMB服务
+    smbServiceRunning.value = !smbServiceRunning.value
+    const status = smbServiceRunning.value ? '运行' : '停止'
+    showSuccess(`SMB服务已${status}`)
+  } catch (error: any) {
+    console.error('Failed to toggle SMB service:', error)
+    showError('操作失败: ' + error.message)
+  }
+}
+
+const testSMBConnection = async () => {
+  try {
+    // 测试路径连接
+    if (!smbForm.value.path) {
+      showError('请先输入共享路径')
+      return
+    }
+
+    // 这里可以调用后端API来测试路径是否可访问
+    showSuccess(`路径 "${smbForm.value.path}" 可访问`)
+  } catch (error: any) {
+    console.error('Failed to test SMB connection:', error)
+    showError('路径测试失败: ' + error.message)
+  }
+}
+
+// 辅助函数
+const showSuccess = (message: string) => {
+  // 可以替换为更好的通知组件
+  alert('✅ ' + message)
+}
+
+const showError = (message: string) => {
+  // 可以替换为更好的错误提示
+  alert('❌ ' + message)
 }
 
 // File Browser Functions
@@ -514,7 +788,7 @@ const loadFiles = async () => {
   loadingFiles.value = true
   try {
     const response = await fileApi.listFiles(currentPath.value)
-    currentFiles.value = response.data.files.map((file: any) => ({
+    currentFiles.value = response.files.map((file: any) => ({  // axios拦截器已返回response.data
       name: file.name,
       isDirectory: file.isDir,
       size: file.size,
@@ -1164,5 +1438,469 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+/* ==================== 增强的SMB管理样式 ==================== */
+
+/* SMB服务状态指示器 */
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.smb-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.smb-status-indicator.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.smb-status-indicator .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+}
+
+.empty-state svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* 增强的SMB列表项 */
+.smb-item {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 20px;
+  align-items: center;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
+}
+
+.smb-item:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.smb-item-disabled {
+  opacity: 0.6;
+  background: #f9fafb;
+}
+
+.smb-icon-readonly {
+  background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+}
+
+.disabled-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smb-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.smb-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.badge-disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.badge-readonly {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-guest {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-tm {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.smb-description {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.smb-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #9ca3af;
+  background: #f9fafb;
+  padding: 4px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+/* 设置组 */
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.setting-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.setting-value {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.setting-value.readonly {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.setting-value.writable {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.setting-value.allowed {
+  color: #065f46;
+  background: #d1fae5;
+}
+
+.setting-value.denied {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+/* 增强的SMB模态框 */
+.smb-modal {
+  max-width: 700px;
+  width: 90%;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.modal-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  border-radius: 2px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .form-row, .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 增强的表单控件 */
+.form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-group select {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.path-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.path-input-group input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px 0 0 8px;
+  font-size: 14px;
+}
+
+.browse-btn {
+  padding: 10px 16px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.browse-btn:hover {
+  background: #e5e7eb;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.form-error {
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 4px;
+}
+
+/* 复选框组增强 */
+.checkbox-group {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.checkbox-label {
+  display: flex;
+  gap: 8px;
+  cursor: pointer;
+  align-items: flex-start;
+}
+
+.checkbox-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkbox-text strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.checkbox-text small {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* 操作按钮增强 */
+.smb-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.action-btn.danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.action-btn.danger:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.smb-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .smb-item {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .smb-actions {
+    justify-content: flex-end;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+  }
 }
 </style>

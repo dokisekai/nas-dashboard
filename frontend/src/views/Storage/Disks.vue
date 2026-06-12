@@ -576,7 +576,7 @@ const loadDisks = async () => {
   error.disks = ''
   try {
     const response = await storageApi.getDisks()
-    disks.value = (response.data?.disks || []).map((disk: any) => ({
+    disks.value = (response.disks || []).map((disk: any) => ({  // axios拦截器已返回response.data
       ...disk,
       usagePercent: disk.used && disk.size ? Math.round((disk.used / disk.size) * 100) : undefined
     }))
@@ -595,7 +595,7 @@ const loadShares = async () => {
   error.shares = ''
   try {
     const response = await storageApi.getSMBShares()
-    shares.value = response.data?.shares || []
+    shares.value = response.shares || []  // axios拦截器已返回response.data
   } catch (err: any) {
     console.error('获取共享列表失败:', err)
     error.shares = err.response?.data?.message || err.message || '获取共享列表失败'

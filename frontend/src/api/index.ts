@@ -1,0 +1,105 @@
+import api from './client'
+
+// ==================== 认证 API ====================
+export const authApi = {
+  login: (username: string, password: string) =>
+    api.post('/api/auth/login', { username, password }),
+  refresh: () => api.post('/api/auth/refresh'),
+}
+
+// ==================== 监控 API ====================
+export const monitorApi = {
+  getCPU: () => api.get('/api/monitor/cpu'),
+  getMemory: () => api.get('/api/monitor/memory'),
+  getDisk: () => api.get('/api/monitor/disk'),
+  getNetwork: () => api.get('/api/monitor/network'),
+}
+
+// ==================== 存储管理 API ====================
+export const storageApi = {
+  getDisks: () => api.get('/api/storage/disks'),
+  getDiskUsage: (path: string) => api.get('/api/storage/usage', { params: { path } }),
+  mount: (device: string, mountPoint: string) =>
+    api.post('/api/storage/mount', { device, mountPoint }),
+  umount: (mountPoint: string) =>
+    api.post('/api/storage/umount', { mountPoint }),
+  formatDisk: (device: string, fsType: string) =>
+    api.post('/api/storage/format', { device, fsType }),
+  getSMBShares: () => api.get('/api/storage/smb'),
+  createSMBShare: (name: string, path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean) =>
+    api.post('/api/storage/smb', { name, path, description, readOnly, guest, isTimeMachine }),
+  updateSMBShare: (name: string, path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean) =>
+    api.put('/api/storage/smb/' + name, { path, description, readOnly, guest, isTimeMachine }),
+  deleteSMBShare: (name: string) =>
+    api.delete('/api/storage/smb/' + name),
+}
+
+// ==================== 服务管理 API ====================
+export const serviceApi = {
+  getServices: () => api.get('/api/services'),
+  startService: (name: string) => api.post(`/api/services/${name}/start`),
+  stopService: (name: string) => api.post(`/api/services/${name}/stop`),
+  restartService: (name: string) => api.post(`/api/services/${name}/restart`),
+  enableService: (name: string) => api.post(`/api/services/${name}/enable`),
+  disableService: (name: string) => api.post(`/api/services/${name}/disable`),
+  getContainers: () => api.get('/api/docker/containers'),
+  startContainer: (id: string) => api.post(`/api/docker/containers/${id}/start`),
+  stopContainer: (id: string) => api.post(`/api/docker/containers/${id}/stop`),
+  restartContainer: (id: string) => api.post(`/api/docker/containers/${id}/restart`),
+  removeContainer: (id: string) => api.delete(`/api/docker/containers/${id}`),
+  getContainerLogs: (id: string) => api.get(`/api/docker/containers/${id}/logs`),
+  getContainerStats: (id: string) => api.get(`/api/docker/containers/${id}/stats`),
+  execInContainer: (id: string, command: string[]) => api.post(`/api/docker/containers/${id}/exec`, { command }),
+  getImages: () => api.get('/api/docker/images'),
+  removeImage: (id: string) => api.delete(`/api/docker/images/${id}`),
+  pullImage: (image: string) => api.post('/api/docker/images/pull', { image }),
+}
+
+// ==================== 用户管理 API ====================
+export const userApi = {
+  getUsers: () => api.get('/api/users'),
+  getUser: (username: string) => api.get(`/api/users/${username}`),
+  createUser: (data: { username: string; password: string; comment?: string; group?: string; shell?: string }) =>
+    api.post('/api/users', data),
+  updateUser: (username: string, data: { password?: string; group?: string; shell?: string; comment?: string }) =>
+    api.put(`/api/users/${username}`, data),
+  deleteUser: (username: string) => api.delete(`/api/users/${username}`),
+  getSSHKeys: (user?: string) => api.get('/api/users/ssh-keys', { params: { user } }),
+  addKey: (data: { name: string; content: string; user: string }) =>
+    api.post('/api/users/ssh-keys', data),
+  deleteKey: (id: string, user?: string) => api.delete(`/api/users/ssh-keys/${id}`, { params: { user } }),
+  getCurrentUser: () => api.get('/api/users/me'),
+  changePassword: (oldPassword: string, newPassword: string) =>
+    api.post('/api/users/me/password', { oldPassword, newPassword }),
+}
+
+// ==================== 系统组 API ====================
+export const groupApi = {
+  getGroups: () => api.get('/api/groups'),
+}
+
+// ==================== 系统信息 API ====================
+export const systemApi = {
+  getInfo: () => api.get('/api/system/info'),
+}
+
+// ==================== 文件管理 API ====================
+export const fileApi = {
+  listFiles: (path: string) => api.post('/api/files/list', { path }),
+  getFileInfo: (path: string) => api.get('/api/files/info', { params: { path } }),
+  downloadFile: (path: string) => api.get('/api/files/download', { params: { path }, responseType: 'blob' }),
+  uploadFile: (path: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('path', path)
+    return api.post('/api/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  createDirectory: (path: string, permissions?: string) =>
+    api.post('/api/files/directory', { path, permissions }),
+  moveFile: (oldPath: string, newPath: string) =>
+    api.post('/api/files/move', { oldPath, newPath }),
+  deleteFile: (path: string, force?: boolean) =>
+    api.post('/api/files/delete', { path, force }),
+}

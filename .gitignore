@@ -1,0 +1,30 @@
+# Binaries
+backend/server
+backend/nas-dashboard
+
+# Go
+*.sum
+*.mod
+
+# Node
+node_modules/
+dist/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar.gz

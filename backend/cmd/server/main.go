@@ -134,6 +134,30 @@ func main() {
 			files.POST("/move", api.MoveFile)
 			files.POST("/delete", api.DeleteFile)
 		}
+
+		// 备份恢复路由
+		backups := apiGroup.Group("/backups")
+		backups.Use(middleware.Auth())
+		{
+			backups.GET("", api.GetBackups)
+			backups.POST("", api.CreateBackup)
+			backups.GET("/:id", api.GetBackup)
+			backups.DELETE("/:id", api.DeleteBackup)
+			backups.POST("/restore", api.RestoreBackup)
+			backups.GET("/:id/download", api.DownloadBackup)
+		}
+
+		// 系统配置路由
+		configs := apiGroup.Group("/configs")
+		configs.Use(middleware.Auth())
+		{
+			configs.GET("", api.GetConfigs)
+			configs.GET("/public", api.GetPublicConfigs)
+			configs.GET("/:key", api.GetConfig)
+			configs.POST("", api.SetConfig)
+			configs.DELETE("/:key", api.DeleteConfig)
+			configs.POST("/bulk", api.BulkSetConfig)
+		}
 	}
 
 	// WebSocket 路由

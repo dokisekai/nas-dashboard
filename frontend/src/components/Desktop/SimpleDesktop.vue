@@ -424,6 +424,7 @@ const appConfigs: Record<string, { title: string; width: number; height: number 
   'system-monitor': { title: '系统监控', width: 1000, height: 700 },
   'app-center': { title: '应用中心', width: 900, height: 600 },
   'user-manager': { title: '用户管理', width: 800, height: 500 },
+  'backup-manager': { title: '备份管理', width: 900, height: 600 },
   'settings': { title: '系统设置', width: 700, height: 500 },
   'control-panel': { title: '控制面板', width: 1200, height: 800 }
 }

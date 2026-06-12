@@ -103,3 +103,23 @@ export const fileApi = {
   deleteFile: (path: string, force?: boolean) =>
     api.post('/api/files/delete', { path, force }),
 }
+
+// ==================== 备份恢复 API ====================
+export const backupApi = {
+  getBackups: () => api.get('/api/backups'),
+  getBackup: (id: number) => api.get(`/api/backups/${id}`),
+  createBackup: (data: any) => api.post('/api/backups', data),
+  deleteBackup: (id: number) => api.delete(`/api/backups/${id}`),
+  restoreBackup: (data: { backupId: number }) => api.post('/api/backups/restore', data),
+  downloadBackup: (id: number) => `${import.meta.env.VITE_API_URL}/api/backups/${id}/download`,
+}
+
+// ==================== 系统配置 API ====================
+export const configApi = {
+  getConfigs: (category?: string) => api.get('/api/configs', { params: { category } }),
+  getPublicConfigs: () => api.get('/api/configs/public'),
+  getConfig: (key: string) => api.get(`/api/configs/${key}`),
+  setConfig: (data: any) => api.post('/api/configs', data),
+  deleteConfig: (key: string) => api.delete(`/api/configs/${key}`),
+  bulkSetConfig: (configs: any[]) => api.post('/api/configs/bulk', { configs }),
+}

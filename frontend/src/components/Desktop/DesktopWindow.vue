@@ -123,6 +123,7 @@ const appComponent = computed(() => {
     'system-monitor': defineAsyncComponent(() => import('../../apps/SystemMonitor.vue')),
     'settings': defineAsyncComponent(() => import('../../apps/SystemSettings.vue')),
     'user-manager': defineAsyncComponent(() => import('../../apps/UserManager.vue')),
+    'backup-manager': defineAsyncComponent(() => import('../../apps/BackupManager.vue')),
     'file-manager': defineAsyncComponent(() => import('../../views/Storage/Disks.vue')),
     'app-center': defineAsyncComponent(() => import('../../apps/AppCenter.vue')),
     'control-panel': defineAsyncComponent(() => import('../../apps/ControlPanel.vue'))

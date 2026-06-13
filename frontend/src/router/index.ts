@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useSystemStore } from '../stores/system'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,8 +12,15 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
+      path: '/initialization',
+      name: 'Initialization',
+      component: () => import('../views/Initialization.vue'),
+      meta: { requiresAuth: false, checkInit: true },
+    },
+    {
       path: '/',
-      redirect: '/desktop',
+      name: 'Home',
+      component: () => import('../components/Desktop/SimpleDesktop.vue'),
       meta: { requiresAuth: true },
     },
     // 桌面界面路由
@@ -20,13 +28,6 @@ const router = createRouter({
       path: '/desktop',
       name: 'Desktop',
       component: () => import('../components/Desktop/SimpleDesktop.vue'),
-      meta: { requiresAuth: true },
-    },
-    // 传统仪表板（备用）
-    {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('../views/Dashboard.vue'),
       meta: { requiresAuth: true },
     },
     // 监控路由
@@ -75,27 +76,68 @@ const router = createRouter({
       component: () => import('../views/Users/Users.vue'),
       meta: { requiresAuth: true },
     },
-    // 调试路由
-    {
-      path: '/debug-test',
-      name: 'DebugTest',
-      component: () => import('../views/DebugTest.vue'),
-      meta: { requiresAuth: true },
-    },
   ],
 })
 
-// 路由守卫
-router.beforeEach((to, from, next) => {
+// 路由守卫 - 包含初始化检查
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  const systemStore = useSystemStore()
 
-  if (to.meta.requiresAuth && !authStore.isLoggedIn()) {
-    next('/login')
-  } else if (to.path === '/login' && authStore.isLoggedIn()) {
-    next('/desktop')
-  } else {
-    next()
+  console.log('Route guard - navigating to:', to.path)
+  console.log('Is dev mode:', authStore.isDevMode())
+  console.log('Is logged in:', authStore.isLoggedIn())
+  console.log('Token in store:', authStore.token?.substring(0, 20) + '...')
+  console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
+
+  // 跳过初始化页面本身的状态检查，避免循环
+  if (to.path === '/initialization') {
+    return next()
   }
+
+  // 开发模式：直接跳过初始化检查和认证检查
+  if (authStore.isDevMode()) {
+    console.log('Dev mode: allowing access to', to.path)
+    // 如果要去登录页面但已经有token，直接跳转到桌面
+    if (to.path === '/login' && authStore.isLoggedIn()) {
+      console.log('Dev mode: already logged in, redirecting to desktop')
+      return next('/desktop')
+    }
+    // 其他页面直接允许访问
+    return next()
+  }
+
+  // 生产模式：检查系统初始化状态
+  try {
+    await systemStore.checkInitStatus()
+    if (!systemStore.initialized) {
+      return next('/initialization')
+    }
+  } catch (error) {
+    console.error('Failed to check initialization status:', error)
+  }
+
+  const loggedIn = authStore.isLoggedIn()
+
+  // 处理登录页面的特殊逻辑
+  if (to.path === '/login') {
+    if (loggedIn) {
+      return next('/desktop')
+    }
+    return next()
+  }
+
+  // 处理需要认证的页面
+  if (to.meta.requiresAuth || to.path.startsWith('/apps/')) {
+    if (loggedIn) {
+      return next()
+    }
+
+    // 未登录跳转到登录页
+    return next('/login')
+  }
+
+  next()
 })
 
 export default router

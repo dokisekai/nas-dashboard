@@ -96,7 +96,7 @@ import {
   UserGroupIcon
 } from '@heroicons/vue/24/outline'
 
-const activeMenu = ref('dashboard')
+const activeMenu = ref('desktop')
 const notificationCount = ref(3)
 const username = ref('Admin')
 const userRole = ref('管理员')
@@ -107,7 +107,7 @@ const systemStatus = ref({
 })
 
 const mainMenu = [
-  { id: 'dashboard', label: '控制台', icon: HomeIcon },
+  { id: 'desktop', label: '控制台', icon: HomeIcon },
   { id: 'monitor', label: '资源监控', icon: ChartBarIcon },
   { id: 'storage', label: '存储管理', icon: CircleStackIcon },
   { id: 'services', label: '服务管理', icon: CogIcon },

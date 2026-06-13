@@ -94,7 +94,13 @@
             <svg class="info-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>默认账号：<strong>admin</strong> / <strong>admin123</strong></span>
+            <span>测试账号：<strong>testuser</strong> / <strong>test12345</strong></span>
+          </div>
+
+          <div class="debug-tools" v-if="isDevMode">
+            <button @click="clearAuth" type="button" class="debug-button">
+              清除认证信息
+            </button>
           </div>
         </div>
       </div>
@@ -121,21 +127,65 @@ const password = ref('')
 const error = ref('')
 const loading = ref(false)
 
+// 检查是否为开发模式
+const isDevMode = import.meta.env.DEV
+
 const handleLogin = async () => {
   error.value = ''
   loading.value = true
 
   try {
-    const response = await authApi.login(username.value, password.value)
-    authStore.setToken(response.token)
-    // Store user data
-    authStore.setUser({ username: username.value })
-    router.push('/dashboard')
+    // 清除旧的认证信息
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+
+    const response = await authApi.login(username.value, password.value) as any
+
+    console.log('Login response:', response)
+
+    // 检查响应是否包含token
+    if (response.token) {
+      authStore.setToken(response.token)
+      console.log('Token set:', response.token.substring(0, 20) + '...')
+
+      // Store user data
+      if (response.user) {
+        authStore.setUser(response.user)
+        console.log('User set:', response.user)
+      } else {
+        authStore.setUser({ username: username.value, role: 'admin' })
+      }
+
+      // 检查认证状态
+      console.log('Is logged in after setting token:', authStore.isLoggedIn())
+      console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
+
+      console.log('Login successful, redirecting to desktop')
+      await router.push('/desktop')
+      console.log('Navigation completed')
+    } else {
+      throw new Error('登录响应中没有token')
+    }
   } catch (err: any) {
+    console.error('Login error:', err)
     error.value = err.message || '登录失败，请检查用户名和密码'
   } finally {
     loading.value = false
   }
+}
+
+const clearAuth = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  localStorage.removeItem('dev_mode')
+  // 清除所有可能的旧数据
+  Object.keys(localStorage).forEach(key => {
+    if (key.includes('token') || key.includes('user') || key.includes('auth')) {
+      localStorage.removeItem(key)
+    }
+  })
+  console.log('已清除所有认证信息')
+  alert('已清除所有认证信息，请重新登录')
 }
 </script>
 
@@ -582,6 +632,29 @@ const handleLogin = async () => {
   color: white;
   font-weight: 600;
   padding: 0 4px;
+}
+
+/* 调试工具 */
+.debug-tools {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.debug-button {
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #fecaca;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.debug-button:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
 /* 底部信息 */

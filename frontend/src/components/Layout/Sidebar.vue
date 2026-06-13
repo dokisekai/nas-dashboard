@@ -74,7 +74,7 @@ const expanded = ref<Record<string, boolean>>({
 })
 
 const menuItems = [
-  { name: 'Dashboard', label: '仪表盘', path: '/dashboard', icon: HomeIcon },
+  { name: 'Dashboard', label: '仪表盘', path: '/desktop', icon: HomeIcon },
   { name: 'Monitor', label: '系统监控', path: '/monitor', icon: ChartBarIcon, children: true },
   { name: 'Storage', label: '存储管理', path: '/storage', icon: CircleStackIcon },
   { name: 'Services', label: '服务管理', path: '/services', icon: CogIcon },

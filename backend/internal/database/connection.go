@@ -111,6 +111,23 @@ func Migrate() error {
 		&models.OperationLog{},
 		&models.Plugin{},
 		&models.FileSystemAccess{},
+		// 新增模型
+		&models.StoragePool{},
+		&models.PoolDisk{},
+		&models.PoolSnapshot{},
+		&models.RAIDConfig{},
+		&models.PhysicalVolume{},
+		&models.VolumeGroup{},
+		&models.LogicalVolume{},
+		&models.SystemEvent{},
+		&models.AlertRule{},
+		&models.SystemLog{},
+		&models.MonitorHistory{},
+		&models.UserQuota{},
+		&models.GroupQuota{},
+		&models.QuotaReport{},
+		&models.QuotaAlert{},
+		&models.FirewallRule{},
 	)
 
 	if err != nil {

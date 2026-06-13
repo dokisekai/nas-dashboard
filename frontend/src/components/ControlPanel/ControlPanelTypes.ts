@@ -8,6 +8,7 @@ export interface ControlPanelCategory {
   order: number
   settings: ControlPanelSetting[]
   accessLevel: 'user' | 'admin' | 'system'
+  readonly?: boolean
 }
 
 export interface ControlPanelSetting {
@@ -24,6 +25,8 @@ export interface ControlPanelSetting {
   advanced?: boolean
   restartRequired?: boolean
   secure?: boolean
+  readonly?: boolean
+  component?: string
 }
 
 export type SettingType =
@@ -39,6 +42,7 @@ export type SettingType =
   | 'file'
   | 'group'
   | 'custom'
+  | 'readonly'
 
 export interface SettingOption {
   label: string

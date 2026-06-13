@@ -1,24 +1,37 @@
 <template>
-  <div class="cps-setting" :class="{ 'cps-advanced': setting.advanced }">
-    <!-- 设置头部 -->
-    <div class="cps-header">
-      <div class="cps-info">
-        <label class="cps-label">
-          {{ setting.label }}
-          <span v-if="setting.restartRequired" class="cps-badge cps-badge-warning">
-            需要重启
-          </span>
-          <span v-if="setting.advanced" class="cps-badge cps-badge-advanced">
-            高级
-          </span>
-        </label>
-        <p v-if="setting.description" class="cps-description">
-          {{ setting.description }}
-        </p>
-      </div>
+  <div class="cps-setting" :class="{ 'cps-advanced': setting.advanced }" :data-setting-type="setting.type">
 
-      <!-- 设置控件 -->
-      <div class="cps-control">
+    <!-- 自定义组件类型 - 不显示头部 -->
+    <template v-if="setting.type === 'custom'">
+      <component
+        :is="getCustomComponent(setting.component)"
+        :value="localValue"
+        @update="handleCustomUpdate"
+        v-if="getCustomComponent(setting.component)"
+      />
+    </template>
+
+    <!-- 其他类型的设置 -->
+    <template v-else>
+      <!-- 设置头部 -->
+      <div class="cps-header">
+        <div class="cps-info">
+          <label class="cps-label">
+            {{ setting.label }}
+            <span v-if="setting.restartRequired" class="cps-badge cps-badge-warning">
+              需要重启
+            </span>
+            <span v-if="setting.advanced" class="cps-badge cps-badge-advanced">
+              高级
+            </span>
+          </label>
+          <p v-if="setting.description" class="cps-description">
+            {{ setting.description }}
+          </p>
+        </div>
+
+        <!-- 设置控件 -->
+        <div class="cps-control">
         <!-- 布尔类型 -->
         <template v-if="setting.type === 'boolean'">
           <button
@@ -160,6 +173,13 @@
             <span v-if="localValue" class="cps-file-name">{{ localValue }}</span>
           </div>
         </template>
+
+        <!-- 只读类型 -->
+        <template v-else-if="setting.type === 'readonly' || setting.readonly">
+          <div class="cps-readonly">
+            {{ localValue }}
+          </div>
+        </template>
       </div>
     </div>
 
@@ -180,11 +200,12 @@
       <InformationCircleIcon class="w-4 h-4" />
       <span>此设置依赖于: {{ dependencyLabels }}</span>
     </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, defineAsyncComponent } from 'vue'
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -277,6 +298,33 @@ const handleFileChange = (event: Event) => {
     localValue.value = file.name
     handleChange()
   }
+}
+
+const getCustomComponent = (componentName?: string) => {
+  if (!componentName) return null
+
+  // 组件映射 - 使用defineAsyncComponent正确处理异步组件
+  const componentMap: Record<string, any> = {
+    'ServicesListComponent': defineAsyncComponent(() =>
+      import('./ServicesListComponent.vue')
+    ),
+    'NetworkInterfacesComponent': defineAsyncComponent(() =>
+      import('./NetworkInterfacesComponent.vue')
+    ),
+    'WiFiScanComponent': defineAsyncComponent(() =>
+      import('./WiFiScanComponent.vue')
+    ),
+    'NetworkManager': defineAsyncComponent(() =>
+      import('./NetworkManager.vue')
+    )
+  }
+
+  return componentMap[componentName] || null
+}
+
+const handleCustomUpdate = (value: any) => {
+  localValue.value = value
+  handleChange()
 }
 
 const validate = () => {
@@ -551,6 +599,18 @@ validate()
 .cps-file-name {
   font-size: 12px;
   color: #6b7280;
+}
+
+/* 只读样式 */
+.cps-readonly {
+  padding: 8px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 14px;
+  font-family: monospace;
+  min-width: 200px;
 }
 
 /* 按钮样式 */

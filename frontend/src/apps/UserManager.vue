@@ -131,56 +131,7 @@
 
     <!-- Groups Tab -->
     <div v-if="activeTab === 'groups'" class="tab-content">
-      <div class="section-header">
-        <h2>用户组</h2>
-        <button class="action-btn primary" @click="showCreateGroupModal = true">
-          <UserGroupIcon class="w-4 h-4" />
-          创建组
-        </button>
-      </div>
-
-      <div v-if="loadingGroups" class="loading-state">
-        <div class="spinner"></div>
-        <p>加载中...</p>
-      </div>
-
-      <div v-else class="groups-grid">
-        <div
-          v-for="group in groups"
-          :key="group.name"
-          class="group-card"
-        >
-          <div class="group-header">
-            <div class="group-icon">
-              <UserGroupIcon class="w-8 h-8" />
-            </div>
-            <div class="group-info">
-              <h3>{{ group.name }}</h3>
-              <p>{{ group.members.length }} 个成员</p>
-            </div>
-          </div>
-
-          <div class="group-members">
-            <div
-              v-for="member in group.members.slice(0, 5)"
-              :key="member"
-              class="member-chip"
-            >
-              {{ member }}
-            </div>
-            <div v-if="group.members.length > 5" class="member-chip more">
-              +{{ group.members.length - 5 }}
-            </div>
-          </div>
-
-          <div class="group-actions">
-            <button class="action-btn" @click="editGroup(group)">
-              <PencilIcon class="w-4 h-4" />
-              编辑
-            </button>
-          </div>
-        </div>
-      </div>
+      <GroupManager />
     </div>
 
     <!-- User Modal -->
@@ -377,6 +328,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import GroupManager from '../components/User/GroupManager.vue'
 import {
   UserGroupIcon,
   KeyIcon,
@@ -443,35 +395,19 @@ const loadUsers = async () => {
   loading.value = true
   try {
     const response = await userApi.getUsers()
-    users.value = response.users || response  // axios拦截器已返回response.data
+    // 处理可能的响应格式
+    if (response && response.users) {
+      users.value = response.users
+    } else if (Array.isArray(response)) {
+      users.value = response
+    } else {
+      users.value = []
+    }
   } catch (error: any) {
     console.error('Failed to load users:', error)
-    users.value = [
-      {
-        username: 'admin',
-        comment: 'System Administrator',
-        group: 'sudo',
-        shell: '/bin/bash',
-        quota: 'unlimited',
-        status: 'Active'
-      },
-      {
-        username: 'john',
-        comment: 'John Doe',
-        group: 'users',
-        shell: '/bin/bash',
-        quota: '100GB',
-        status: 'Active'
-      },
-      {
-        username: 'jane',
-        comment: 'Jane Smith',
-        group: 'users',
-        shell: '/bin/zsh',
-        quota: '50GB',
-        status: 'Active'
-      }
-    ]
+    // 设置为空数组而不是Mock数据
+    users.value = []
+    // 可以选择显示错误提示给用户
   } finally {
     loading.value = false
   }
@@ -481,25 +417,19 @@ const loadSSHKeys = async () => {
   loadingSSH.value = true
   try {
     const response = await userApi.getSSHKeys()
-    sshKeys.value = response.keys || response  // axios拦截器已返回response.data
+    // 处理可能的响应格式
+    if (response && response.keys) {
+      sshKeys.value = response.keys
+    } else if (Array.isArray(response)) {
+      sshKeys.value = response
+    } else {
+      sshKeys.value = []
+    }
   } catch (error: any) {
     console.error('Failed to load SSH keys:', error)
-    sshKeys.value = [
-      {
-        id: '1',
-        name: 'My Laptop',
-        fingerprint: 'SHA256:abc123...',
-        user: 'admin',
-        addedAt: '2024-01-15'
-      },
-      {
-        id: '2',
-        name: 'Work Computer',
-        fingerprint: 'SHA256:def456...',
-        user: 'john',
-        addedAt: '2024-01-10'
-      }
-    ]
+    // 设置为空数组而不是Mock数据
+    sshKeys.value = []
+    // 可以选择显示错误提示给用户
   } finally {
     loadingSSH.value = false
   }
@@ -512,20 +442,9 @@ const loadGroups = async () => {
     groups.value = response.groups || response  // axios拦截器已返回response.data
   } catch (error: any) {
     console.error('Failed to load groups:', error)
-    groups.value = [
-      {
-        name: 'sudo',
-        members: ['admin']
-      },
-      {
-        name: 'users',
-        members: ['john', 'jane']
-      },
-      {
-        name: 'docker',
-        members: ['admin', 'john']
-      }
-    ]
+    // 设置为空数组而不是Mock数据
+    groups.value = []
+    // 可以选择显示错误提示给用户
   } finally {
     loadingGroups.value = false
   }
@@ -645,11 +564,20 @@ const manageUserQuota = (user: any) => {
   showQuotaModal.value = true
 }
 
-const saveQuota = () => {
-  console.log('Setting quota for user:', quotaUser.value?.username)
-  console.log('Quota settings:', quotaForm.value)
-  alert('配额已设置')
-  closeQuotaModal()
+const saveQuota = async () => {
+  try {
+    // 调用配额API设置用户配额
+    await userApi.setUserQuota(quotaUser.value?.username, {
+      space: quotaForm.value.space,
+      files: quotaForm.value.files
+    })
+    closeQuotaModal()
+    await loadUsers()
+    alert('配额设置成功')
+  } catch (error: any) {
+    console.error('Failed to set quota:', error)
+    alert('配额设置失败: ' + error.message)
+  }
 }
 
 const closeQuotaModal = () => {

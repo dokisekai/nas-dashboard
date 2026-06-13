@@ -260,6 +260,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useControlPanelStore } from '../../stores/controlPanel'
 import ControlPanelSettingComponent from './ControlPanelSettingComponent.vue'
 import {
@@ -280,7 +281,9 @@ import {
   ShieldCheckIcon,
   ServerIcon,
   BellIcon,
-  PaintBrushIcon
+  PaintBrushIcon,
+  BeakerIcon,
+  CircleStackIcon
 } from '@heroicons/vue/24/outline'
 
 // 图标映射 - 现在使用直接导入的图标
@@ -290,7 +293,9 @@ const iconComponents: Record<string, any> = {
   ShieldCheckIcon,
   ServerIcon,
   BellIcon,
-  PaintBrushIcon
+  PaintBrushIcon,
+  BeakerIcon,
+  CircleStackIcon
 }
 
 const controlPanel = useControlPanelStore()
@@ -306,7 +311,7 @@ const exportIncludeMetadata = ref(true)
 const importConfigText = ref('')
 const importError = ref('')
 
-// 计算属性
+// 从 store 中提取响应式状态
 const {
   categories,
   settings,
@@ -314,7 +319,7 @@ const {
   loading,
   saving,
   unsavedChanges
-} = controlPanel
+} = storeToRefs(controlPanel)
 
 // 方法
 const selectCategory = (categoryId: string) => {
@@ -332,7 +337,7 @@ const handleSearch = () => {
 }
 
 const getCategory = (categoryId: string) => {
-  return categories.find(c => c.id === categoryId)
+  return categories.value.find(c => c.id === categoryId)
 }
 
 const getRegularSettings = (categoryId: string) => {
@@ -419,7 +424,7 @@ const getIcon = (iconName: string) => {
 
 // 生命周期
 onMounted(async () => {
-  if (!initialized) {
+  if (!initialized.value) {
     await controlPanel.initialize()
   }
 })
@@ -727,6 +732,17 @@ onMounted(async () => {
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+/* 自定义组件占据全宽 */
+.cp-setting-item:has([data-setting-type="custom"]) {
+  grid-column: 1 / -1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.cp-setting-item:has([data-setting-type="custom"]) .cps-setting {
+  padding: 24px;
 }
 
 .cp-category-actions {

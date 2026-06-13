@@ -1,128 +1,202 @@
-# NAS 系统管理面板
+# NAS Dashboard
 
-一个现代化的 NAS 系统管理面板，提供系统监控、存储管理、服务管理和用户权限管理功能。
-
-## 技术栈
-
-- **后端**: Go + Gin 框架
-- **前端**: Vue 3 + Vite + TailwindCSS
-- **通信**: RESTful API + WebSocket
+企业级 NAS 存储管理系统，提供全面的存储管理、系统监控和用户管理功能，对标 Synology DSM 设计。
 
 ## 功能特性
 
-- 🔍 **系统监控**: CPU、内存、磁盘、网络实时监控
-- 💾 **存储管理**: 磁盘管理、SMB 共享配置
-- ⚙️ **服务管理**: 系统服务控制、Docker 容器管理
-- 👥 **用户管理**: 用户 CRUD、SSH 密钥管理
+### 🗄️ 存储管理
+- **MergerFS 存储池**: 合并多个物理磁盘为大容量存储空间
+- **多种文件系统**: 支持 ext4、xfs、btrfs、NTFS 等
+- **动态磁盘管理**: 在线添加/移除磁盘，自动负载均衡
+- **快照和备份**: 支持存储池快照和自动备份
+- **RAID 管理**: 支持 RAID 0/1/5/6/10 配置
+- **LVM 集成**: 完整的逻辑卷管理支持
+
+### 📊 系统监控
+- **实时资源监控**: CPU、内存、磁盘、网络实时监控
+- **进程管理**: 查看和管理系统进程
+- **服务管理**: 控制系统服务启停状态
+- **温度监控**: 硬件温度实时监控和告警
+- **性能分析**: 系统性能趋势分析
+- **告警系统**: 自定义告警规则和通知
+
+### 💾 磁盘管理
+- **分区编辑**: 图形化磁盘分区管理
+- **S.M.A.R.T. 监控**: 磁盘健康状态监控
+- **性能测试**: 磁盘读写性能基准测试
+- **热插拔支持**: 支持热插拔磁盘操作
+- **磁盘阵列**: RAID 阵列创建和管理
+
+### 👥 用户和权限
+- **用户管理**: 用户账户创建和管理
+- **组管理**: 用户组管理和权限控制
+- **配额管理**: 用户和组磁盘配额设置
+- **权限控制**: 细粒度权限管理
+- **访问控制**: 基于角色的访问控制
+
+### 🔐 安全特性
+- **JWT 认证**: 安全的用户认证
+- **权限管理**: 基于角色的权限控制
+- **审计日志**: 完整的操作审计记录
+- **数据加密**: 支持数据加密存储
+- **防火墙集成**: 防火墙规则管理
+
+## 技术架构
+
+### 后端技术
+- **语言**: Go 1.19+
+- **框架**: Gin Web Framework
+- **数据库**: PostgreSQL 14+
+- **ORM**: GORM
+- **监控**: gopsutil
+- **通信**: gorilla/websocket
+
+### 前端技术
+- **框架**: Vue 3
+- **语言**: TypeScript
+- **构建**: Vite
+- **状态管理**: Pinia
+- **UI 组件**: Element Plus
+- **图表**: Chart.js
 
 ## 快速开始
 
-### 环境要求
+### 系统要求
 
-- Go 1.22+
-- Node.js 20+
-- Docker (可选，用于容器化部署)
+- **操作系统**: Linux (Ubuntu 20.04+, Debian 11+, CentOS 8+)
+- **内存**: 4GB RAM (推荐 8GB+)
+- **存储**: 至少 20GB 可用空间
+- **网络**: 千兆以太网接口
 
-### 本地开发
+### 安装部署
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd nas-dashboard
-   ```
+```bash
+# 克隆仓库
+git clone https://github.com/yourusername/nas-dashboard.git
+cd nas-dashboard
 
-2. **启动后端**
-   ```bash
-   cd backend
-   go mod download
-   go run cmd/server/main.go
-   ```
-   后端将在 http://localhost:8080 运行
+# 启动后端
+cd backend
+go mod download
+go run cmd/server/main.go
 
-3. **启动前端**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   前端将在 http://localhost:5173 运行
-
-4. **登录**
-   - 默认用户名: `admin`
-   - 默认密码: `admin123`
+# 启动前端 (新终端)
+cd frontend
+npm install
+npm run dev
+```
 
 ### Docker 部署
 
 ```bash
+# 使用 Docker Compose
 docker-compose up -d
 ```
 
-访问 http://localhost:3000
+详细部署说明请查看 [部署指南](DEPLOYMENT.md)
+
+### 快速配置
+
+1. 登录系统 (默认账户: admin/admin)
+2. 创建存储池
+3. 添加用户
+4. 设置配额
+5. 配置共享
+
+详细使用说明请查看 [快速开始指南](QUICKSTART.md)
+
+## 文档
+
+- [部署指南](DEPLOYMENT.md) - 系统部署和配置
+- [用户手册](USER_MANUAL.md) - 完整功能使用说明
+- [快速开始](QUICKSTART.md) - 5分钟快速上手
+- [API 文档](API_DOCUMENTATION.md) - REST API 接口文档
 
 ## 项目结构
 
 ```
 nas-dashboard/
-├── backend/                 # Go 后端
-│   ├── cmd/server/         # 入口文件
-│   ├── internal/
-│   │   ├── api/            # API 处理器
-│   │   ├── middleware/     # 中间件
-│   │   └── models/         # 数据模型
-│   └── pkg/
-│       ├── system/         # 系统信息获取
-│       └── jwt/            # JWT 工具
-├── frontend/               # Vue 前端
+├── backend/                 # 后端 Go 代码
+│   ├── cmd/                # 命令行工具
+│   ├── internal/           # 内部包
+│   │   ├── api/           # API 处理器
+│   │   ├── models/        # 数据模型
+│   │   └── middleware/    # 中间件
+│   ├── pkg/               # 公共包
+│   │   ├── mergerfs/      # MergerFS 集成
+│   │   └── system/        # 系统监控
+│   └── migrations/        # 数据库迁移
+├── frontend/              # 前端 Vue 代码
 │   ├── src/
-│   │   ├── api/           # API 调用
-│   │   ├── components/    # 组件
-│   │   ├── views/         # 页面
-│   │   ├── router/        # 路由
-│   │   └── stores/        # 状态管理
-└── docker-compose.yml     # 容器编排
+│   │   ├── api/          # API 客户端
+│   │   ├── apps/         # 主要应用组件
+│   │   ├── components/   # 通用组件
+│   │   ├── stores/       # Pinia 状态管理
+│   │   └── types/        # TypeScript 类型
+│   └── public/
+└── docs/                  # 项目文档
 ```
 
-## API 端点
+## 核心功能
 
-### 认证
-- `POST /api/auth/login` - 登录
+### 存储池管理
 
-### 监控 (需要认证)
-- `GET /api/monitor/cpu` - CPU 信息
-- `GET /api/monitor/memory` - 内存信息
-- `GET /api/monitor/disk` - 磁盘信息
-- `GET /api/monitor/network` - 网络信息
-- `WS /ws/monitor` - 实时监控数据
+```typescript
+// 创建存储池
+const pool = await storagePoolAPI.create({
+  name: 'main-pool',
+  type: 'mergerfs',
+  disks: ['/dev/sdb', '/dev/sdc'],
+  mountPoint: '/mnt/main-pool',
+  config: {
+    categories: {
+      'RW': 'min space most',
+      'RO': 'most free space'
+    }
+  }
+})
+```
 
-### 存储 (需要认证)
-- `GET /api/storage/disks` - 磁盘列表
-- `POST /api/storage/mount` - 挂载磁盘
-- `POST /api/storage/umount` - 卸载磁盘
-- `GET /api/storage/smb` - SMB 共享列表
-- `POST /api/storage/smb` - 创建 SMB 共享
+### 系统监控
 
-### 服务 (需要认证)
-- `GET /api/services` - 服务列表
-- `POST /api/services/:name/start` - 启动服务
-- `POST /api/services/:name/stop` - 停止服务
-- `POST /api/services/:name/restart` - 重启服务
-- `GET /api/docker/containers` - Docker 容器列表
-- `POST /api/docker/containers/:id/start` - 启动容器
-- `POST /api/docker/containers/:id/stop` - 停止容器
+```typescript
+// 获取系统状态
+const status = await monitorAPI.getOverview()
+console.log('CPU 使用率:', status.cpu.usagePercent)
+console.log('内存使用:', status.memory.usagePercent)
 
-### 用户 (需要认证)
-- `GET /api/users` - 用户列表
-- `POST /api/users` - 创建用户
-- `PUT /api/users/:id` - 更新用户
-- `DELETE /api/users/:id` - 删除用户
-- `GET /api/users/ssh-keys` - SSH 密钥列表
+// 监听实时更新
+monitorAPI.on('system_status', (data) => {
+  console.log('实时状态更新:', data)
+})
+```
 
-## 注意事项
+### 配额管理
 
-1. **安全**: 生产环境请修改 JWT 密钥
-2. **权限**: 某些操作需要 root 权限
-3. **Docker**: 确保 Docker 服务正在运行以管理容器
+```typescript
+// 设置用户配额
+await quotaAPI.setUserQuota('john', {
+  path: '/home/john',
+  softLimit: 10 * 1024 * 1024 * 1024,  // 10GB
+  hardLimit: 15 * 1024 * 1024 * 1024,  // 15GB
+  gracePeriod: 7
+})
+```
 
 ## 许可证
 
-MIT License
+本项目采用 MIT 许可证 - 详见 LICENSE 文件
+
+## 联系方式
+
+- **项目主页**: https://github.com/yourusername/nas-dashboard
+- **问题反馈**: https://github.com/yourusername/nas-dashboard/issues
+- **文档**: https://docs.nas-dashboard.com
+
+## 致谢
+
+感谢所有贡献者和开源项目的支持！
+
+---
+
+**注意**: 本项目正在积极开发中，功能可能随时变化。建议在生产环境使用前进行充分测试。

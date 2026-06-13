@@ -71,6 +71,9 @@ export const userApi = {
   getCurrentUser: () => api.get('/api/users/me'),
   changePassword: (oldPassword: string, newPassword: string) =>
     api.post('/api/users/me/password', { oldPassword, newPassword }),
+  getUserQuota: (username: string) => api.get(`/api/users/${username}/quota`),
+  setUserQuota: (username: string, quota: { space?: string; files?: string }) =>
+    api.put(`/api/users/${username}/quota`, quota),
 }
 
 // ==================== 系统组 API ====================

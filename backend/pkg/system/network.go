@@ -168,11 +168,22 @@ func extractAddresses(iface psutilnet.InterfaceStat) []string {
 	addresses := make([]string, 0, len(iface.Addrs))
 	for _, addr := range iface.Addrs {
 		addrStr := addr.String()
-		// 去除 CIDR 后缀，保留纯净 IP
+		// 清理地址字符串，移除CIDR后缀
 		if idx := strings.Index(addrStr, "/"); idx != -1 {
-			addresses = append(addresses, addrStr[:idx])
+			cleanAddr := strings.TrimSpace(addrStr[:idx])
+			// 移除可能的引号和JSON转义字符
+			cleanAddr = strings.ReplaceAll(cleanAddr, "{\"addr\":\"", "")
+			cleanAddr = strings.ReplaceAll(cleanAddr, "\"", "")
+			if cleanAddr != "" && cleanAddr != "<nil>" {
+				addresses = append(addresses, cleanAddr)
+			}
 		} else {
-			addresses = append(addresses, addrStr)
+			// 如果没有CIDR后缀，直接清理使用
+			cleanAddr := strings.ReplaceAll(addrStr, "{\"addr\":\"", "")
+			cleanAddr = strings.ReplaceAll(cleanAddr, "\"", "")
+			if cleanAddr != "" && cleanAddr != "<nil>" {
+				addresses = append(addresses, cleanAddr)
+			}
 		}
 	}
 	return addresses

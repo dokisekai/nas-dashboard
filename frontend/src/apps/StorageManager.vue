@@ -798,12 +798,8 @@ const loadFiles = async () => {
     }))
   } catch (error: any) {
     console.error('Failed to load files:', error)
-    // Fallback to mock data if API fails
-    currentFiles.value = [
-      { name: 'Documents', isDirectory: true, size: 0, permissions: 'drwxr-xr-x', modified: '2024-01-15' },
-      { name: 'Downloads', isDirectory: true, size: 0, permissions: 'drwxr-xr-x', modified: '2024-01-14' },
-      { name: 'Media', isDirectory: true, size: 0, permissions: 'drwxr-xr-x', modified: '2024-01-13' }
-    ]
+    showError('无法加载文件列表，请检查网络连接或路径权限')
+    currentFiles.value = []
   } finally {
     loadingFiles.value = false
   }

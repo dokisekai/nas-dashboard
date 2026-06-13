@@ -24,7 +24,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
     return JSON.stringify(settings.value) !== JSON.stringify(originalSettings.value)
   })
 
-  // 默认分类配置
+  // 默认分类配置 - 合并系统设置功能
   const defaultCategories: ControlPanelCategory[] = [
     {
       id: 'general',
@@ -108,71 +108,14 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       accessLevel: 'admin',
       settings: [
         {
-          id: 'network.hostname',
-          type: 'string',
+          id: 'network.manager',
+          type: 'custom',
           category: 'network',
-          label: '主机名',
-          description: '网络中的主机名称',
-          defaultValue: 'nas',
-          currentValue: 'nas'
-        },
-        {
-          id: 'network.dns',
-          type: 'group',
-          category: 'network',
-          label: 'DNS设置',
-          description: '域名服务器配置',
+          label: '网络管理',
+          description: '管理以太网和Wi-Fi连接',
           defaultValue: {},
-          currentValue: {}
-        },
-        {
-          id: 'network.dns.primary',
-          type: 'string',
-          category: 'network',
-          label: '首选DNS',
-          description: '首选域名服务器',
-          defaultValue: '8.8.8.8',
-          currentValue: '8.8.8.8',
-          dependencies: ['network.dns']
-        },
-        {
-          id: 'network.dns.secondary',
-          type: 'string',
-          category: 'network',
-          label: '备用DNS',
-          description: '备用域名服务器',
-          defaultValue: '8.8.4.4',
-          currentValue: '8.8.4.4',
-          dependencies: ['network.dns']
-        },
-        {
-          id: 'network.proxy.enabled',
-          type: 'boolean',
-          category: 'network',
-          label: '启用代理',
-          description: '使用代理服务器访问网络',
-          defaultValue: false,
-          currentValue: false
-        },
-        {
-          id: 'network.proxy.host',
-          type: 'string',
-          category: 'network',
-          label: '代理服务器',
-          description: '代理服务器地址',
-          defaultValue: '',
-          currentValue: '',
-          dependencies: ['network.proxy.enabled']
-        },
-        {
-          id: 'network.proxy.port',
-          type: 'number',
-          category: 'network',
-          label: '代理端口',
-          description: '代理服务器端口',
-          defaultValue: 8080,
-          currentValue: 8080,
-          dependencies: ['network.proxy.enabled']
+          currentValue: {},
+          component: 'NetworkManager'
         }
       ]
     },
@@ -401,6 +344,300 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
           ]
         }
       ]
+    },
+    {
+      id: 'system-info',
+      name: '系统信息',
+      icon: 'ServerIcon',
+      description: '查看系统硬件和运行信息',
+      order: 7,
+      accessLevel: 'user',
+      readonly: true,
+      settings: [
+        {
+          id: 'system.hostname.info',
+          type: 'string',
+          category: 'system-info',
+          label: '主机名',
+          description: '系统主机名',
+          defaultValue: 'nas-server',
+          currentValue: 'nas-server',
+          readonly: true
+        },
+        {
+          id: 'system.cpu',
+          type: 'string',
+          category: 'system-info',
+          label: 'CPU',
+          description: '处理器型号和核心数',
+          defaultValue: 'Intel Core i7-8700 (8 cores)',
+          currentValue: 'Intel Core i7-8700 (8 cores)',
+          readonly: true
+        },
+        {
+          id: 'system.memory',
+          type: 'string',
+          category: 'system-info',
+          label: '内存',
+          description: '系统内存容量和使用情况',
+          defaultValue: '16GB total, 8GB used',
+          currentValue: '16GB total, 8GB used',
+          readonly: true
+        },
+        {
+          id: 'system.storage',
+          type: 'string',
+          category: 'system-info',
+          label: '存储',
+          description: '存储容量和使用情况',
+          defaultValue: '2TB total, 1.2TB used',
+          currentValue: '2TB total, 1.2TB used',
+          readonly: true
+        },
+        {
+          id: 'system.os',
+          type: 'string',
+          category: 'system-info',
+          label: '操作系统',
+          description: '操作系统版本和发行版',
+          defaultValue: 'Ubuntu 22.04 LTS',
+          currentValue: 'Ubuntu 22.04 LTS',
+          readonly: true
+        },
+        {
+          id: 'system.uptime',
+          type: 'string',
+          category: 'system-info',
+          label: '运行时间',
+          description: '系统持续运行时间',
+          defaultValue: '15 days, 6 hours',
+          currentValue: '15 days, 6 hours',
+          readonly: true
+        },
+        {
+          id: 'system.kernel',
+          type: 'string',
+          category: 'system-info',
+          label: '内核版本',
+          description: 'Linux内核版本',
+          defaultValue: '5.15.0-72-generic',
+          currentValue: '5.15.0-72-generic',
+          readonly: true,
+          advanced: true
+        },
+        {
+          id: 'system.architecture',
+          type: 'string',
+          category: 'system-info',
+          label: '系统架构',
+          description: '处理器架构类型',
+          defaultValue: 'x86_64',
+          currentValue: 'x86_64',
+          readonly: true,
+          advanced: true
+        }
+      ]
+    },
+    {
+      id: 'services',
+      name: '服务管理',
+      icon: 'CogIcon',
+      description: '管理系统服务和守护进程',
+      order: 8,
+      accessLevel: 'admin',
+      settings: [
+        {
+          id: 'services.list',
+          type: 'custom',
+          category: 'services',
+          label: '系统服务',
+          description: '管理系统启停的服务',
+          defaultValue: [],
+          currentValue: [],
+          component: 'ServicesListComponent'
+        },
+        {
+          id: 'services.autoStart',
+          type: 'boolean',
+          category: 'services',
+          label: '自动启动关键服务',
+          description: '系统启动时自动启动关键服务',
+          defaultValue: true,
+          currentValue: true
+        },
+        {
+          id: 'services.monitoring',
+          type: 'boolean',
+          category: 'services',
+          label: '服务监控',
+          description: '监控服务状态并自动重启失败的服务',
+          defaultValue: true,
+          currentValue: true,
+          advanced: true
+        }
+      ]
+    },
+    {
+      id: 'updates',
+      name: '更新管理',
+      icon: 'BeakerIcon',
+      description: '系统更新和版本管理',
+      order: 9,
+      accessLevel: 'admin',
+      settings: [
+        {
+          id: 'updates.currentVersion',
+          type: 'string',
+          category: 'updates',
+          label: '当前版本',
+          description: '当前运行的系统版本',
+          defaultValue: '1.0.0',
+          currentValue: '1.0.0',
+          readonly: true
+        },
+        {
+          id: 'updates.autoCheck',
+          type: 'boolean',
+          category: 'updates',
+          label: '自动检查更新',
+          description: '定期自动检查系统更新',
+          defaultValue: true,
+          currentValue: true
+        },
+        {
+          id: 'updates.autoInstall',
+          type: 'boolean',
+          category: 'updates',
+          label: '自动安装安全更新',
+          description: '自动安装安全相关的重要更新',
+          defaultValue: true,
+          currentValue: true,
+          advanced: true
+        },
+        {
+          id: 'updates.frequency',
+          type: 'select',
+          category: 'updates',
+          label: '检查频率',
+          description: '自动检查更新的频率',
+          defaultValue: 'weekly',
+          currentValue: 'weekly',
+          options: [
+            { label: '每天', value: 'daily' },
+            { label: '每周', value: 'weekly' },
+            { label: '每月', value: 'monthly' }
+          ],
+          dependencies: ['updates.autoCheck']
+        },
+        {
+          id: 'updates.notify',
+          type: 'boolean',
+          category: 'updates',
+          label: '更新通知',
+          description: '有可用更新时发送通知',
+          defaultValue: true,
+          currentValue: true
+        },
+        {
+          id: 'updates.maintenanceWindow',
+          type: 'string',
+          category: 'updates',
+          label: '维护时间窗口',
+          description: '自动安装更新的时间窗口',
+          defaultValue: '03:00-05:00',
+          currentValue: '03:00-05:00',
+          dependencies: ['updates.autoInstall'],
+          advanced: true
+        }
+      ]
+    },
+    {
+      id: 'backup',
+      name: '备份管理',
+      icon: 'CircleStackIcon',
+      description: '系统备份和恢复',
+      order: 10,
+      accessLevel: 'admin',
+      settings: [
+        {
+          id: 'backup.enabled',
+          type: 'boolean',
+          category: 'backup',
+          label: '启用自动备份',
+          description: '启用系统配置和数据自动备份',
+          defaultValue: true,
+          currentValue: true
+        },
+        {
+          id: 'backup.schedule',
+          type: 'select',
+          category: 'backup',
+          label: '备份频率',
+          description: '自动备份的执行频率',
+          defaultValue: 'daily',
+          currentValue: 'daily',
+          options: [
+            { label: '每小时', value: 'hourly' },
+            { label: '每天', value: 'daily' },
+            { label: '每周', value: 'weekly' },
+            { label: '每月', value: 'monthly' }
+          ],
+          dependencies: ['backup.enabled']
+        },
+        {
+          id: 'backup.time',
+          type: 'string',
+          category: 'backup',
+          label: '备份时间',
+          description: '执行自动备份的具体时间',
+          defaultValue: '02:00',
+          currentValue: '02:00',
+          dependencies: ['backup.enabled']
+        },
+        {
+          id: 'backup.location',
+          type: 'string',
+          category: 'backup',
+          label: '备份位置',
+          description: '备份文件存储位置',
+          defaultValue: '/var/backups/nas',
+          currentValue: '/var/backups/nas',
+          dependencies: ['backup.enabled']
+        },
+        {
+          id: 'backup.retention',
+          type: 'number',
+          category: 'backup',
+          label: '保留天数',
+          description: '备份文件保留天数',
+          defaultValue: 7,
+          currentValue: 7,
+          dependencies: ['backup.enabled'],
+          advanced: true
+        },
+        {
+          id: 'backup.compression',
+          type: 'boolean',
+          category: 'backup',
+          label: '压缩备份',
+          description: '压缩备份文件以节省空间',
+          defaultValue: true,
+          currentValue: true,
+          dependencies: ['backup.enabled'],
+          advanced: true
+        },
+        {
+          id: 'backup.encrypt',
+          type: 'boolean',
+          category: 'backup',
+          label: '加密备份',
+          description: '使用加密保护备份文件',
+          defaultValue: false,
+          currentValue: false,
+          dependencies: ['backup.enabled'],
+          advanced: true
+        }
+      ]
     }
   ]
 
@@ -408,11 +645,11 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
   const initialize = async () => {
     loading.value = true
     try {
-      // 模拟API调用加载配置
-      await new Promise(resolve => setTimeout(resolve, 500))
-
       // 加载分类
       categories.value = defaultCategories
+
+      // 从真实API获取系统信息
+      await loadSystemInfo()
 
       // 初始化设置值
       const loadedSettings: Record<string, any> = {}
@@ -432,6 +669,126 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  // 从API加载系统信息
+  const loadSystemInfo = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        console.log('No token found, skipping system info load')
+        return
+      }
+
+      console.log('Loading system info with token')
+
+      // 导入axios实例
+      const { default: axios } = await import('axios')
+      const api = axios.create({
+        baseURL: '',
+        timeout: 10000,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      // 获取网络信息
+      try {
+        const networkData = await api.get('/api/monitor/network')
+        console.log('Network data loaded:', networkData)
+        updateNetworkMetrics(networkData)
+      } catch (err) {
+        console.error('Network API error:', err)
+      }
+
+      // 获取CPU信息
+      try {
+        const cpuData = await api.get('/api/monitor/cpu')
+        updateSystemInfo('system.cpu', `${cpuData.model || 'Unknown'} (${cpuData.cores || 0} cores)`)
+      } catch (err) {
+        console.error('CPU API error:', err)
+      }
+
+      // 获取内存信息
+      try {
+        const memData = await api.get('/api/monitor/memory')
+        const totalGB = (memData.total / (1024 ** 3)).toFixed(0)
+        const usedGB = (memData.used / (1024 ** 3)).toFixed(1)
+        updateSystemInfo('system.memory', `${totalGB}GB total, ${usedGB}GB used`)
+      } catch (err) {
+        console.error('Memory API error:', err)
+      }
+
+    } catch (error) {
+      console.error('Failed to load system info:', error)
+    }
+  }
+
+  // 更新网络统计信息
+  const updateNetworkMetrics = (networkData: any) => {
+    if (!networkData || !networkData.interfaces) {
+      console.log('Invalid network data')
+      return
+    }
+
+    const interfaces = networkData.interfaces
+    let totalUploadSpeed = 0
+    let totalDownloadSpeed = 0
+
+    interfaces.forEach((iface: any) => {
+      if (iface.up && !isVirtualInterface(iface.name)) {
+        totalUploadSpeed += iface.sentSpeed || 0
+        totalDownloadSpeed += iface.recvSpeed || 0
+      }
+    })
+
+    const uploadSpeedStr = formatSpeed(totalUploadSpeed)
+    const downloadSpeedStr = formatSpeed(totalDownloadSpeed)
+
+    console.log('Network metrics updated:', uploadSpeedStr, downloadSpeedStr)
+
+    // 更新网络统计设置
+    const networkMetricSetting = getSetting('network.metrics')
+    if (networkMetricSetting) {
+      networkMetricSetting.currentValue = `↑ ${uploadSpeedStr} ↓ ${downloadSpeedStr}`
+      settings.value['network.metrics'] = `↑ ${uploadSpeedStr} ↓ ${downloadSpeedStr}`
+    }
+  }
+
+  // 更新系统信息
+  const updateSystemInfo = (settingId: string, value: string) => {
+    const setting = getSetting(settingId)
+    if (setting) {
+      setting.currentValue = value
+      settings.value[settingId] = value
+      console.log('System info updated:', settingId, value)
+    }
+  }
+
+  // 判断是否为虚拟接口
+  const isVirtualInterface = (name: string): boolean => {
+    return name.startsWith('veth') ||
+           name.startsWith('virbr') ||
+           name.startsWith('docker') ||
+           name.startsWith('br-') ||
+           name.startsWith('lo')
+  }
+
+  // 格式化速度
+  const formatSpeed = (bytesPerSecond: number): string => {
+    if (!bytesPerSecond || bytesPerSecond === 0) return '0 B/s'
+
+    const units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+    let value = bytesPerSecond
+    let unitIndex = 0
+
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024
+      unitIndex++
+    }
+
+    return `${value.toFixed(1)} ${units[unitIndex]}`
   }
 
   // 更新设置

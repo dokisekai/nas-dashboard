@@ -2,19 +2,25 @@ package main
 
 import (
 	"log"
+
 	"nas-dashboard/internal/api"
 	"nas-dashboard/internal/database"
 	"nas-dashboard/internal/middleware"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func main() {
 	// 初始化数据库（非阻塞，失败时继续运行）
-	if err := initDatabase(); err != nil {
+	db, err := initDatabase()
+	if err != nil {
 		log.Printf("Warning: Failed to initialize database: %v", err)
 		log.Println("Server will continue without database support")
 	}
+
+	// 初始化API处理器
+	api.InitAPI(db)
 
 	// 创建 Gin 路由
 	r := gin.Default()
@@ -38,11 +44,51 @@ func main() {
 		monitor := apiGroup.Group("/monitor")
 		monitor.Use(middleware.Auth())
 		{
+					monitorAPI := api.GetMonitorAPI()
 			monitor.GET("/cpu", api.GetCPU)
 			monitor.GET("/memory", api.GetMemory)
 			monitor.GET("/disk", api.GetDisk)
 			monitor.GET("/network", api.GetNetwork)
+
+			// 扩展监控功能
+			monitor.GET("/processes", monitorAPI.GetProcesses)
+			monitor.GET("/processes/:pid", monitorAPI.GetProcess)
+			monitor.DELETE("/processes/:pid", monitorAPI.KillProcess)
+			monitor.GET("/services", monitorAPI.GetServices)
+			monitor.GET("/services/:name", monitorAPI.GetService)
+			monitor.POST("/services/:name/start", monitorAPI.StartService)
+			monitor.POST("/services/:name/stop", monitorAPI.StopService)
+			monitor.POST("/services/:name/restart", monitorAPI.RestartService)
+			monitor.GET("/temperature", monitorAPI.GetTemperature)
+			monitor.GET("/events", monitorAPI.GetEvents)
+			monitor.GET("/logs", monitorAPI.GetLogs)
+			monitor.POST("/logs/clear", monitorAPI.ClearLogs)
+			monitor.GET("/alerts", monitorAPI.GetAlerts)
+			monitor.POST("/alerts", monitorAPI.CreateAlert)
+			monitor.PUT("/alerts/:id", monitorAPI.UpdateAlert)
+			monitor.DELETE("/alerts/:id", monitorAPI.DeleteAlert)
 		}
+
+			// 网络管理路由
+			network := apiGroup.Group("/network")
+			network.Use(middleware.Auth())
+			{
+				// 网络接口管理
+				network.GET("/interfaces", api.GetNetworkInterfaces)
+				network.GET("/interfaces/ethernet", api.GetEthernetInterfaces)
+				network.GET("/interfaces/wifi", api.GetWiFiInterfaces)
+				network.POST("/interfaces/:interface/:action", api.ControlInterface)
+
+				// Wi-Fi管理
+				network.GET("/wifi/scan", api.ScanWiFiNetworks)
+				network.POST("/wifi/connect", api.ConnectToWiFi)
+				network.POST("/wifi/disconnect", api.DisconnectWiFi)
+				network.GET("/wifi/current", api.GetCurrentWiFiConnection)
+
+				// DNS管理
+				network.GET("/dns", api.GetDNSConfig)
+				network.POST("/dns", api.SetDNSConfig)
+			}
 
 		// 存储管理路由
 		storage := apiGroup.Group("/storage")
@@ -56,6 +102,33 @@ func main() {
 			storage.PUT("/smb/:name", api.UpdateSMBShare)
 			storage.DELETE("/smb/:name", api.DeleteSMBShare)
 			storage.GET("/usage", api.GetDiskUsage) // 获取指定路径的磁盘使用情况
+
+			// 存储池管理路由
+			pools := storage.Group("/pools")
+					storagePoolAPI := api.GetStoragePoolAPI()
+			{
+				pools.GET("", storagePoolAPI.GetPools)
+				pools.POST("", storagePoolAPI.CreatePool)
+				pools.GET("/:name", storagePoolAPI.GetPool)
+				pools.PUT("/:name", storagePoolAPI.UpdatePool)
+				pools.DELETE("/:name", storagePoolAPI.DeletePool)
+				pools.POST("/:name/disks", storagePoolAPI.AddDisk)
+				pools.DELETE("/:name/disks/:device", storagePoolAPI.RemoveDisk)
+				pools.GET("/:name/branches", storagePoolAPI.GetPoolBranches)
+				pools.POST("/:name/mount", storagePoolAPI.MountPool)
+				pools.POST("/:name/umount", storagePoolAPI.UmountPool)
+				pools.POST("/:name/balance", storagePoolAPI.BalancePool)
+				pools.POST("/:name/scan", storagePoolAPI.ScanPool)
+			}
+
+			// 配额管理路由
+			quota := storage.Group("/quota")
+					quotaAPI := api.GetQuotaAPI()
+			{
+				quota.GET("/users", quotaAPI.GetAllQuotas)
+				quota.GET("/groups", quotaAPI.GetAllGroupQuotas)
+				quota.GET("/report", quotaAPI.GetQuotaReport)
+			}
 		}
 
 		// 服务管理路由
@@ -105,7 +178,10 @@ func main() {
 			// 当前用户相关
 			users.GET("/me", api.GetCurrentUser)
 			users.POST("/me/password", api.ChangeCurrentUserPassword)
-			users.GET("/:username/quota", api.GetUserDiskQuota)
+
+			// 用户配额管理
+			users.GET("/:username/quota", api.GetQuotaAPI().GetUserQuota)
+			users.PUT("/:username/quota", api.GetQuotaAPI().SetUserQuota)
 		}
 
 		// 系统组路由
@@ -158,6 +234,17 @@ func main() {
 			configs.DELETE("/:key", api.DeleteConfig)
 			configs.POST("/bulk", api.BulkSetConfig)
 		}
+
+		// 防火墙路由
+		firewall := apiGroup.Group("/security/firewall")
+		firewall.Use(middleware.Auth())
+		{
+			firewall.GET("/rules", api.GetFirewallRules)
+			firewall.POST("/rules", api.CreateFirewallRule)
+			firewall.PUT("/rules/:id", api.UpdateFirewallRule)
+			firewall.DELETE("/rules/:id", api.DeleteFirewallRule)
+			firewall.POST("/apply", api.ApplyFirewallRules)
+		}
 	}
 
 	// WebSocket 路由
@@ -171,7 +258,7 @@ func main() {
 }
 
 // initDatabase 初始化数据库
-func initDatabase() error {
+func initDatabase() (*gorm.DB, error) {
 	log.Println("Initializing database...")
 
 	// 加载数据库配置
@@ -179,14 +266,17 @@ func initDatabase() error {
 
 	// 连接数据库
 	if err := database.Connect(cfg); err != nil {
-		return err
+		return nil, err
 	}
+
+	// 获取数据库连接
+	db := database.GetDB()
 
 	// 运行迁移
 	if err := database.Migrate(); err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Println("Database initialized successfully")
-	return nil
+	return db, nil
 }

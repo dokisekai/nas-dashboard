@@ -35,6 +35,14 @@ export const useNotificationStore = defineStore('notification', () => {
     isCenterOpen.value = false
   }
 
+  const openCenter = () => {
+    isCenterOpen.value = true
+  }
+
+  const closeCenter = () => {
+    isCenterOpen.value = false
+  }
+
   const toggleCenter = () => {
     isCenterOpen.value = !isCenterOpen.value
   }
@@ -59,10 +67,16 @@ export const useNotificationStore = defineStore('notification', () => {
   return {
     notifications,
     unreadCount,
+    isCenterOpen,
     add,
     markAsRead,
     markAllAsRead,
     remove,
-    clearAll
+    clearAll,
+    showCenter,
+    hideCenter,
+    openCenter,
+    closeCenter,
+    toggleCenter
   }
 })

@@ -111,7 +111,8 @@ const windowIcon = computed(() => {
     'settings': CogIcon,
     'user-manager': UserGroupIcon,
     'file-manager': FolderIcon,
-    'app-center': ShoppingBagIcon
+    'app-center': ShoppingBagIcon,
+    'control-panel': CogIcon
   }
   return icons[props.window.appId] || ServerIcon
 })

@@ -416,13 +416,15 @@ func GetSSHKeys(c *gin.Context) {
 	}
 
 	if targetUser == "" {
-		c.JSON(400, gin.H{"error": "User parameter is required"})
+		// 如果无法确定用户，返回空列表而不是错误
+		c.JSON(200, gin.H{"keys": []SSHKey{}, "user": "", "message": "Unable to determine user"})
 		return
 	}
 
 	keys, err := getSSHKeys(targetUser)
 	if err != nil {
-		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get SSH keys: %v", err)})
+		// 即使出错，也返回空列表而不是500错误
+		c.JSON(200, gin.H{"keys": []SSHKey{}, "user": targetUser, "message": "No SSH keys found"})
 		return
 	}
 
@@ -434,14 +436,15 @@ func getSSHKeys(username string) ([]SSHKey, error) {
 	// 查找用户主目录
 	systemUser, err := user.Lookup(username)
 	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
+		// 用户不存在，返回空列表而不是错误
+		return []SSHKey{}, nil
 	}
 
 	// 读取 authorized_keys 文件
 	authorizedKeysPath := filepath.Join(systemUser.HomeDir, ".ssh", "authorized_keys")
 	data, err := os.ReadFile(authorizedKeysPath)
 	if err != nil {
-		// 文件不存在返回空列表
+		// 文件不存在或无权限访问，返回空列表
 		return []SSHKey{}, nil
 	}
 

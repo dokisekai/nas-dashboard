@@ -287,7 +287,7 @@
 
     <!-- 通知组件 -->
     <NotificationToast />
-    <NotificationCenter />
+    <NotificationCenter :isOpen="isNotificationCenterOpen" @close="closeNotificationCenter" />
   </div>
 </template>
 
@@ -303,16 +303,36 @@ import QuickShortcutsWidget from '../../widgets/QuickShortcutsWidget.vue'
 import NotificationToast from '../NotificationSystem/NotificationToast.vue'
 import NotificationCenter from '../NotificationSystem/NotificationCenter.vue'
 import { useNotificationStore } from '../../stores/notification'
+import { useAuthStore } from '../../stores/auth'
 import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/outline'
 
-// ... (existing interfaces)
+interface Window {
+  id: string
+  appId: string
+  title: string
+  position: { x: number; y: number }
+  size: { width: number; height: number }
+  minimized: boolean
+  maximized: boolean
+  focused: boolean
+  zIndex: number
+}
+
+const windows = ref<Window[]>([])
+const nextZIndex = ref(1000)
+const windowMenuVisible = ref(false)
 
 const notificationStore = useNotificationStore()
 const notificationUnreadCount = computed(() => notificationStore.unreadCount)
 const isNotificationCenterOpen = computed(() => notificationStore.isCenterOpen)
 
-const closeNotificationCenter = () => {
-  notificationStore.hideCenter()
+const isSearchOpen = ref(false)
+
+const handleGlobalKeydown = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    isSearchOpen.value = true
+  }
 }
 
 // 认证和用户信息
@@ -358,6 +378,16 @@ const handleClickOutside = (event: MouseEvent) => {
     userMenuVisible.value = false
     document.removeEventListener('click', handleClickOutside)
   }
+}
+
+// 显示通知中心
+const showNotificationCenter = () => {
+  notificationStore.openCenter()
+}
+
+// 关闭通知中心
+const closeNotificationCenter = () => {
+  notificationStore.closeCenter()
 }
 
 // 显示电源菜单

@@ -43,13 +43,44 @@ api.interceptors.response.use(
     if (DEBUG) {
       console.error('[API Response Error]', error.response?.data || error.message)
     }
-    if (error.response?.status === 401) {
-      // Token 过期，清除本地存储并跳转登录
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+
+    // 处理不同类型的错误
+    if (error.response) {
+      const status = error.response.status
+      const data = error.response.data
+
+      if (status === 401) {
+        // Token 过期，清除本地存储并跳转登录
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      } else if (status === 500) {
+        // 服务器内部错误，提供友好的错误信息
+        console.error('Server Error:', data || error.message)
+        return Promise.reject({
+          message: '服务器内部错误，请稍后重试',
+          originalError: data || error.message,
+          status: 500
+        })
+      } else if (status === 404) {
+        // 资源不存在
+        return Promise.reject({
+          message: '请求的资源不存在',
+          originalError: data || error.message,
+          status: 404
+        })
+      } else if (status === 403) {
+        // 权限不足
+        return Promise.reject({
+          message: '权限不足，无法访问此资源',
+          originalError: data || error.message,
+          status: 403
+        })
+      }
     }
-    return Promise.reject(error.response?.data || error.message)
+
+    // 网络错误或其他错误
+    return Promise.reject(error.message || '网络错误，请检查连接')
   }
 )
 

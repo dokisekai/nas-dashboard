@@ -108,14 +108,19 @@
 
         <!-- 分类设置 -->
         <div v-else-if="activeCategory && !searchQuery" class="cp-category-content">
-          <!-- SMB 管理 -->
-          <div v-if="activeCategory === 'smb'" class="cp-special-section">
-            <SMBManager />
+          <!-- 共享文件夹管理 -->
+          <div v-if="activeCategory === 'share-folders'" class="cp-special-section">
+            <ShareFolderManager />
           </div>
 
           <!-- 用户权限管理 -->
           <div v-if="activeCategory === 'user-permissions'" class="cp-special-section">
             <DSMStyleUserManager />
+          </div>
+
+          <!-- 共享文件夹管理 -->
+          <div v-if="activeCategory === 'share-folders'" class="cp-special-section">
+            <ShareFolderManager />
           </div>
 
           <!-- 常规设置 -->
@@ -269,6 +274,7 @@ import { useControlPanelStore } from '../../stores/controlPanel'
 import ControlPanelSettingComponent from './ControlPanelSettingComponent.vue'
 import SMBManager from './SMBManager.vue'
 import DSMStyleUserManager from './DSMStyleUserManager.vue'
+import ShareFolderManager from './ShareFolderManager.vue'
 import {
   MagnifyingGlassIcon,
   ChevronRightIcon,

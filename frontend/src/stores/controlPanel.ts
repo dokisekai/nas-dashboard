@@ -444,13 +444,13 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       settings: [] // 权限管理使用自定义组件
     },
     {
-      id: 'smb',
-      name: '文件共享',
+      id: 'share-folders',
+      name: '共享文件夹',
       icon: 'FolderIcon',
-      description: 'SMB文件共享和访问权限设置',
+      description: '创建和管理共享文件夹，支持多种协议',
       order: 8,
       accessLevel: 'user',
-      settings: [] // SMB管理使用自定义组件，不需要传统设置
+      settings: [] // 共享文件夹管理使用自定义组件
     }
   ]
 

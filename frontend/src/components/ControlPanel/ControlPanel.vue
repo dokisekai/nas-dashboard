@@ -113,6 +113,11 @@
             <SMBManager />
           </div>
 
+          <!-- 用户权限管理 -->
+          <div v-if="activeCategory === 'user-permissions'" class="cp-special-section">
+            <AdvancedUserManager />
+          </div>
+
           <!-- 常规设置 -->
           <div v-else class="cp-settings-section">
             <h3 class="cp-section-title">常规设置</h3>
@@ -263,6 +268,7 @@ import { storeToRefs } from 'pinia'
 import { useControlPanelStore } from '../../stores/controlPanel'
 import ControlPanelSettingComponent from './ControlPanelSettingComponent.vue'
 import SMBManager from './SMBManager.vue'
+import AdvancedUserManager from './AdvancedUserManager.vue'
 import {
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -284,7 +290,8 @@ import {
   PaintBrushIcon,
   BeakerIcon,
   CircleStackIcon,
-  FolderIcon
+  FolderIcon,
+  UserGroupIcon
 } from '@heroicons/vue/24/outline'
 
 // 图标映射 - 现在使用直接导入的图标
@@ -297,7 +304,8 @@ const iconComponents: Record<string, any> = {
   PaintBrushIcon,
   BeakerIcon,
   CircleStackIcon,
-  FolderIcon
+  FolderIcon,
+  UserGroupIcon
 }
 
 const controlPanel = useControlPanelStore()

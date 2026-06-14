@@ -435,11 +435,20 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       ]
     },
     {
+      id: 'user-permissions',
+      name: '用户权限',
+      icon: 'UserGroupIcon',
+      description: '用户、用户组和权限管理',
+      order: 7,
+      accessLevel: 'user',
+      settings: [] // 权限管理使用自定义组件
+    },
+    {
       id: 'smb',
       name: '文件共享',
       icon: 'FolderIcon',
       description: 'SMB文件共享和访问权限设置',
-      order: 6,
+      order: 8,
       accessLevel: 'user',
       settings: [] // SMB管理使用自定义组件，不需要传统设置
     }

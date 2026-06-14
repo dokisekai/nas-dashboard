@@ -53,7 +53,7 @@ if [ $? -eq 0 ]; then
     sleep 3
 
     # 检查服务是否启动成功
-    if curl -s http://localhost:8888/api/health > /dev/null 2>&1; then
+    if curl -s http://localhost:8888/health > /dev/null 2>&1; then
         echo "✅ 后端服务启动成功"
     else
         echo "❌ 后端服务启动失败，请检查日志: /tmp/nas-dashboard.log"

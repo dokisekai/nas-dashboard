@@ -117,7 +117,10 @@ func main() {
 				// DNS管理
 				network.GET("/dns", api.GetDNSConfig)
 				network.POST("/dns", api.SetDNSConfig)
-			}
+
+				// IP管理
+				network.PUT("/ip", api.UpdateIPConfig)
+				}
 
 		// 存储管理路由
 		storage := apiGroup.Group("/storage")
@@ -133,9 +136,36 @@ func main() {
 			storage.DELETE("/smb/:name", api.DeleteSMBShare)
 			storage.GET("/usage", api.GetDiskUsage) // 获取指定路径的磁盘使用情况
 
+			// 高级磁盘管理
+			storage.GET("/disks/:device/partitions", api.GetDiskPartitions)
+			storage.POST("/disks/:device/partitions", api.CreateDiskPartition)
+			storage.DELETE("/disks/:device/partitions/:number", api.DeleteDiskPartition)
+			storage.GET("/disks/:device/smart", api.GetDiskSmart)
+			storage.POST("/disks/:device/test", api.RunDiskSmartTest)
+			storage.GET("/disks/:device/health", api.GetDiskHealth)
+			storage.POST("/disks/:device/benchmark", api.RunDiskBenchmark)
+
+			// RAID管理
+			storage.GET("/raid", api.GetRAIDArrays)
+			storage.GET("/raid/:name", api.GetRAIDArray)
+			storage.POST("/raid", api.CreateRAID)
+			storage.DELETE("/raid/:name", api.DeleteRAID)
+			storage.POST("/raid/:name/add", api.AddDiskToRAID)
+			storage.POST("/raid/:name/remove", api.RemoveDiskFromRAID)
+
+			// LVM管理
+			storage.GET("/lvm/pv", api.GetPhysicalVolumes)
+			storage.POST("/lvm/pv", api.CreatePhysicalVolume)
+			storage.GET("/lvm/vg", api.GetVolumeGroups)
+			storage.POST("/lvm/vg", api.CreateVolumeGroup)
+			storage.DELETE("/lvm/vg/:name", api.DeleteVolumeGroup)
+			storage.GET("/lvm/lv", api.GetLogicalVolumes)
+			storage.POST("/lvm/lv", api.CreateLogicalVolume)
+			storage.DELETE("/lvm/lv/:vg/:name", api.DeleteLogicalVolume)
+
 			// 存储池管理路由
 			pools := storage.Group("/pools")
-					storagePoolAPI := api.GetStoragePoolAPI()
+			storagePoolAPI := api.GetStoragePoolAPI()
 			{
 				pools.GET("", storagePoolAPI.GetPools)
 				pools.POST("", storagePoolAPI.CreatePool)
@@ -149,6 +179,25 @@ func main() {
 				pools.POST("/:name/umount", storagePoolAPI.UmountPool)
 				pools.POST("/:name/balance", storagePoolAPI.BalancePool)
 				pools.POST("/:name/scan", storagePoolAPI.ScanPool)
+			}
+
+			// 同步管理
+			syncAPI := api.NewSyncAPI(db)
+			sync := storage.Group("/sync")
+			{
+				sync.GET("/jobs", syncAPI.GetSyncJobs)
+				sync.POST("/jobs", syncAPI.CreateSyncJob)
+				sync.POST("/jobs/:id/run", syncAPI.RunSyncJob)
+			}
+
+			// 备份管理 (Restic)
+			backupAPI := api.NewBackupAPI(db)
+			backups := storage.Group("/backup")
+			{
+				backups.GET("/repos", backupAPI.GetRepos)
+				backups.POST("/repos", backupAPI.CreateRepo)
+				backups.GET("/tasks", backupAPI.GetTasks)
+				backups.POST("/tasks", backupAPI.CreateTask)
 			}
 
 			// 配额管理路由
@@ -337,9 +386,20 @@ func main() {
 		r.GET("/ws/monitor", api.WSMonitor)
 
 		// 启动服务器
-		log.Println("Server starting on 0.0.0.0:8888")
-		if err := r.Run("0.0.0.0:8888"); err != nil {
-			log.Fatal("Failed to start server:", err)
+		port := "8888"
+		certFile := "certs/server.crt"
+		keyFile := "certs/server.key"
+
+		if _, err := os.Stat(certFile); err == nil {
+			log.Printf("Server starting on https://0.0.0.0:%s (SSL Enabled)", port)
+			if err := r.RunTLS("0.0.0.0:"+port, certFile, keyFile); err != nil {
+				log.Fatal("Failed to start HTTPS server:", err)
+			}
+		} else {
+			log.Printf("Server starting on http://0.0.0.0:%s", port)
+			if err := r.Run("0.0.0.0:"+port); err != nil {
+				log.Fatal("Failed to start HTTP server:", err)
+			}
 		}
 	}
 

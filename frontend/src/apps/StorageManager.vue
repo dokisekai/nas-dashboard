@@ -22,10 +22,16 @@
     <div v-if="activeTab === 'disks'" class="tab-content">
       <div class="section-header">
         <h2>磁盘列表</h2>
-        <button class="action-btn" @click="refreshDisks">
-          <ArrowPathIcon class="w-4 h-4" />
-          刷新
-        </button>
+        <div class="header-actions">
+          <button class="action-btn primary" @click="activeTab = 'pools'; showCreatePoolWizard()">
+            <CircleStackIcon class="w-4 h-4" />
+            合并硬盘 (MergerFS)
+          </button>
+          <button class="action-btn" @click="refreshDisks">
+            <ArrowPathIcon class="w-4 h-4" />
+            刷新
+          </button>
+        </div>
       </div>
 
       <div v-if="loading" class="loading-state">
@@ -102,7 +108,7 @@
 
     <!-- Storage Pools Tab -->
     <div v-if="activeTab === 'pools'" class="tab-content">
-      <StoragePoolManager />
+      <StoragePoolManager ref="poolManagerRef" />
     </div>
 
     <!-- SMB Shares Tab -->
@@ -490,10 +496,19 @@ import { storageApi, fileApi } from '../api'
 import StoragePoolManager from './StoragePoolManager.vue'
 import DiskFormatDialog from '../components/Disk/DiskFormatDialog.vue'
 
+const poolManagerRef = ref<any>(null)
 const activeTab = ref('disks')
 const loading = ref(false)
 const loadingSMB = ref(false)
 const loadingFiles = ref(false)
+
+const showCreatePoolWizard = () => {
+  setTimeout(() => {
+    if (poolManagerRef.value) {
+      poolManagerRef.value.showCreateDialog = true
+    }
+  }, 100)
+}
 
 const tabs = [
   { id: 'disks', label: '磁盘管理', icon: ServerIcon },

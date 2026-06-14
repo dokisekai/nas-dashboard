@@ -70,7 +70,13 @@
 
       <!-- Pool Disks -->
       <div class="detail-section">
-        <h3>包含磁盘 ({{ pool.poolDisks?.length || 0 }})</h3>
+        <div class="section-header-with-actions">
+          <h3>包含磁盘 ({{ pool.poolDisks?.length || 0 }})</h3>
+          <el-button type="primary" size="small" @click="showAddDiskDialog = true">
+            <el-icon><Plus /></el-icon>
+            添加磁盘
+          </el-button>
+        </div>
         <el-table :data="pool.poolDisks" style="width: 100%">
           <el-table-column prop="device" label="设备" width="150" />
           <el-table-column prop="size" label="容量" width="120">
@@ -87,7 +93,7 @@
           </el-table-column>
           <el-table-column prop="branchPath" label="分支路径" min-width="200" />
           <el-table-column prop="priority" label="优先级" width="100" align="center" />
-          <el-table-column label="使用情况" width="200">
+          <el-table-column label="使用情况" width="150">
             <template #default="{ row }">
               <div class="disk-usage">
                 <el-progress
@@ -102,8 +108,28 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ row }">
+              <el-button
+                type="danger"
+                size="small"
+                link
+                @click="handleRemoveDisk(row)"
+                :disabled="pool.poolDisks.length <= 1"
+              >
+                移除
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </div>
+
+    <!-- Add Disk Dialog -->
+    <AddDiskDialog
+      v-model:visible="showAddDiskDialog"
+      :pool="pool"
+      @added="handleRefresh"
+    />
 
       <!-- MergerFS Configuration -->
       <div v-if="pool.type === 'mergerfs' && pool.config" class="detail-section">
@@ -216,12 +242,15 @@ import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { StoragePool } from '@/types/storage_pool'
 import { MERGERFS_CATEGORIES } from '@/types/storage_pool'
+import { useStoragePoolStore } from '@/stores/storage_pool'
 import {
   Refresh,
   Connection,
   SwitchButton,
-  Delete
+  Delete,
+  Plus
 } from '@element-plus/icons-vue'
+import AddDiskDialog from './AddDiskDialog.vue'
 
 interface Props {
   visible: boolean
@@ -235,6 +264,9 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const storagePoolStore = useStoragePoolStore()
+const showAddDiskDialog = ref(false)
 
 const dialogVisible = computed({
   get: () => props.visible,
@@ -359,9 +391,29 @@ const handleRefresh = () => {
   ElMessage.success('数据已刷新')
 }
 
-import { useStoragePoolStore } from '@/stores/storage_pool'
+const handleRemoveDisk = async (disk: any) => {
+  if (!props.pool) return
 
-const storagePoolStore = useStoragePoolStore()
+  try {
+    await ElMessageBox.confirm(
+      `确定要从存储池中移除磁盘 ${disk.device} 吗？移除前请确保磁盘上的数据已迁移或不再需要。`,
+      '确认移除',
+      {
+        confirmButtonText: '确定移除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await storagePoolStore.removeDisk(props.pool.name, disk.device)
+    ElMessage.success('磁盘已成功移除')
+    emit('refresh')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('移除磁盘失败')
+    }
+  }
+}
 
 const handleAction = async (command: string) => {
   if (!props.pool) return

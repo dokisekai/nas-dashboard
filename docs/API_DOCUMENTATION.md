@@ -1,1162 +1,854 @@
-# NAS Dashboard - API Documentation
+# NAS Dashboard API 文档
 
-Complete API reference for the NAS Dashboard backend services, including REST endpoints and WebSocket protocols.
+## 概述
 
-## 📋 Table of Contents
+NAS Dashboard 提供完整的 REST API 用于管理和监控系统。所有 API 端点都使用 JSON 格式进行数据交换。
 
-1. [Base URL and Authentication](#base-url-and-authentication)
-2. [REST API Endpoints](#rest-api-endpoints)
-3. [WebSocket Protocol](#websocket-protocol)
-4. [Error Codes](#error-codes)
-5. [Data Models](#data-models)
+### 基础信息
 
----
+- **Base URL**: `http://your-nas-ip:8888/api`
+- **认证方式**: JWT Bearer Token
+- **数据格式**: JSON
+- **字符编码**: UTF-8
 
-## Base URL and Authentication
+### 认证
 
-### Base URLs
-
-```
-Development:  http://localhost:8888/api
-Production:   https://your-domain.com/api
-WebSocket:    ws://localhost:8888/api/monitor/ws
-```
-
-### Authentication
-
-All API endpoints (except login) require JWT authentication:
+所有 API 请求都需要在 HTTP Header 中包含有效的 JWT Token：
 
 ```http
-Authorization: Bearer <access_token>
+Authorization: Bearer <your-jwt-token>
 ```
 
-#### Token Types
+#### 获取 Token
 
-- **Access Token**: Short-lived (24 hours), used for API requests
-- **Refresh Token**: Long-lived (30 days), used to obtain new access tokens
-
-#### Authentication Flow
-
-1. **Login**: Obtain tokens from `/api/auth/login`
-2. **Use Access Token**: Include in Authorization header
-3. **Refresh Token**: When access token expires, use `/api/auth/refresh`
-4. **Logout**: Invalidate tokens using `/api/auth/logout`
-
----
-
-## REST API Endpoints
-
-### Authentication Endpoints
-
-#### POST /api/auth/login
-Authenticate user and receive JWT tokens.
-
-**Request:**
 ```http
 POST /api/auth/login
 Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "admin123"
+  "password": "password"
 }
 ```
 
-**Response (200 OK):**
+响应：
+
 ```json
 {
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "username": "admin",
-    "role": "admin"
+  "code": 200,
+  "message": "success",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": 86400
   }
 }
 ```
 
-**Error Response (401 Unauthorized):**
-```json
-{
-  "error": "Invalid credentials"
-}
-```
+## 存储池管理 API
 
-#### POST /api/auth/refresh
-Refresh access token using refresh token.
+### 获取存储池列表
 
-**Request:**
 ```http
-POST /api/auth/refresh
-Content-Type: application/json
-
-{
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
+GET /api/storage/pools
 ```
 
-**Response (200 OK):**
+响应：
+
 ```json
 {
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-#### POST /api/auth/logout
-Invalidate current tokens.
-
-**Request:**
-```http
-POST /api/auth/logout
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
-#### GET /api/auth/me
-Get current user information.
-
-**Request:**
-```http
-GET /api/auth/me
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "id": 1,
-  "username": "admin",
-  "role": "admin",
-  "created_at": "2024-01-01T00:00:00Z"
-}
-```
-
----
-
-### System Monitoring Endpoints
-
-#### GET /api/monitor/cpu
-Get CPU usage information.
-
-**Request:**
-```http
-GET /api/monitor/cpu
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "usage": 0.45,
-  "cores": 24,
-  "load1": 2.5,
-  "load5": 2.1,
-  "load15": 1.8,
-  "frequency": 3200
-}
-```
-
-**Field Descriptions:**
-- `usage`: CPU usage percentage (0.0-1.0)
-- `cores`: Number of CPU cores
-- `load1`: 1-minute load average
-- `load5`: 5-minute load average
-- `load15`: 15-minute load average
-- `frequency`: CPU frequency in MHz
-
-#### GET /api/monitor/memory
-Get memory usage information.
-
-**Request:**
-```http
-GET /api/monitor/memory
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "total": 17179869184,
-  "used": 8589934592,
-  "free": 8589934592,
-  "percent": 50.0,
-  "swap_total": 4294967296,
-  "swap_used": 0,
-  "swap_percent": 0.0
-}
-```
-
-**Field Descriptions:**
-- `total`: Total memory in bytes
-- `used`: Used memory in bytes
-- `free`: Free memory in bytes
-- `percent`: Memory usage percentage
-- `swap_total`: Total swap space in bytes
-- `swap_used`: Used swap space in bytes
-- `swap_percent`: Swap usage percentage
-
-#### GET /api/monitor/disk
-Get disk usage information.
-
-**Request:**
-```http
-GET /api/monitor/disk
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "disks": [
-    {
-      "device": "/dev/sda1",
-      "mount_point": "/",
-      "file_system": "ext4",
-      "total": 1073741824000,
-      "used": 536870912000,
-      "free": 536870912000,
-      "percent": 50.0
-    },
-    {
-      "device": "/dev/sda2",
-      "mount_point": "/home",
-      "file_system": "ext4",
-      "total": 2147483648000,
-      "used": 1073741824000,
-      "free": 1073741824000,
-      "percent": 50.0
-    }
-  ]
-}
-```
-
-#### GET /api/monitor/network
-Get network interface statistics.
-
-**Request:**
-```http
-GET /api/monitor/network
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "interfaces": [
-    {
-      "name": "eth0",
-      "bytes_sent": 1073741824,
-      "bytes_recv": 2147483648,
-      "packets_sent": 1000000,
-      "packets_recv": 2000000,
-      "err_in": 0,
-      "err_out": 0,
-      "drop_in": 0,
-      "drop_out": 0
-    }
-  ]
-}
-```
-
-#### GET /api/monitor/system
-Get system information.
-
-**Request:**
-```http
-GET /api/monitor/system
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "hostname": "nas-server",
-  "os": "Linux",
-  "platform": "ubuntu",
-  "platform_version": "22.04",
-  "architecture": "x86_64",
-  "kernel_version": "5.15.0-72-generic",
-  "uptime": 86400,
-  "boot_time": 1704067200,
-  "processes": 250
-}
-```
-
-#### GET /api/monitor/all
-Get all monitoring data in single request.
-
-**Request:**
-```http
-GET /api/monitor/all
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "cpu": { /* CPU data */ },
-  "memory": { /* Memory data */ },
-  "disk": { /* Disk data */ },
-  "network": { /* Network data */ },
-  "system": { /* System data */ }
-}
-```
-
----
-
-### Docker Management Endpoints
-
-#### GET /api/docker/containers
-List all Docker containers.
-
-**Request:**
-```http
-GET /api/docker/containers
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "containers": [
-    {
-      "id": "abc123def456",
-      "name": "nginx",
-      "image": "nginx:latest",
-      "state": "running",
-      "status": "Up 2 hours",
-      "ports": ["80:80", "443:443"],
-      "created": 1704067200
-    }
-  ]
-}
-```
-
-#### POST /api/docker/containers/{id}/start
-Start a Docker container.
-
-**Request:**
-```http
-POST /api/docker/containers/abc123def456/start
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Container started successfully"
-}
-```
-
-#### POST /api/docker/containers/{id}/stop
-Stop a Docker container.
-
-**Request:**
-```http
-POST /api/docker/containers/abc123def456/stop
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Container stopped successfully"
-}
-```
-
-#### POST /api/docker/containers/{id}/restart
-Restart a Docker container.
-
-**Request:**
-```http
-POST /api/docker/containers/abc123def456/restart
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Container restarted successfully"
-}
-```
-
-#### GET /api/docker/containers/{id}/logs
-Get container logs.
-
-**Request:**
-```http
-GET /api/docker/containers/abc123def456/logs?tail=100
-Authorization: Bearer <access_token>
-```
-
-**Query Parameters:**
-- `tail`: Number of lines from end of logs (default: 100)
-- `since`: UNIX timestamp to get logs since
-- `timestamps`: Include timestamps (true/false)
-
-**Response (200 OK):**
-```json
-{
-  "logs": "2024-01-01T00:00:00.000Z [INFO] Starting nginx...\n..."
-}
-```
-
----
-
-### Storage Management Endpoints
-
-#### GET /api/storage
-Get storage usage information.
-
-**Request:**
-```http
-GET /api/storage
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "storage": [
-    {
-      "path": "/",
-      "device": "/dev/sda1",
-      "type": "ext4",
-      "total": 1073741824000,
-      "used": 536870912000,
-      "available": 536870912000,
-      "usage_percent": 50.0,
-      "mount_options": ["rw", "relatime"]
-    }
-  ]
-}
-```
-
-#### POST /api/storage/scan
-Scan and update storage information.
-
-**Request:**
-```http
-POST /api/storage/scan
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Storage scan completed"
-}
-```
-
----
-
-### User Management Endpoints
-
-#### GET /api/users
-List all users.
-
-**Request:**
-```http
-GET /api/users
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "users": [
+  "code": 200,
+  "message": "success",
+  "data": [
     {
       "id": 1,
-      "username": "admin",
-      "email": "admin@example.com",
-      "role": "admin",
-      "created_at": "2024-01-01T00:00:00Z",
-      "last_login": "2024-01-01T12:00:00Z"
+      "name": "main-pool",
+      "type": "mergerfs",
+      "status": "active",
+      "mountPoint": "/mnt/main-pool",
+      "totalSize": 1099511627776,
+      "usedSize": 549755813888,
+      "freeSize": 549755813888,
+      "description": "Main storage pool",
+      "createdAt": "2026-06-12T10:00:00Z",
+      "updatedAt": "2026-06-12T10:00:00Z"
     }
   ]
 }
 ```
 
-#### POST /api/users
-Create a new user.
+### 获取存储池详情
 
-**Request:**
 ```http
-POST /api/users
-Authorization: Bearer <access_token>
-Content-Type: application/json
-
-{
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "password": "securepassword123",
-  "role": "user"
-}
+GET /api/storage/pools/:name
 ```
 
-**Response (201 Created):**
+参数：
+- `name`: 存储池名称
+
+响应：
+
 ```json
 {
-  "success": true,
-  "user": {
-    "id": 2,
-    "username": "newuser",
-    "email": "newuser@example.com",
-    "role": "user",
-    "created_at": "2024-01-01T12:00:00Z"
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": 1,
+    "name": "main-pool",
+    "type": "mergerfs",
+    "status": "active",
+    "mountPoint": "/mnt/main-pool",
+    "totalSize": 1099511627776,
+    "usedSize": 549755813888,
+    "freeSize": 549755813888,
+    "description": "Main storage pool",
+    "config": {
+      "categories": {
+        "RW": "min space most",
+        "RO": "most free space"
+      }
+    },
+    "disks": [
+      {
+        "device": "/dev/sdb",
+        "size": 549755813888,
+        "status": "active",
+        "branchPath": "/mnt/disk1"
+      }
+    ],
+    "snapshots": []
   }
 }
 ```
 
-#### PUT /api/users/{id}
-Update user information.
+### 创建存储池
 
-**Request:**
 ```http
-PUT /api/users/2
-Authorization: Bearer <access_token>
+POST /api/storage/pools
 Content-Type: application/json
 
 {
-  "email": "updated@example.com",
-  "role": "admin"
+  "name": "backup-pool",
+  "type": "mergerfs",
+  "mountPoint": "/mnt/backup-pool",
+  "disks": [
+    {
+      "device": "/dev/sdc",
+      "branchPath": "/mnt/disk2"
+    }
+  ],
+  "config": {
+    "categories": {
+      "RW": "mspmfs",
+      "RO": "most free space"
+    }
+  },
+  "description": "Backup storage pool"
 }
 ```
 
-**Response (200 OK):**
+响应：
+
 ```json
 {
-  "success": true,
-  "user": {
+  "code": 201,
+  "message": "Storage pool created successfully",
+  "data": {
     "id": 2,
-    "username": "newuser",
-    "email": "updated@example.com",
-    "role": "admin",
-    "updated_at": "2024-01-01T13:00:00Z"
+    "name": "backup-pool"
   }
 }
 ```
 
-#### DELETE /api/users/{id}
-Delete a user.
+### 更新存储池
 
-**Request:**
 ```http
-DELETE /api/users/2
-Authorization: Bearer <access_token>
-```
-
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "User deleted successfully"
-}
-```
-
-#### PUT /api/users/{id}/password
-Change user password.
-
-**Request:**
-```http
-PUT /api/users/2/password
-Authorization: Bearer <access_token>
+PUT /api/storage/pools/:name
 Content-Type: application/json
 
 {
-  "old_password": "oldpassword",
-  "new_password": "newpassword123"
+  "description": "Updated description",
+  "config": {
+    "categories": {
+      "RW": "most free space",
+      "RO": "most free space"
+    }
+  }
 }
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Password changed successfully"
-}
-```
+### 删除存储池
 
----
-
-### Service Management Endpoints
-
-#### GET /api/services
-List all system services.
-
-**Request:**
 ```http
-GET /api/services
-Authorization: Bearer <access_token>
+DELETE /api/storage/pools/:name
 ```
 
-**Response (200 OK):**
+### 添加磁盘到存储池
+
+```http
+POST /api/storage/pools/:name/disks
+Content-Type: application/json
+
+{
+  "device": "/dev/sdd",
+  "branchPath": "/mnt/disk3",
+  "priority": 0
+}
+```
+
+### 从存储池移除磁盘
+
+```http
+DELETE /api/storage/pools/:name/disks/:device
+```
+
+### 挂载存储池
+
+```http
+POST /api/storage/pools/:name/mount
+```
+
+### 卸载存储池
+
+```http
+POST /api/storage/pools/:name/umount
+```
+
+### 获取存储池状态
+
+```http
+GET /api/storage/pools/:name/status
+```
+
+响应：
+
 ```json
 {
-  "services": [
+  "code": 200,
+  "message": "success",
+  "data": {
+    "status": "active",
+    "mounted": true,
+    "totalSize": 1099511627776,
+    "usedSize": 549755813888,
+    "freeSize": 549755813888,
+    "usagePercent": 50.0,
+    "disks": [
+      {
+        "device": "/dev/sdb",
+        "status": "active",
+        "size": 549755813888,
+        "used": 274877906944
+      }
+    ]
+  }
+}
+```
+
+## 系统监控 API
+
+### 获取系统概览
+
+```http
+GET /api/monitor/overview
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "cpu": {
+      "usagePercent": 25.5,
+      "cores": 8,
+      "frequency": 2400
+    },
+    "memory": {
+      "total": 8589934592,
+      "used": 4294967296,
+      "free": 4294967296,
+      "usagePercent": 50.0
+    },
+    "disk": [
+      {
+        "device": "/dev/sda1",
+        "mountPoint": "/",
+        "total": 1099511627776,
+        "used": 549755813888,
+        "free": 549755813888,
+        "usagePercent": 50.0
+      }
+    ],
+    "network": [
+      {
+        "interface": "eth0",
+        "bytesSent": 104857600,
+        "bytesRecv": 209715200,
+        "bytesSentSpeed": 102400,
+        "bytesRecvSpeed": 204800
+      }
+    ]
+  }
+}
+```
+
+### 获取进程列表
+
+```http
+GET /api/monitor/processes?limit=50&sort=cpu
+```
+
+参数：
+- `limit`: 返回数量限制（默认50）
+- `sort`: 排序字段（cpu, memory, name）
+
+响应：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "pid": 1234,
+      "name": "nginx",
+      "status": "running",
+      "cpuPercent": 5.2,
+      "memoryPercent": 2.1,
+      "memory": 177209600,
+      "threads": 4,
+      "username": "www-data",
+      "command": "nginx: worker process"
+    }
+  ]
+}
+```
+
+### 获取进程详情
+
+```http
+GET /api/monitor/processes/:pid
+```
+
+### 终止进程
+
+```http
+DELETE /api/monitor/processes/:pid
+```
+
+### 获取系统服务
+
+```http
+GET /api/monitor/services
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
     {
       "name": "nginx",
       "description": "A high performance web server",
-      "state": "running",
-      "status": "active (running)"
+      "status": "running",
+      "enabled": true,
+      "loadState": "loaded",
+      "activeState": "active",
+      "mainPid": 1234
     }
   ]
 }
 ```
 
-#### POST /api/services/{name}/start
-Start a system service.
+### 启动服务
 
-**Request:**
 ```http
-POST /api/services/nginx/start
-Authorization: Bearer <access_token>
+POST /api/monitor/services/:name/start
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Service started successfully"
-}
-```
+### 停止服务
 
-#### POST /api/services/{name}/stop
-Stop a system service.
-
-**Request:**
 ```http
-POST /api/services/nginx/stop
-Authorization: Bearer <access_token>
+POST /api/monitor/services/:name/stop
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Service stopped successfully"
-}
-```
+### 重启服务
 
-#### POST /api/services/{name}/restart
-Restart a system service.
-
-**Request:**
 ```http
-POST /api/services/nginx/restart
-Authorization: Bearer <access_token>
+POST /api/monitor/services/:name/restart
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Service restarted successfully"
-}
-```
+### 获取温度信息
 
----
-
-### Health Check Endpoint
-
-#### GET /api/health
-Check API health status.
-
-**Request:**
 ```http
-GET /api/health
+GET /api/monitor/temperature
 ```
 
-**Response (200 OK):**
+响应：
+
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-01-01T12:00:00Z",
-  "version": "0.1.0"
-}
-```
-
----
-
-## WebSocket Protocol
-
-### Connection
-
-**Endpoint:** `ws://localhost:8888/api/monitor/ws`
-
-**Authentication:** Include JWT token in query string:
-
-```javascript
-const ws = new WebSocket('ws://localhost:8888/api/monitor/ws?token=<access_token>');
-```
-
-### Message Format
-
-All WebSocket messages are JSON objects.
-
-#### Server → Client Messages
-
-**Monitoring Data Update:**
-```json
-{
-  "type": "monitor_data",
-  "timestamp": 1704067200,
+  "code": 200,
+  "message": "success",
   "data": {
-    "cpu": {
-      "usage": 0.45,
-      "cores": 24,
-      "load1": 2.5,
-      "load5": 2.1,
-      "load15": 1.8
-    },
-    "memory": {
-      "total": 17179869184,
-      "used": 8589934592,
-      "free": 8589934592,
-      "percent": 50.0
-    },
-    "disk": {
-      "disks": [
-        {
-          "device": "/dev/sda1",
-          "mount_point": "/",
-          "total": 1073741824000,
-          "used": 536870912000,
-          "free": 536870912000,
-          "percent": 50.0
-        }
-      ]
-    },
-    "network": {
-      "interfaces": [
-        {
-          "name": "eth0",
-          "bytes_sent": 1073741824,
-          "bytes_recv": 2147483648,
-          "packets_sent": 1000000,
-          "packets_recv": 2000000
-        }
-      ]
-    }
+    "sensors": [
+      {
+        "name": "CPU Core 0",
+        "current": 45.0,
+        "max": 80.0,
+        "critical": 90.0,
+        "unit": "°C"
+      }
+    ]
   }
 }
 ```
 
-#### Client → Server Messages
+## 磁盘管理 API
 
-**Subscribe to specific metrics:**
+### 获取磁盘列表
+
+```http
+GET /api/storage/disks
+```
+
+响应：
+
 ```json
 {
-  "action": "subscribe",
-  "metrics": ["cpu", "memory", "disk", "network"]
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "device": "/dev/sdb",
+      "model": "Samsung SSD 870",
+      "size": 1099511627776,
+      "health": "good",
+      "temperature": 35,
+      "partitions": [
+        {
+          "device": "/dev/sdb1",
+          "size": 549755813888,
+          "type": "primary",
+          "filesystem": "ext4",
+          "mountPoint": "/mnt/disk1"
+        }
+      ]
+    }
+  ]
 }
 ```
 
-**Unsubscribe from metrics:**
-```json
+### 获取磁盘详情
+
+```http
+GET /api/storage/disks/:device
+```
+
+### 获取磁盘分区
+
+```http
+GET /api/storage/disks/:device/partitions
+```
+
+### 创建分区
+
+```http
+POST /api/storage/disks/:device/partition
+Content-Type: application/json
+
 {
-  "action": "unsubscribe",
-  "metrics": ["disk"]
+  "start": 1048576,
+  "end": 549755813888,
+  "type": "primary",
+  "filesystem": "ext4"
 }
 ```
 
-**Request refresh:**
+### 删除分区
+
+```http
+DELETE /api/storage/disks/:device/partitions/:id
+```
+
+### 获取磁盘 SMART 信息
+
+```http
+GET /api/storage/disks/:device/smart
+```
+
+响应：
+
 ```json
 {
-  "action": "refresh"
+  "code": 200,
+  "message": "success",
+  "data": {
+    "device": "/dev/sdb",
+    "health": "good",
+    "attributes": [
+      {
+        "id": 1,
+        "name": "Raw Read Error Rate",
+        "value": 100,
+        "worst": 100,
+        "threshold": 50,
+        "status": "good"
+      }
+    ]
+  }
 }
 ```
 
-### Connection States
+### 运行磁盘性能测试
 
-1. **Connecting**: WebSocket handshake in progress
-2. **Connected**: Authentication successful, data streaming active
-3. **Disconnected**: Connection lost, attempting reconnection
-4. **Error**: Authentication failed or connection error
+```http
+POST /api/storage/disks/:device/benchmark
+Content-Type: application/json
 
-### Reconnection Strategy
+{
+  "size": 4096,
+  "queueDepth": 32,
+  "duration": 60,
+  "mode": "mixed"
+}
+```
+
+## RAID 管理 API
+
+### 获取 RAID 列表
+
+```http
+GET /api/storage/raid
+```
+
+### 创建 RAID
+
+```http
+POST /api/storage/raid
+Content-Type: application/json
+
+{
+  "name": "raid1",
+  "level": "1",
+  "devices": ["/dev/sdb", "/dev/sdc"]
+}
+```
+
+### 获取 RAID 详情
+
+```http
+GET /api/storage/raid/:name
+```
+
+### 删除 RAID
+
+```http
+DELETE /api/storage/raid/:name
+```
+
+### 添加磁盘到 RAID
+
+```http
+POST /api/storage/raid/:name/add
+Content-Type: application/json
+
+{
+  "device": "/dev/sdd"
+}
+```
+
+## LVM 管理 API
+
+### 获取物理卷列表
+
+```http
+GET /api/storage/lvm/pv
+```
+
+### 创建物理卷
+
+```http
+POST /api/storage/lvm/pv
+Content-Type: application/json
+
+{
+  "device": "/dev/sdb"
+}
+```
+
+### 获取卷组列表
+
+```http
+GET /api/storage/lvm/vg
+```
+
+### 创建卷组
+
+```http
+POST /api/storage/lvm/vg
+Content-Type: application/json
+
+{
+  "name": "vg1",
+  "devices": ["/dev/sdb", "/dev/sdc"]
+}
+```
+
+### 获取逻辑卷列表
+
+```http
+GET /api/storage/lvm/lv
+```
+
+### 创建逻辑卷
+
+```http
+POST /api/storage/lvm/lv
+Content-Type: application/json
+
+{
+  "name": "lv1",
+  "vgName": "vg1",
+  "size": 107374182400
+}
+```
+
+## 配额管理 API
+
+### 获取用户配额
+
+```http
+GET /api/users/:username/quota
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "user": {
+        "id": 1,
+        "username": "john",
+        "email": "john@example.com"
+      },
+      "path": "/home/john",
+      "softLimit": 10737418240,
+      "hardLimit": 16106127360,
+      "usedSpace": 5368709120,
+      "gracePeriod": 7
+    }
+  ]
+}
+```
+
+### 设置用户配额
+
+```http
+PUT /api/users/:username/quota
+Content-Type: application/json
+
+{
+  "path": "/home/john",
+  "softLimit": 10737418240,
+  "hardLimit": 16106127360,
+  "gracePeriod": 7
+}
+```
+
+### 获取组配额
+
+```http
+GET /api/groups/:name/quota
+```
+
+### 设置组配额
+
+```http
+PUT /api/groups/:name/quota
+Content-Type: application/json
+
+{
+  "path": "/shared/group",
+  "softLimit": 53687091200,
+  "hardLimit": 64424509440,
+  "gracePeriod": 7
+}
+```
+
+### 生成配额报告
+
+```http
+GET /api/storage/quota/report
+```
+
+响应：
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "totalUsers": 10,
+    "activeUsers": 8,
+    "totalQuotaUsed": 536870912000,
+    "totalQuotaTotal": 1073741824000,
+    "topUsers": [
+      {
+        "username": "john",
+        "usedSpace": 107374182400,
+        "hardLimit": 214748364800,
+        "usagePercent": 50.0
+      }
+    ]
+  }
+}
+```
+
+## WebSocket API
+
+### 连接 WebSocket
 
 ```javascript
-// Automatic reconnection with backoff
-const connect = () => {
-  const ws = new WebSocket('ws://localhost:8888/api/monitor/ws?token=<token>');
-  
-  ws.onclose = (event) => {
-    if (!event.wasClean) {
-      setTimeout(connect, 5000); // Reconnect after 5 seconds
-    }
-  };
-  
-  return ws;
+const ws = new WebSocket('ws://your-nas-ip:8888/ws?token=<your-jwt-token>');
+
+ws.onmessage = function(event) {
+  const data = JSON.parse(event.data);
+  console.log('Received:', data);
 };
 ```
 
----
+### 消息格式
 
-## Error Codes
-
-### HTTP Status Codes
-
-| Code | Description | Usage |
-|------|-------------|-------|
-| 200 | OK | Successful request |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Authentication required or failed |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 500 | Internal Server Error | Server error |
-| 503 | Service Unavailable | Service temporarily unavailable |
-
-### Error Response Format
+#### 系统状态更新
 
 ```json
 {
-  "error": "Error message",
-  "code": "ERROR_CODE",
-  "details": {
-    "field": "Additional error details"
-  }
-}
-```
-
-### Common Error Codes
-
-| Code | Description | Solution |
-|------|-------------|----------|
-| `INVALID_CREDENTIALS` | Username or password incorrect | Check credentials |
-| `TOKEN_EXPIRED` | Access token expired | Use refresh token |
-| `INVALID_TOKEN` | Invalid JWT token | Re-authenticate |
-| `INSUFFICIENT_PERMISSIONS` | User lacks required permissions | Contact administrator |
-| `RESOURCE_NOT_FOUND` | Requested resource doesn't exist | Verify resource ID |
-| `RATE_LIMIT_EXCEEDED` | Too many requests | Wait and retry |
-| `SERVICE_UNAVAILABLE` | Backend service unavailable | Check service status |
-
----
-
-## Data Models
-
-### User Object
-
-```typescript
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  role: 'admin' | 'user';
-  created_at: string;  // ISO 8601 datetime
-  updated_at?: string; // ISO 8601 datetime
-  last_login?: string; // ISO 8601 datetime
-}
-```
-
-### Container Object
-
-```typescript
-interface Container {
-  id: string;
-  name: string;
-  image: string;
-  state: 'running' | 'stopped' | 'paused';
-  status: string;
-  ports: string[];
-  created: number;      // UNIX timestamp
-}
-```
-
-### Storage Object
-
-```typescript
-interface Storage {
-  path: string;
-  device: string;
-  type: string;
-  total: number;        // bytes
-  used: number;         // bytes
-  available: number;    // bytes
-  usage_percent: number;
-  mount_options: string[];
-}
-```
-
-### Service Object
-
-```typescript
-interface Service {
-  name: string;
-  description: string;
-  state: 'running' | 'stopped' | 'failed';
-  status: string;
-}
-```
-
-### CPU Info Object
-
-```typescript
-interface CPUInfo {
-  usage: number;        // 0.0-1.0
-  cores: number;
-  load1: number;
-  load5: number;
-  load15: number;
-  frequency: number;    // MHz
-}
-```
-
-### Memory Info Object
-
-```typescript
-interface MemoryInfo {
-  total: number;        // bytes
-  used: number;         // bytes
-  free: number;         // bytes
-  percent: number;      // 0-100
-  swap_total: number;   // bytes
-  swap_used: number;    // bytes
-  swap_percent: number; // 0-100
-}
-```
-
-### Disk Info Object
-
-```typescript
-interface DiskInfo {
-  device: string;
-  mount_point: string;
-  file_system: string;
-  total: number;        // bytes
-  used: number;        // bytes
-  free: number;        // bytes
-  percent: number;     // 0-100
-}
-```
-
-### Network Interface Object
-
-```typescript
-interface NetworkInterface {
-  name: string;
-  bytes_sent: number;
-  bytes_recv: number;
-  packets_sent: number;
-  packets_recv: number;
-  err_in: number;
-  err_out: number;
-  drop_in: number;
-  drop_out: number;
-}
-```
-
----
-
-## Rate Limiting
-
-API requests are rate-limited to prevent abuse:
-
-- **Standard endpoints**: 100 requests per minute
-- **Streaming endpoints**: 10 requests per second
-- **WebSocket**: 1 message per second
-
-Rate limit headers are included in responses:
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1704067260
-```
-
----
-
-## Pagination
-
-List endpoints support pagination:
-
-```http
-GET /api/users?page=1&limit=20
-```
-
-**Response:**
-```json
-{
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 100,
-    "total_pages": 5
-  }
-}
-```
-
----
-
-## CORS Configuration
-
-Cross-Origin Resource Sharing (CORS) is configured to allow:
-
-- **Origins**: Configured in backend `CORS_ORIGIN` environment variable
-- **Methods**: GET, POST, PUT, DELETE, OPTIONS
-- **Headers**: Authorization, Content-Type, X-Requested-With
-- **Max Age**: 86400 seconds (24 hours)
-
----
-
-## Best Practices
-
-### Token Management
-
-```typescript
-// Store tokens securely
-const token = localStorage.getItem('access_token');
-const refreshToken = localStorage.getItem('refresh_token');
-
-// Use access token for requests
-axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-// Handle token expiration
-axios.interceptors.response.use(
-  response => response,
-  async error => {
-    if (error.response?.status === 401) {
-      // Refresh token
-      const newToken = await refreshAccessToken();
-      // Retry original request
-      return axios.request(error.config);
-    }
-    return Promise.reject(error);
-  }
-);
-```
-
-### Error Handling
-
-```typescript
-try {
-  const response = await axios.get('/api/monitor/cpu');
-  console.log(response.data);
-} catch (error) {
-  if (error.response?.status === 401) {
-    console.error('Authentication failed');
-  } else if (error.response?.status === 500) {
-    console.error('Server error');
-  } else {
-    console.error('Request failed:', error.message);
-  }
-}
-```
-
-### WebSocket Connection
-
-```typescript
-class MonitorClient {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-
-  connect(token: string) {
-    this.ws = new WebSocket(`ws://localhost:8888/api/monitor/ws?token=${token}`);
-    
-    this.ws.onopen = () => {
-      console.log('WebSocket connected');
-      this.reconnectAttempts = 0;
-    };
-    
-    this.ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      this.handleMessage(data);
-    };
-    
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-    
-    this.ws.onclose = () => {
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        this.reconnectAttempts++;
-        setTimeout(() => this.connect(token), 5000);
+  "type": "system_status",
+  "data": {
+    "cpu": 25.5,
+    "memory": 50.0,
+    "disk": [
+      {
+        "device": "/dev/sda1",
+        "usagePercent": 60.0
       }
-    };
-  }
-  
-  private handleMessage(data: any) {
-    switch (data.type) {
-      case 'monitor_data':
-        this.updateMonitorUI(data);
-        break;
-      default:
-        console.log('Unknown message type:', data.type);
-    }
-  }
-  
-  disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
+    ]
   }
 }
 ```
 
----
+#### 进程更新
 
-## Testing the API
-
-### Using cURL
-
-```bash
-# Login
-curl -X POST http://localhost:8888/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
-
-# Get CPU info (replace <token>)
-curl -X GET http://localhost:8888/api/monitor/cpu \
-  -H "Authorization: Bearer <token>"
-
-# List containers
-curl -X GET http://localhost:8888/api/docker/containers \
-  -H "Authorization: Bearer <token>"
-
-# Stop container
-curl -X POST http://localhost:8888/api/docker/containers/<id>/stop \
-  -H "Authorization: Bearer <token>"
+```json
+{
+  "type": "process_update",
+  "data": {
+    "pid": 1234,
+    "cpuPercent": 10.5,
+    "memoryPercent": 5.2
+  }
+}
 ```
 
-### Using Postman
+#### 告警通知
 
-1. **Import API collection** (if available)
-2. **Set environment variables**:
-   - `base_url`: `http://localhost:8888/api`
-   - `access_token`: From login response
-3. **Use Authorization header**: `Bearer {{access_token}}`
+```json
+{
+  "type": "alert",
+  "data": {
+    "id": 1,
+    "type": "user_quota",
+    "severity": "warning",
+    "message": "User john has exceeded 80% of quota",
+    "timestamp": "2026-06-12T10:30:00Z"
+  }
+}
+```
 
----
+## 错误处理
 
-## Changelog
+### 错误响应格式
 
-### Version 0.1.0 (Current)
-- Initial API release
-- Basic authentication
-- System monitoring endpoints
-- Docker management
-- User management
-- WebSocket real-time monitoring
+```json
+{
+  "code": 400,
+  "message": "Invalid request parameters",
+  "errors": [
+    {
+      "field": "name",
+      "message": "Name is required"
+    }
+  ]
+}
+```
 
----
+### 常见错误代码
 
-**Last Updated**: 2026-06-12
-**API Version**: 0.1.0
+- `200`: 成功
+- `201`: 创建成功
+- `400`: 请求参数错误
+- `401`: 未授权
+- `403`: 禁止访问
+- `404`: 资源不存在
+- `500`: 服务器内部错误
+
+## 速率限制
+
+- **未认证用户**: 100 requests/minute
+- **已认证用户**: 1000 requests/minute
+- **WebSocket 连接**: 5 connections/user
+
+超出限制会返回 `429 Too Many Requests` 错误。
+
+## SDK 和客户端库
+
+### Python SDK
+
+```python
+from nas_dashboard import Client
+
+client = Client('http://your-nas-ip:8888', token='your-jwt-token')
+
+# 获取存储池列表
+pools = client.storage_pools.list()
+
+# 创建存储池
+pool = client.storage_pools.create(
+    name='new-pool',
+    type='mergerfs',
+    mount_point='/mnt/new-pool'
+)
+```
+
+### JavaScript SDK
+
+```javascript
+import { NASDashboard } from '@nas-dashboard/sdk';
+
+const client = new NASDashboard({
+  baseURL: 'http://your-nas-ip:8888',
+  token: 'your-jwt-token'
+});
+
+// 获取存储池列表
+const pools = await client.storagePools.list();
+
+// 创建存储池
+const pool = await client.storagePools.create({
+  name: 'new-pool',
+  type: 'mergerfs',
+  mountPoint: '/mnt/new-pool'
+});
+```
+
+## 支持
+
+如有问题，请联系技术支持或查看开发者文档。

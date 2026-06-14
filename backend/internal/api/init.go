@@ -37,6 +37,10 @@ func InitAPI(db *gorm.DB) {
 		if db != nil {
 			monitorAPI := NewMonitorAPI(db)
 			go monitorAPI.StartMonitoring()
+
+			// 启动系统任务调度器
+			scheduler := NewScheduler(db)
+			scheduler.Start()
 		}
 	})
 }

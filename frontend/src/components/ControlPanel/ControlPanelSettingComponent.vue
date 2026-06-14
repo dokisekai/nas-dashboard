@@ -329,9 +329,6 @@ const getCustomComponent = (componentName?: string) => {
     ),
     'GroupManager': defineAsyncComponent(() =>
       import('./GroupManager.vue')
-    ),
-    'ACLEditor': defineAsyncComponent(() =>
-      import('./ACLEditor.vue')
     )
   }
 

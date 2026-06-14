@@ -368,8 +368,24 @@ godoc -http=:6060
 ✅ **备份恢复**: 自动备份和一键恢复
 ✅ **WebSocket 优化**: 高效的实时数据推送
 ✅ **安全加固**: 全面的安全措施和审计
+✅ **高级磁盘管理**: 完整的 RAID、LVM、SMART、分区管理及性能测试支持
 
 系统现已具备生产环境部署的所有必要条件，可以安全、稳定、高效地运行。详细的部署、测试和监控文档确保了系统的可维护性和可扩展性。
+
+## 高级磁盘管理端点
+- `GET /api/storage/disks/:device/partitions` - 获取分区列表
+- `POST /api/storage/disks/:device/partitions` - 创建分区
+- `DELETE /api/storage/disks/:device/partitions/:number` - 删除分区
+- `GET /api/storage/disks/:device/smart` - 获取 SMART 信息
+- `POST /api/storage/disks/:device/test` - 运行 SMART 测试
+- `GET /api/storage/disks/:device/health` - 获取健康状态
+- `POST /api/storage/disks/:device/benchmark` - 运行性能测试
+- `GET /api/storage/raid` - 获取 RAID 列表
+- `POST /api/storage/raid` - 创建 RAID
+- `DELETE /api/storage/raid/:name` - 删除 RAID
+- `GET /api/storage/lvm/pv` - 获取 PV 列表
+- `GET /api/storage/lvm/vg` - 获取 VG 列表
+- `GET /api/storage/lvm/lv` - 获取 LV 列表
 
 **项目状态**: ✅ 完成并可用于生产环境
 **代码质量**: ⭐⭐⭐⭐⭐ 企业级标准

@@ -271,6 +271,77 @@ func SetDNSConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "DNS配置已更新"})
 }
 
+// IPConfig IP配置
+type IPConfig struct {
+	Interface string `json:"interface" binding:"required"`
+	Method    string `json:"method" binding:"required"` // dhcp, static
+	Address   string `json:"address"`                  // 192.168.1.10/24
+	Gateway   string `json:"gateway"`
+	DNS       string `json:"dns"`                      // 逗号分隔
+}
+
+// UpdateIPConfig 设置接口 IP 配置
+func UpdateIPConfig(c *gin.Context) {
+	var req IPConfig
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 检查 nmcli 是否可用
+	if _, err := exec.LookPath("nmcli"); err != nil {
+		c.JSON(http.StatusNotImplemented, gin.H{"error": "NetworkManager (nmcli) is required for static IP configuration"})
+		return
+	}
+
+	// 1. 获取对应的连接名称 (Connection Name)
+	cmdGetConn := exec.Command("nmcli", "-g", "NAME,DEVICE", "con", "show")
+	output, _ := cmdGetConn.Output()
+	connName := ""
+	for _, line := range strings.Split(string(output), "\n") {
+		parts := strings.Split(line, ":")
+		if len(parts) == 2 && parts[1] == req.Interface {
+			connName = parts[0]
+			break
+		}
+	}
+
+	if connName == "" {
+		// 如果没找到连接，尝试直接用接口名
+		connName = req.Interface
+	}
+
+	// 2. 构建 nmcli 修改命令
+	args := []string{"con", "mod", connName}
+	if req.Method == "static" {
+		if req.Address == "" || req.Gateway == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Address and Gateway are required for static IP"})
+			return
+		}
+		args = append(args, "ipv4.method", "manual", "ipv4.addresses", req.Address, "ipv4.gateway", req.Gateway)
+		if req.DNS != "" {
+			args = append(args, "ipv4.dns", req.DNS)
+		}
+	} else {
+		args = append(args, "ipv4.method", "auto")
+	}
+
+	// 3. 执行修改
+	cmdMod := exec.Command("nmcli", args...)
+	if output, err := cmdMod.CombinedOutput(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to modify connection: %v, output: %s", err, string(output))})
+		return
+	}
+
+	// 4. 应用修改 (需要重启连接，可能会导致短暂断开)
+	go func() {
+		time.Sleep(1 * time.Second)
+		exec.Command("nmcli", "con", "up", connName).Run()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"message": "IP configuration updated. Connection will restart."})
+}
+
 // 辅助函数
 
 // isHardwareInterface 判断是否为硬件接口

@@ -112,7 +112,7 @@ func parseLsblkOutput(output []byte, dfMap map[string]map[string]string) []Disk 
 	lines := strings.Split(string(output), "\n")
 
 	// 获取根分区所在的设备
-	rootDevice := getRootDevice()
+	rootDevice := GetRootDevice()
 
 	// 第一遍：收集所有设备信息
 	type localDeviceRaw struct {
@@ -271,8 +271,8 @@ func parseLsblkOutput(output []byte, dfMap map[string]map[string]string) []Disk 
 	return disks
 }
 
-// getRootDevice 获取根分区所在的物理设备
-func getRootDevice() string {
+// GetRootDevice 获取根分区所在的物理设备
+func GetRootDevice() string {
 	cmd := exec.Command("sh", "-c", "findmnt -n -o SOURCE /")
 	output, err := cmd.Output()
 	if err != nil {
@@ -290,14 +290,14 @@ func FormatDisk(c *gin.Context) {
 	}
 
 	// 安全检查：不允许格式化根分区
-	rootDevice := getRootDevice()
+	rootDevice := GetRootDevice()
 	if req.Device == rootDevice || strings.HasPrefix(rootDevice, req.Device) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot format system disk"})
 		return
 	}
 
 	// 检查磁盘是否已挂载
-	if isDeviceMounted(req.Device) {
+	if IsDeviceMounted(req.Device) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Disk is currently mounted. Please unmount it first."})
 		return
 	}
@@ -335,8 +335,8 @@ func FormatDisk(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Disk formatted successfully", "output": string(output)})
 }
 
-// isDeviceMounted 检查特定设备是否已挂载
-func isDeviceMounted(device string) bool {
+// IsDeviceMounted 检查设备是否已挂载
+func IsDeviceMounted(device string) bool {
 	data, err := os.ReadFile("/proc/mounts")
 	if err != nil {
 		return false
@@ -625,7 +625,55 @@ func CreateSMBShare(c *gin.Context) {
 		return
 	}
 
+	// 如果是 Time Machine，注册 Avahi 服务
+	if req.IsTimeMachine {
+		if err := registerTimeMachineAvahi(req.Name); err != nil {
+			fmt.Printf("Warning: Failed to register Avahi service for Time Machine: %v\n", err)
+		}
+	}
+
 	c.JSON(201, gin.H{"message": "SMB share created successfully"})
+}
+
+// registerTimeMachineAvahi 注册 Avahi mDNS 服务以支持 macOS 发现
+func registerTimeMachineAvahi(shareName string) error {
+	avahiPath := fmt.Sprintf("/etc/avahi/services/nas-tm-%s.service", shareName)
+	
+	content := fmt.Sprintf(`<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">%%h - %s</name>
+  <service>
+    <type>_smb._tcp</type>
+    <port>445</port>
+  </service>
+  <service>
+    <type>_device-info._tcp</type>
+    <port>0</port>
+    <txt-record>model=Macmini</txt-record>
+  </service>
+  <service>
+    <type>_adisk._tcp</type>
+    <txt-record>dk0=adVN=%s,adVF=0x82</txt-record>
+    <txt-record>sys=waMa=0,adVF=0x100</txt-record>
+  </service>
+</service-group>
+`, shareName, shareName)
+
+	err := os.WriteFile(avahiPath, []byte(content), 0644)
+	if err != nil {
+		return err
+	}
+
+	// 重启 Avahi
+	exec.Command("systemctl", "restart", "avahi-daemon").Run()
+	return nil
+}
+
+func unregisterTimeMachineAvahi(shareName string) {
+	avahiPath := fmt.Sprintf("/etc/avahi/services/nas-tm-%s.service", shareName)
+	os.Remove(avahiPath)
+	exec.Command("systemctl", "restart", "avahi-daemon").Run()
 }
 
 // UpdateSMBShare 更新 SMB 共享
@@ -664,6 +712,9 @@ func DeleteSMBShare(c *gin.Context) {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to delete SMB share: %v", err)})
 		return
 	}
+
+	// 尝试取消注册 Avahi (不论是否是 TM，清理一次无害)
+	unregisterTimeMachineAvahi(name)
 
 	if err := restartSambaService(); err != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to restart Samba service: %v", err)})

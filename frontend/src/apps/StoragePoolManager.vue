@@ -136,6 +136,20 @@
       @refresh="onPoolRefresh"
     />
 
+    <!-- Add Disk Dialog -->
+    <AddDiskDialog
+      v-model:visible="showAddDiskDialog"
+      :pool="selectedPool"
+      @added="onPoolRefresh"
+    />
+
+    <!-- Edit Pool Dialog -->
+    <PoolEditDialog
+      v-model:visible="showEditDialog"
+      :pool="selectedPool"
+      @updated="onPoolRefresh"
+    />
+
     <!-- Context Menu -->
     <el-dropdown
       ref="contextMenu"
@@ -160,6 +174,10 @@
           <el-dropdown-item command="scan">
             <el-icon><Search /></el-icon>
             扫描状态
+          </el-dropdown-item>
+          <el-dropdown-item command="add-disk" :disabled="selectedPool?.type !== 'mergerfs'">
+            <el-icon><Plus /></el-icon>
+            合并硬盘 (Add Disk)
           </el-dropdown-item>
           <el-dropdown-item divided command="delete" :disabled="selectedPool?.status === 'active'">
             <el-icon><Delete /></el-icon>
@@ -193,12 +211,16 @@ import {
 } from '@element-plus/icons-vue'
 import StoragePoolWizard from '@/components/StoragePool/PoolWizard.vue'
 import PoolDetailsDialog from '@/components/StoragePool/PoolDetailsDialog.vue'
+import AddDiskDialog from '@/components/StoragePool/AddDiskDialog.vue'
+import PoolEditDialog from '@/components/StoragePool/PoolEditDialog.vue'
 
 const storagePoolStore = useStoragePoolStore()
 
 // Dialog states
 const showCreateDialog = ref(false)
 const showDetailsDialog = ref(false)
+const showAddDiskDialog = ref(false)
+const showEditDialog = ref(false)
 const selectedPool = ref<StoragePool | null>(null)
 const contextMenu = ref()
 
@@ -288,8 +310,7 @@ const viewPoolDetails = async (pool: StoragePool) => {
 
 const editPool = (pool: StoragePool) => {
   selectedPool.value = pool
-  // Navigate to edit view or show edit dialog
-  ElMessage.info('编辑功能即将推出')
+  showEditDialog.value = true
 }
 
 const showPoolMenu = (pool: StoragePool, event: any) => {
@@ -330,6 +351,10 @@ const handleContextCommand = async (command: string) => {
         ElMessage.success('存储池状态已更新')
         break
 
+      case 'add-disk':
+        showAddDiskDialog.value = true
+        break
+
       case 'delete':
         await ElMessageBox.confirm('删除存储池将永久删除所有数据，此操作不可恢复！', '危险操作', {
           type: 'error',
@@ -355,6 +380,10 @@ const onPoolCreated = (pool: StoragePool) => {
 const onPoolRefresh = () => {
   storagePoolStore.fetchPools()
 }
+
+defineExpose({
+  showCreateDialog
+})
 </script>
 
 <style scoped lang="scss">

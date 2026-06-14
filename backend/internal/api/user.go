@@ -252,7 +252,27 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
+	// 同步创建 Samba 用户
+	if err := setSambaPassword(req.Username, req.Password); err != nil {
+		fmt.Printf("Warning: Failed to create Samba user: %v\n", err)
+	}
+
 	c.JSON(201, gin.H{"message": "User created successfully", "username": req.Username})
+}
+
+// setSambaPassword 设置 Samba 用户密码
+func setSambaPassword(username, password string) error {
+	// smbpasswd -a username -s <<EOF
+	// password
+	// password
+	// EOF
+	cmd := exec.Command("smbpasswd", "-a", username, "-s")
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s\n%s\n", password, password))
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("smbpasswd failed: %v, output: %s", err, string(output))
+	}
+	return nil
 }
 
 // setUserPassword 设置用户密码
@@ -295,6 +315,10 @@ func UpdateUser(c *gin.Context) {
 		if err := setUserPassword(username, req.Password); err != nil {
 			c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to update password: %v", err)})
 			return
+		}
+		// 同步更新 Samba 密码
+		if err := setSambaPassword(username, req.Password); err != nil {
+			fmt.Printf("Warning: Failed to update Samba password: %v\n", err)
 		}
 	}
 
@@ -351,6 +375,9 @@ func DeleteUser(c *gin.Context) {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to delete user: %v, output: %s", err, string(output))})
 		return
 	}
+
+	// 同步删除 Samba 用户
+	exec.Command("smbpasswd", "-x", username).Run()
 
 	c.JSON(200, gin.H{"message": "User deleted successfully"})
 }

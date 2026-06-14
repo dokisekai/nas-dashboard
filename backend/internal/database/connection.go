@@ -149,6 +149,10 @@ func Migrate() error {
 		&models.QuotaReport{},
 		&models.QuotaAlert{},
 		&models.FirewallRule{},
+		// 同步与备份模型
+		&models.SyncJob{},
+		&models.BackupRepo{},
+		&models.BackupTask{},
 	)
 
 	if err != nil {

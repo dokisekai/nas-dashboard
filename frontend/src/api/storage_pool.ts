@@ -41,12 +41,13 @@ export const storagePoolAPI = {
   },
 
   // Add disk to storage pool
-  async addDisk(name: string, device: string, branchPath: string, mode: string, priority: number): Promise<void> {
+  async addDisk(name: string, device: string, branchPath: string, mode: string, priority: number, format: boolean = false): Promise<void> {
     await axios.post(`${API_BASE}/${name}/disks`, {
       device,
       branchPath,
       mode,
-      priority
+      priority,
+      format
     })
   },
 

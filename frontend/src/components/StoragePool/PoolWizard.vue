@@ -460,6 +460,25 @@ const availableDisks = ref<any[]>([])
 const formRef = ref()
 const creating = ref(false)
 const currentStep = ref(0)
+const steps = [
+  { title: '基本信息' },
+  { title: '选择磁盘' },
+  { title: '配置选项' },
+  { title: '确认创建' }
+]
+
+const rules = {
+  name: [
+    { required: true, message: '请输入存储池名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度在 3 到 50 个字符', trigger: 'blur' }
+  ],
+  type: [
+    { required: true, message: '请选择存储池类型', trigger: 'change' }
+  ],
+  mountPoint: [
+    { required: true, message: '请输入挂载点', trigger: 'blur' }
+  ]
+}
 
 const form = ref({
   name: '',

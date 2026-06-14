@@ -633,8 +633,10 @@ import {
   CloudIcon
 } from '@heroicons/vue/24/outline'
 
-const activeTab = ref('repos')
+import { syncApi, backupApi } from '@/api'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
+const activeTab = ref('repos')
 const tabs = [
   { id: 'repos', label: '仓库', icon: CircleStackIcon },
   { id: 'jobs', label: '任务', icon: ClockIcon },
@@ -642,177 +644,12 @@ const tabs = [
   { id: 'settings', label: '设置', icon: ServerIcon }
 ]
 
-// Repositories
-const repositories = ref<any[]>([])
-const showAddRepoModal = ref(false)
-const newRepo = ref({
-  name: '',
-  type: 'local',
-  url: '',
-  username: '',
-  password: '',
-  region: '',
-  endpoint: '',
-  description: ''
-})
-
-// Backup Jobs
-const backupJobs = ref<any[]>([])
-const showAddJobModal = ref(false)
-const newJob = ref({
-  name: '',
-  sourcePath: '',
-  repoId: '',
-  enabled: true,
-  scheduleType: 'interval',
-  intervalValue: 24,
-  intervalUnit: 'hours',
-  cronExpression: '0 2 * * *',
-  excludes: '',
-  description: ''
-})
-
-// Snapshots
-const snapshots = ref<any[]>([])
-const selectedRepoId = ref('')
-
-// Settings
-const globalSettings = ref({
-  keepVerifications: true,
-  useCache: true,
-  cacheDir: '/tmp/restic-cache',
-  compression: 'auto'
-})
-
-const retention = ref({
-  keepLast: 7,
-  keepHourly: 24,
-  keepDaily: 7,
-  keepWeekly: 4,
-  keepMonthly: 12,
-  keepYearly: 10
-})
-
-const notifications = ref({
-  enabled: true,
-  types: ['success', 'error'],
-  email: '',
-  webhook: ''
-})
-
-const notificationTypes = [
-  { value: 'success', label: '成功通知' },
-  { value: 'error', label: '错误通知' },
-  { value: 'warning', label: '警告通知' }
-]
-
-// Computed
-const filteredSnapshots = computed(() => {
-  if (!selectedRepoId.value) return snapshots.value
-  return snapshots.value.filter(s => s.repoId === selectedRepoId.value)
-})
-
-// Functions
-const getRepoIcon = (type: string) => {
-  const icons: Record<string, any> = {
-    local: ServerIcon,
-    s3: CloudIcon,
-    webdav: GlobeAltIcon,
-    sftp: ServerIcon,
-    rest: GlobeAltIcon,
-    azure: CloudIcon,
-    gcs: CloudIcon,
-    b2: CloudIcon
-  }
-  return icons[type] || ServerIcon
-}
-
-const getRepoTypeName = (type: string) => {
-  const types: Record<string, string> = {
-    local: '本地',
-    s3: 'S3',
-    webdav: 'WebDAV',
-    sftp: 'SFTP',
-    rest: 'REST',
-    azure: 'Azure',
-    gcs: 'GCS',
-    b2: 'B2'
-  }
-  return types[type] || type
-}
-
-const getStatusName = (status: string) => {
-  const statuses: Record<string, string> = {
-    active: '活动',
-    inactive: '非活动',
-    error: '错误',
-    checking: '检查中'
-  }
-  return statuses[status] || status
-}
-
-const getPlaceholderForType = (type: string) => {
-  const placeholders: Record<string, string> = {
-    local: '/mnt/backups/myrepo',
-    s3: 's3://bucket-name/path',
-    webdav: 'https://example.com/webdav/path',
-    sftp: 'sftp://server.com/backup/path',
-    rest: 'rest:https://example.com/api',
-    azure: 'azure:container-name/path',
-    gcs: 'gs:bucket-name/path',
-    b2: 'b2:bucket-name/path'
-  }
-  return placeholders[type] || ''
-}
-
-const requiresAuth = (type: string) => {
-  return ['s3', 'webdav', 'sftp', 'rest', 'azure', 'gcs', 'b2'].includes(type)
-}
-
-const getRepoName = (repoId: string) => {
-  const repo = repositories.value.find(r => r.id === repoId)
-  return repo ? repo.name : 'Unknown'
-}
-
-const formatBytes = (bytes: number) => {
-  if (!bytes) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = bytes
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-  return `${size.toFixed(1)} ${units[unitIndex]}`
-}
-
-const formatDateTime = (dateStr: string) => {
-  if (!dateStr) return 'Never'
-  return new Date(dateStr).toLocaleString('zh-CN')
-}
-
-const formatSchedule = (schedule: any) => {
-  if (!schedule) return 'Manual'
-  if (schedule.type === 'interval') {
-    return `每 ${schedule.value} ${schedule.unit}`
-  }
-  return schedule.cron || 'Custom'
-}
-
-// Repository operations
 const addRepository = async () => {
   try {
-    console.log('Adding repository:', newRepo.value)
-    // Mock add
-    repositories.value.push({
-      id: Date.now().toString(),
-      ...newRepo.value,
-      status: 'active',
-      snapshotCount: 0,
-      totalSize: 0,
-      lastBackup: null
-    })
+    await backupApi.createRepo(newRepo.value)
+    ElMessage.success('仓库添加成功')
     showAddRepoModal.value = false
+    loadRepos()
     // Reset form
     newRepo.value = {
       name: '',
@@ -825,246 +662,33 @@ const addRepository = async () => {
       description: ''
     }
   } catch (error: any) {
-    console.error('Failed to add repository:', error)
-    alert('添加仓库失败: ' + error.message)
+    ElMessage.error('添加仓库失败')
   }
 }
 
-const backupRepo = async (repo: any) => {
+const loadTasks = async () => {
   try {
-    console.log('Backing up repository:', repo.name)
-    alert('开始备份: ' + repo.name)
-  } catch (error: any) {
-    console.error('Backup failed:', error)
-    alert('备份失败: ' + error.message)
+    const data = await backupApi.getTasks()
+    backupJobs.value = data || []
+  } catch (error) {
+    console.error('Failed to load tasks:', error)
   }
 }
 
-const checkRepo = async (repo: any) => {
-  try {
-    console.log('Checking repository:', repo.name)
-    alert('检查仓库: ' + repo.name)
-  } catch (error: any) {
-    console.error('Check failed:', error)
-    alert('检查失败: ' + error.message)
-  }
-}
-
-const forgetRepo = async (repo: any) => {
-  if (confirm(`确定要清理仓库 "${repo.name}" 的旧快照吗?`)) {
-    try {
-      console.log('Forgetting old snapshots:', repo.name)
-      alert('清理完成: ' + repo.name)
-    } catch (error: any) {
-      console.error('Forget failed:', error)
-      alert('清理失败: ' + error.message)
-    }
-  }
-}
-
-const deleteRepo = async (repo: any) => {
-  if (confirm(`确定要删除仓库 "${repo.name}" 吗? 这将删除所有快照数据。`)) {
-    try {
-      repositories.value = repositories.value.filter(r => r.id !== repo.id)
-      alert('仓库已删除')
-    } catch (error: any) {
-      console.error('Delete failed:', error)
-      alert('删除失败: ' + error.message)
-    }
-  }
-}
-
-// Job operations
 const addBackupJob = async () => {
   try {
-    console.log('Adding backup job:', newJob.value)
-    // Mock add
-    backupJobs.value.push({
-      id: Date.now().toString(),
-      ...newJob.value,
-      status: 'idle',
-      lastRun: null,
-      nextRun: newJob.value.enabled ? new Date().toISOString() : null,
-      schedule: newJob.value.enabled ? {
-        type: newJob.value.scheduleType,
-        value: newJob.value.intervalValue,
-        unit: newJob.value.intervalUnit,
-        cron: newJob.value.cronExpression
-      } : null
-    })
+    await backupApi.createTask(newJob.value)
+    ElMessage.success('任务创建成功')
     showAddJobModal.value = false
-    // Reset form
-    newJob.value = {
-      name: '',
-      sourcePath: '',
-      repoId: '',
-      enabled: true,
-      scheduleType: 'interval',
-      intervalValue: 24,
-      intervalUnit: 'hours',
-      cronExpression: '0 2 * * *',
-      excludes: '',
-      description: ''
-    }
+    loadTasks()
   } catch (error: any) {
-    console.error('Failed to add job:', error)
-    alert('创建任务失败: ' + error.message)
+    ElMessage.error('创建任务失败')
   }
-}
-
-const runJob = async (job: any) => {
-  try {
-    console.log('Running job:', job.name)
-    alert('开始运行任务: ' + job.name)
-  } catch (error: any) {
-    console.error('Run job failed:', error)
-    alert('运行失败: ' + error.message)
-  }
-}
-
-const stopJob = async (job: any) => {
-  try {
-    console.log('Stopping job:', job.name)
-    alert('停止任务: ' + job.name)
-  } catch (error: any) {
-    console.error('Stop job failed:', error)
-    alert('停止失败: ' + error.message)
-  }
-}
-
-const editJob = (job: any) => {
-  console.log('Editing job:', job.name)
-  alert('编辑任务: ' + job.name)
-}
-
-const deleteJob = (job: any) => {
-  if (confirm(`确定要删除任务 "${job.name}" 吗?`)) {
-    backupJobs.value = backupJobs.value.filter(j => j.id !== job.id)
-    alert('任务已删除')
-  }
-}
-
-// Snapshot operations
-const browseSnapshot = (snapshot: any) => {
-  console.log('Browsing snapshot:', snapshot.id)
-  alert('浏览快照: ' + snapshot.description)
-}
-
-const restoreSnapshot = (snapshot: any) => {
-  if (confirm(`确定要恢复快照 "${snapshot.description}" 吗?`)) {
-    console.log('Restoring snapshot:', snapshot.id)
-    alert('恢复快照: ' + snapshot.description)
-  }
-}
-
-const deleteSnapshot = (snapshot: any) => {
-  if (confirm(`确定要删除快照 "${snapshot.description}" 吗?`)) {
-    snapshots.value = snapshots.value.filter(s => s.id !== snapshot.id)
-    alert('快照已删除')
-  }
-}
-
-const loadSnapshots = () => {
-  console.log('Loading snapshots...')
-}
-
-// Settings operations
-const saveGlobalSettings = () => {
-  console.log('Saving global settings:', globalSettings.value)
-  alert('全局设置已保存')
-}
-
-const saveRetentionPolicy = () => {
-  console.log('Saving retention policy:', retention.value)
-  alert('保留策略已保存')
-}
-
-const saveNotificationSettings = () => {
-  console.log('Saving notification settings:', notifications.value)
-  alert('通知设置已保存')
 }
 
 onMounted(() => {
-  // Mock data
-  repositories.value = [
-    {
-      id: '1',
-      name: '本地备份',
-      type: 'local',
-      url: '/mnt/backup/restic',
-      status: 'active',
-      snapshotCount: 15,
-      totalSize: 1024000000,
-      lastBackup: new Date().toISOString(),
-      description: '本地存储备份'
-    },
-    {
-      id: '2',
-      name: 'S3 云备份',
-      type: 's3',
-      url: 's3://my-backup-bucket/nas',
-      status: 'active',
-      snapshotCount: 10,
-      totalSize: 512000000,
-      lastBackup: new Date(Date.now() - 86400000).toISOString(),
-      description: 'AWS S3 备份'
-    }
-  ]
-
-  backupJobs.value = [
-    {
-      id: '1',
-      name: '每日数据备份',
-      description: '备份重要数据文件',
-      sourcePath: '/data/important',
-      repoId: '1',
-      status: 'idle',
-      enabled: true,
-      lastRun: new Date().toISOString(),
-      nextRun: new Date(Date.now() + 86400000).toISOString(),
-      schedule: {
-        type: 'interval',
-        value: 24,
-        unit: 'hours'
-      }
-    },
-    {
-      id: '2',
-      name: '配置文件备份',
-      description: '备份系统配置',
-      sourcePath: '/etc',
-      repoId: '1',
-      status: 'idle',
-      enabled: true,
-      lastRun: new Date(Date.now() - 86400000).toISOString(),
-      nextRun: new Date(Date.now() + 86400000).toISOString(),
-      schedule: {
-        type: 'cron',
-        cron: '0 3 * * *'
-      }
-    }
-  ]
-
-  snapshots.value = [
-    {
-      id: '1',
-      repoId: '1',
-      repoName: '本地备份',
-      description: '自动备份-2024-01-15',
-      time: new Date().toISOString(),
-      size: 102400000,
-      fileCount: 1524
-    },
-    {
-      id: '2',
-      repoId: '2',
-      repoName: 'S3 云备份',
-      description: '自动备份-2024-01-14',
-      time: new Date(Date.now() - 86400000).toISOString(),
-      size: 51200000,
-      fileCount: 856
-    }
-  ]
+  loadRepos()
+  loadTasks()
 })
 </script>
 

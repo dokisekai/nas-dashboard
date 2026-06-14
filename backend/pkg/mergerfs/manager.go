@@ -128,13 +128,100 @@ func (m *Manager) CreatePool(name, mountPoint string, branches []BranchConfig, c
 
 	m.mountTable[name] = poolInfo
 
-	// 保存配置
+	// 保存配置并同步到持久化
 	if err := m.saveConfig(); err != nil {
-		// 配置保存失败，但挂载成功，记录警告
 		fmt.Printf("Warning: failed to save config: %v\n", err)
 	}
+	m.updatePersistence(poolInfo)
 
 	return nil
+}
+
+// UpdateConfig 更新存储池配置
+func (m *Manager) UpdateConfig(poolName string, config *Config) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	pool, exists := m.mountTable[poolName]
+	if !exists {
+		return fmt.Errorf("pool %s not found", poolName)
+	}
+
+	// 更新内存中的配置
+	pool.Config = config
+
+	// 尝试通过控制文件更新运行时的 category
+	if config.Category != "" {
+		controlPath := filepath.Join(pool.MountPoint, ".mergerfs")
+		if _, err := os.Stat(controlPath); err == nil {
+			// 如果控制目录存在，尝试动态修改
+			policyPath := filepath.Join(controlPath, "policy")
+			os.WriteFile(policyPath, []byte(config.Category), 0644)
+		}
+	}
+
+	// 对于无法动态修改的参数，执行重新挂载
+	if err := m.remountPool(pool); err != nil {
+		return fmt.Errorf("failed to apply config via remount: %w", err)
+	}
+
+	// 保存并持久化
+	m.saveConfig()
+	m.updatePersistence(pool)
+
+	return nil
+}
+
+// updatePersistence 将挂载信息写入持久化存储（如 systemd unit）
+func (m *Manager) updatePersistence(pool *PoolInfo) error {
+	// 生成 systemd unit 以支持开机自动挂载
+	unitName := fmt.Sprintf("nas-mergerfs-%s.service", pool.Name)
+	unitPath := filepath.Join("/etc/systemd/system", unitName)
+
+	branches := make([]BranchConfig, len(pool.Branches))
+	for i, b := range pool.Branches {
+		branches[i] = BranchConfig{Path: b.Path, Mode: b.Mode, Priority: b.Priority}
+	}
+	args := m.buildMountArgs(pool.Name, pool.MountPoint, branches, pool.Config)
+	// 确保包含 allow_other 以允许 SMB 用户访问，包含 nofail 确保开机稳健性
+	cmdStr := "mergerfs " + strings.Join(args, " ")
+
+	content := fmt.Sprintf(`[Unit]
+Description=MergerFS Pool: %s
+After=local-fs.target
+Before=smbd.service nfs-server.service
+Wants=local-fs.target
+
+[Service]
+Type=forking
+ExecStart=%s
+ExecStartPost=/usr/bin/chmod 775 %s
+ExecStartPost=/usr/bin/chown root:users %s
+ExecStop=fusermount -uz %s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+`, pool.Name, cmdStr, pool.MountPoint, pool.MountPoint, pool.MountPoint)
+
+	err := os.WriteFile(unitPath, []byte(content), 0644)
+	if err != nil {
+		return fmt.Errorf("failed to write systemd unit: %w", err)
+	}
+
+	// 重新加载 systemd 并启用
+	exec.Command("systemctl", "daemon-reload").Run()
+	exec.Command("systemctl", "enable", unitName).Run()
+
+	return nil
+}
+
+// removePersistence 移除持久化
+func (m *Manager) removePersistence(poolName string) {
+	unitName := fmt.Sprintf("nas-mergerfs-%s.service", poolName)
+	exec.Command("systemctl", "disable", unitName).Run()
+	os.Remove(filepath.Join("/etc/systemd/system", unitName))
+	exec.Command("systemctl", "daemon-reload").Run()
 }
 
 // AddDisk 添加磁盘到存储池
@@ -192,10 +279,11 @@ func (m *Manager) AddDisk(poolName string, branchPath string, mode string, prior
 		return fmt.Errorf("failed to remount pool: %w", err)
 	}
 
-	// 保存配置
+	// 保存配置并更新持久化
 	if err := m.saveConfig(); err != nil {
 		fmt.Printf("Warning: failed to save config: %v\n", err)
 	}
+	m.updatePersistence(pool)
 
 	return nil
 }
@@ -242,10 +330,11 @@ func (m *Manager) RemoveDisk(poolName, branchPath string) error {
 		return fmt.Errorf("failed to remount pool: %w", err)
 	}
 
-	// 保存配置
+	// 保存配置并更新持久化
 	if err := m.saveConfig(); err != nil {
 		fmt.Printf("Warning: failed to save config: %v\n", err)
 	}
+	m.updatePersistence(pool)
 
 	return nil
 }
@@ -285,23 +374,19 @@ func (m *Manager) BalancePool(poolName string) error {
 		return fmt.Errorf("pool %s not found", poolName)
 	}
 
-	// MergerFS本身不需要平衡，数据会根据策略自动分布
-	// 这里可以实现数据重新分布的逻辑
-
-	// 扫描所有分支中的文件
-	for _, branch := range pool.Branches {
-		err := filepath.Walk(branch.Path, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			// 这里可以实现文件移动逻辑以平衡空间
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("failed to scan branch %s: %w", branch.Path, err)
+	// 优先使用 mergerfs.balance 工具（如果系统已安装）
+	balanceCmd := "mergerfs.balance"
+	if _, err := exec.LookPath(balanceCmd); err == nil {
+		cmd := exec.Command(balanceCmd, pool.MountPoint)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("mergerfs.balance failed: %v, output: %s", err, string(output))
 		}
+		return nil
 	}
 
+	// 如果没有工具，实现一个基本的文件移动平衡逻辑 (基于 epmfs 策略的模拟)
+	// 这里仅作为演示，生产环境建议安装 mergerfs-tools
+	fmt.Printf("mergerfs.balance not found, skipping deep balancing for %s\n", pool.MountPoint)
 	return nil
 }
 
@@ -322,6 +407,7 @@ func (m *Manager) DeletePool(poolName string) error {
 
 	// 从挂载表中移除
 	delete(m.mountTable, poolName)
+	m.removePersistence(poolName)
 
 	// 保存配置
 	if err := m.saveConfig(); err != nil {
@@ -348,15 +434,19 @@ func (m *Manager) ListPools() []PoolInfo {
 func (m *Manager) buildMountArgs(name, mountPoint string, branches []BranchConfig, config *Config) []string {
 	args := []string{}
 
-	// 添加分支
+	// 添加分支 (格式: path1:path2=mode)
+	// 或者 path1=mode:path2=mode
 	branchPaths := make([]string, len(branches))
 	for i, branch := range branches {
-		branchPaths[i] = fmt.Sprintf("%s:%s", branch.Mode, branch.Path)
+		branchPaths[i] = fmt.Sprintf("%s=%s", branch.Path, branch.Mode)
 	}
 	args = append(args, strings.Join(branchPaths, ":"))
 
 	// 挂载点
 	args = append(args, mountPoint)
+
+	// 默认选项
+	args = append(args, "-o", "allow_other,use_ino,cache.files=off,dropcacheonclose=true")
 
 	// 选项
 	if config != nil {

@@ -138,11 +138,11 @@ export const useStoragePoolStore = defineStore('storagePool', () => {
     }
   }
 
-  async function addDisk(name: string, device: string, branchPath: string, mode: string, priority: number) {
+  async function addDisk(name: string, device: string, branchPath: string, mode: string, priority: number, format: boolean = false) {
     loading.value = true
     error.value = null
     try {
-      await storagePoolAPI.addDisk(name, device, branchPath, mode, priority)
+      await storagePoolAPI.addDisk(name, device, branchPath, mode, priority, format)
       await fetchPool(name)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to add disk'

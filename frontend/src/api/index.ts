@@ -161,3 +161,6 @@ export const configApi = {
 
 // ==================== 应用管理 API ====================
 export { applicationApi } from './application'
+
+// ==================== 同步与备份 API ====================
+export { syncApi, backupApi } from './sync_backup'

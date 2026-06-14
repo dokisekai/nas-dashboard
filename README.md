@@ -93,7 +93,7 @@ npm run dev
 docker-compose up -d
 ```
 
-详细部署说明请查看 [部署指南](DEPLOYMENT.md)
+详细部署说明请查看 [部署指南](docs/DEPLOYMENT.md)
 
 ### 快速配置
 
@@ -103,14 +103,15 @@ docker-compose up -d
 4. 设置配额
 5. 配置共享
 
-详细使用说明请查看 [快速开始指南](QUICKSTART.md)
+详细使用说明请查看 [快速开始指南](docs/QUICKSTART.md)
 
 ## 文档
 
-- [部署指南](DEPLOYMENT.md) - 系统部署和配置
-- [用户手册](USER_MANUAL.md) - 完整功能使用说明
-- [快速开始](QUICKSTART.md) - 5分钟快速上手
-- [API 文档](API_DOCUMENTATION.md) - REST API 接口文档
+- [部署指南](docs/DEPLOYMENT.md) - 系统部署和配置
+- [用户手册](docs/USER_MANUAL.md) - 完整功能使用说明
+- [快速开始](docs/QUICKSTART.md) - 5分钟快速上手
+- [API 文档](docs/API_DOCUMENTATION.md) - REST API 接口文档
+
 
 ## 项目结构
 

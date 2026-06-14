@@ -50,7 +50,7 @@
               <UserIcon class="w-4 h-4" />
               用户资料
             </button>
-            <button class="dropdown-item" @click="openWindow('settings', '账户设置')">
+            <button class="dropdown-item" @click="openWindow('sync-manager', '账户设置')">
               <CogIcon class="w-4 h-4" />
               账户设置
             </button>
@@ -63,7 +63,7 @@
         </div>
 
         <!-- 设置按钮 -->
-        <button class="system-bar-btn settings-btn" @click="openWindow('settings', '系统设置')" title="系统设置">
+        <button class="system-bar-btn settings-btn" @click="openWindow('sync-manager', '同步备份')" title="同步备份">
           <CogIcon class="w-4 h-4" />
         </button>
 
@@ -219,14 +219,13 @@
 
       <div
         class="dock-item"
-        :class="{ active: isWindowActive('settings') }"
-        @click="openWindow('settings', '系统设置')"
-        title="设置"
+        :class="{ active: isWindowActive('sync-manager') }"
+        @click="openWindow('sync-manager', '同步备份')"
+        title="同步备份"
       >
         <div class="dock-icon">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
           </svg>
         </div>
       </div>
@@ -304,7 +303,7 @@ import NotificationToast from '../NotificationSystem/NotificationToast.vue'
 import NotificationCenter from '../NotificationSystem/NotificationCenter.vue'
 import { useNotificationStore } from '../../stores/notification'
 import { useAuthStore } from '../../stores/auth'
-import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon } from '@heroicons/vue/24/outline'
+import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon, CloudArrowUpIcon } from '@heroicons/vue/24/outline'
 
 interface Window {
   id: string
@@ -439,7 +438,7 @@ const appConfigs: Record<string, { title: string; width: number; height: number 
   'app-center': { title: '应用中心', width: 900, height: 600 },
   'user-manager': { title: '用户管理', width: 800, height: 500 },
   'backup-manager': { title: '备份管理', width: 900, height: 600 },
-  'settings': { title: '系统设置', width: 700, height: 500 },
+  'sync-manager': { title: '同步备份', width: 1000, height: 700 },
   'control-panel': { title: '控制面板', width: 1200, height: 800 }
 }
 

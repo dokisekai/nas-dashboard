@@ -59,7 +59,7 @@ import { computed, ref, onUnmounted, defineAsyncComponent } from 'vue'
 import {
   ServerIcon,
   ChartBarIcon,
-  CogIcon,
+  CloudArrowUpIcon,
   UserGroupIcon,
   FolderIcon,
   ShoppingBagIcon
@@ -108,11 +108,11 @@ const windowIcon = computed(() => {
   const icons: Record<string, any> = {
     'storage-manager': ServerIcon,
     'system-monitor': ChartBarIcon,
-    'settings': CogIcon,
+    'sync-manager': CloudArrowUpIcon,
     'user-manager': UserGroupIcon,
     'file-manager': FolderIcon,
     'app-center': ShoppingBagIcon,
-    'control-panel': CogIcon
+    'control-panel': CloudArrowUpIcon
   }
   return icons[props.window.appId] || ServerIcon
 })
@@ -122,7 +122,7 @@ const appComponent = computed(() => {
   const components: Record<string, any> = {
     'storage-manager': defineAsyncComponent(() => import('../../apps/StorageManager.vue')),
     'system-monitor': defineAsyncComponent(() => import('../../apps/SystemMonitor.vue')),
-    'settings': defineAsyncComponent(() => import('../../apps/SystemSettings.vue')),
+    'sync-manager': defineAsyncComponent(() => import('../../apps/SyncManager.vue')),
     'user-manager': defineAsyncComponent(() => import('../../apps/UserManager.vue')),
     'backup-manager': defineAsyncComponent(() => import('../../apps/BackupManager.vue')),
     'file-manager': defineAsyncComponent(() => import('../../views/Storage/Disks.vue')),

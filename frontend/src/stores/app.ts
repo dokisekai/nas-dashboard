@@ -169,7 +169,7 @@ export const useAppStore = defineStore('app', () => {
       'storage-manager': '存储管理',
       'system-monitor': '系统监控',
       'user-manager': '用户管理',
-      'settings': '系统设置',
+      'sync-manager': '同步备份',
       'plugin-store': '插件商店'
     }
     return titles[appId] || appId

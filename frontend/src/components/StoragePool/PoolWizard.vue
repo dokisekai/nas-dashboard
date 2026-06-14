@@ -55,13 +55,16 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="挂载点" prop="mountPoint">
-            <el-input
-              v-model="form.mountPoint"
-              placeholder="/mnt/pool-name"
-              prefix-icon="Folder"
-            />
-          </el-form-item>
+        <el-form-item label="挂载点" prop="mountPoint">
+          <el-input
+            v-model="form.mountPoint"
+            placeholder="/data (推荐) 或 /mnt/pool-name"
+            prefix-icon="Folder"
+          />
+          <div class="form-tip">
+            推荐使用 /data 作为统一存储入口
+          </div>
+        </el-form-item>
 
           <el-form-item label="描述">
             <el-input
@@ -130,9 +133,53 @@
                   </el-select>
                 </template>
               </el-table-column>
-              <el-table-column label="优先级" width="120">
+              <el-table-column label="角色" width="120">
                 <template #default="{ row }">
-                  <el-input-number v-model="row.priority" :min="0" :max="100" size="small" />
+                  <el-select 
+                    v-model="row.role" 
+                    size="small"
+                    style="width: 100%"
+                  >
+                    <el-option label="热数据 (SSD)" value="hot" />
+                    <el-option label="温数据 (SATA SSD)" value="warm" />
+                    <el-option label="冷数据 (HDD)" value="cold" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="优先级" width="150">
+                <template #default="{ row }">
+                  <el-input-number 
+                    v-model="row.priority" 
+                    :min="0" 
+                    :max="100" 
+                    size="small" 
+                    controls-position="right"
+                    :step="10"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column label="排序" width="100" align="center">
+                <template #default="{ $index }">
+                  <div class="sort-buttons">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      link
+                      @click="moveUp($index)"
+                      :disabled="$index === 0"
+                    >
+                      <el-icon><ArrowUp /></el-icon>
+                    </el-button>
+                    <el-button
+                      type="primary"
+                      size="small"
+                      link
+                      @click="moveDown($index)"
+                      :disabled="$index === selectedDisks.length - 1"
+                    >
+                      <el-icon><ArrowDown /></el-icon>
+                    </el-button>
+                  </div>
                 </template>
               </el-table-column>
               <el-table-column width="60">
@@ -160,8 +207,18 @@
       <div v-show="currentStep === 2" class="wizard-step">
         <div v-if="form.type === 'mergerfs'" class="mergerfs-config">
           <h4>MergerFS 配置</h4>
+          <el-alert
+            title="存储策略说明"
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 20px"
+          >
+            MergerFS 提供多种文件分配策略来控制新文件如何在磁盘间分布。选择合适的策略可以优化性能和空间利用率。
+          </el-alert>
+
           <el-form :model="form.config" label-width="150px">
-            <el-form-item label="文件分配策略">
+            <el-form-item label="文件创建策略" required>
               <el-select v-model="form.config.category" placeholder="选择策略">
                 <el-option
                   v-for="cat in mergerFSCategories"
@@ -180,20 +237,71 @@
               </div>
             </el-form-item>
 
-            <el-form-item label="最小空闲空间">
+            <el-form-item label="策略推荐">
+              <div class="strategy-recommendations">
+                <el-card shadow="hover" class="strategy-card" :class="{ recommended: form.config.category === 'epmfs' }">
+                  <template #header>
+                    <div class="card-header">
+                      <span>推荐策略</span>
+                      <el-tag type="success" size="small">推荐</el-tag>
+                    </div>
+                  </template>
+                  <div class="strategy-content">
+                    <div class="strategy-item">
+                      <strong>epmfs (Most Free Space)</strong>
+                      <p>最适合大多数NAS场景，始终写入剩余空间最多的磁盘</p>
+                    </div>
+                  </div>
+                </el-card>
+
+                <el-card shadow="hover" class="strategy-card" :class="{ recommended: form.config.category === 'epff' }">
+                  <template #header>
+                    <div class="card-header">
+                      <span>高性能策略</span>
+                      <el-tag type="warning" size="small">SSD优化</el-tag>
+                    </div>
+                  </template>
+                  <div class="strategy-content">
+                    <div class="strategy-item">
+                      <strong>epff (First Free)</strong>
+                      <p>按优先级顺序写入，适合SSD作为主存储的场景</p>
+                    </div>
+                  </div>
+                </el-card>
+
+                <el-card shadow="hover" class="strategy-card" :class="{ recommended: form.config.category === 'epall' }">
+                  <template #header>
+                    <div class="card-header">
+                      <span>负载均衡策略</span>
+                      <el-tag type="info" size="small">均衡</el-tag>
+                    </div>
+                  </template>
+                  <div class="strategy-content">
+                    <div class="strategy-item">
+                      <strong>epall (Round Robin)</strong>
+                      <p>轮询方式分配，平衡所有磁盘的I/O负载</p>
+                    </div>
+                  </div>
+                </el-card>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="最小空闲空间" required>
               <el-input
                 v-model="form.config.minfreespace"
                 placeholder="例如: 10G, 100M"
               />
               <div class="form-tip">
-                分支的最小空闲空间要求，低于此值将不用于写入新文件
+                分支的最小空闲空间要求，低于此值将不用于写入新文件。建议设置为 10G-50G
               </div>
             </el-form-item>
+
+            <el-divider>高级选项</el-divider>
 
             <el-form-item label="直接 I/O">
               <el-switch v-model="form.config.direct_io" />
               <div class="form-tip">
-                启用直接 I/O 可以提高性能，但可能减少缓存效果
+                启用直接 I/O 可以提高性能，但可能减少缓存效果。适合大文件传输
               </div>
             </el-form-item>
 
@@ -201,6 +309,27 @@
               <el-switch v-model="form.config.async_read" />
               <div class="form-tip">
                 启用异步读取可以提高并发读取性能
+              </div>
+            </el-form-item>
+
+            <el-form-item label="硬删除">
+              <el-switch v-model="form.config.hard_remove" />
+              <div class="form-tip">
+                立即删除文件而非延迟删除，可以防止空间泄露
+              </div>
+            </el-form-item>
+
+            <el-form-item label="使用 inode">
+              <el-switch v-model="form.config.use_ino" />
+              <div class="form-tip">
+                使用真实的 inode 值，有助于某些应用正常工作
+              </div>
+            </el-form-item>
+
+            <el-form-item label="跟随符号链接">
+              <el-switch v-model="form.config.follow_symlinks" />
+              <div class="form-tip">
+                允许符号链接被正确解析
               </div>
             </el-form-item>
           </el-form>
@@ -310,6 +439,7 @@ import { ref, computed, watch } from 'vue'
 import { useStoragePoolStore } from '@/stores/storage_pool'
 import { storageApi } from '@/api'
 import { ElMessage } from 'element-plus'
+import { ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import type { StoragePoolCreateRequest, BranchConfig, MergerFSCategory } from '@/types/storage_pool'
 import { MERGERFS_CATEGORIES } from '@/types/storage_pool'
 
@@ -327,6 +457,28 @@ const emit = defineEmits<Emits>()
 
 const storagePoolStore = useStoragePoolStore()
 const availableDisks = ref<any[]>([])
+const formRef = ref()
+const creating = ref(false)
+const currentStep = ref(0)
+
+const form = ref({
+  name: '',
+  type: 'mergerfs',
+  mountPoint: '',
+  description: '',
+  config: {
+    branches: [],
+    category: 'epmfs',
+    minfreespace: '10G',
+    direct_io: false,
+    async_read: true,
+    use_ino: false,
+    hard_remove: false,
+    auto_unshare: false,
+    follow_symlinks: false,
+    link_exas: false
+  }
+})
 
 const dialogVisible = computed({
   get: () => props.visible,
@@ -436,11 +588,37 @@ const onTypeChange = () => {
 }
 
 const handleDiskSelection = (selection: any[]) => {
-  selectedDisks.value = selection.map(disk => ({
+  selectedDisks.value = selection.map((disk, index) => ({
     ...disk,
     mode: 'rw',
-    priority: 0
+    priority: index === 0 ? 100 : 50,
+    role: detectDiskRole(disk)
   }))
+}
+
+const detectDiskRole = (disk: any): string => {
+  const sizeGB = disk.size / (1024 * 1024 * 1024)
+  const isSSD = disk.model?.toLowerCase().includes('ssd') || 
+                disk.model?.toLowerCase().includes('nvme') ||
+                disk.type === 'ssd'
+  
+  if (isSSD && sizeGB < 1000) return 'hot'
+  if (isSSD && sizeGB >= 1000) return 'warm'
+  return 'cold'
+}
+
+const moveUp = (index: number) => {
+  if (index === 0) return
+  const temp = selectedDisks.value[index]
+  selectedDisks.value[index] = selectedDisks.value[index - 1]
+  selectedDisks.value[index - 1] = temp
+}
+
+const moveDown = (index: number) => {
+  if (index === selectedDisks.value.length - 1) return
+  const temp = selectedDisks.value[index]
+  selectedDisks.value[index] = selectedDisks.value[index + 1]
+  selectedDisks.value[index + 1] = temp
 }
 
 const removeDisk = (index: number) => {
@@ -590,10 +768,56 @@ watch(() => form.value.name, (newName) => {
   }
 }
 
-.form-tip {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 5px;
+.mergerfs-config {
+  .strategy-recommendations {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-top: 10px;
+
+    .strategy-card {
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &.recommended {
+        border: 2px solid #67c23a;
+      }
+
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+      }
+
+      .strategy-content {
+        .strategy-item {
+          strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #303133;
+          }
+
+          p {
+            margin: 0;
+            font-size: 12px;
+            color: #606266;
+            line-height: 1.4;
+          }
+        }
+      }
+    }
+  }
+}
+
+.sort-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .confirmation {

@@ -92,6 +92,10 @@
 
               <div class="disk-actions">
                 <el-button-group>
+                  <el-button size="small" @click.stop="formatDisk(disk)" type="danger">
+                    <el-icon><Delete /></el-icon>
+                    格式化
+                  </el-button>
                   <el-button size="small" @click.stop="partitionDisk(disk)">
                     <el-icon><Edit /></el-icon>
                     分区
@@ -272,6 +276,13 @@
       :disk="selectedDisk"
       @updated="onPartitionUpdated"
     />
+
+    <!-- Format Disk Dialog -->
+    <DiskFormatDialog
+      v-model:visible="showFormatDialog"
+      :disk="selectedDisk"
+      @formatted="onDiskFormatted"
+    />
   </div>
 </template>
 
@@ -291,13 +302,15 @@ import {
   Document,
   Edit,
   Timer,
-  Monitor
+  Monitor,
+  Delete
 } from '@element-plus/icons-vue'
 import RAIDWizard from '@/components/Disk/RAIDWizard.vue'
 import DiskDetailsDialog from '@/components/Disk/DiskDetailsDialog.vue'
 import PartitionEditor from '@/components/Disk/PartitionEditor.vue'
 import SMARTMonitor from '@/components/Disk/SMARTMonitor.vue'
 import BenchmarkTool from '@/components/Disk/BenchmarkTool.vue'
+import DiskFormatDialog from '@/components/Disk/DiskFormatDialog.vue'
 
 const activeTab = ref('disks')
 const disks = ref<DiskInfo[]>([])
@@ -309,6 +322,7 @@ const selectedDisk = ref<DiskInfo | null>(null)
 const showRAIDWizard = ref(false)
 const showDiskDetailsDialog = ref(false)
 const showPartitionEditor = ref(false)
+const showFormatDialog = ref(false)
 
 // Computed
 const healthyDisks = computed(() =>
@@ -389,9 +403,13 @@ const partitionDisk = (disk: DiskInfo) => {
   showPartitionEditor.value = true
 }
 
+const formatDisk = (disk: DiskInfo) => {
+  selectedDisk.value = disk
+  showFormatDialog.value = true
+}
+
 const benchmarkDisk = (disk: DiskInfo) => {
   activeTab.value = 'benchmark'
-  // Pass disk to benchmark tool
   ElMessage.info(`即将对 ${disk.device} 进行性能测试`)
 }
 
@@ -456,6 +474,10 @@ const onRAIDCreated = () => {
 }
 
 const onPartitionUpdated = () => {
+  refreshDisks()
+}
+
+const onDiskFormatted = () => {
   refreshDisks()
 }
 

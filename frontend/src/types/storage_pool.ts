@@ -100,15 +100,17 @@ export interface MergerFSCategory {
 }
 
 export const MERGERFS_CATEGORIES: MergerFSCategory[] = [
-  { value: 'create', label: 'Create', description: 'Create on first branch with space' },
-  { value: 'mv', label: 'Move', description: 'Move to branch with most space' },
-  { value: 'epall', label: 'EP All', description: 'Round-robin across all branches' },
-  { value: 'epff', label: 'EP First', description: 'Place on first available branch' },
-  { value: 'epmfs', label: 'EP MFS', description: 'Place on branch with most free space' },
-  { value: 'eplus', label: 'EP Plus', description: 'Place on branch with most plus space' },
-  { value: 'eprand', label: 'EP Random', description: 'Place on random branch' },
-  { value: 'lus', label: 'LUS', description: 'Least used space' },
-  { value: 'mfs', label: 'MFS', description: 'Most free space' }
+  { value: 'create', label: 'Create (ff)', description: '在第一个有空间的分支创建新文件' },
+  { value: 'mv', label: 'Move (mv)', description: '移动到剩余空间最多的分支' },
+  { value: 'epall', label: 'EP All (epall)', description: '在所有分支之间轮询分配新文件' },
+  { value: 'epff', label: 'EP First (epff)', description: '按顺序在第一个可用分支放置新文件' },
+  { value: 'epmfs', label: 'EP MFS (epmfs)', description: '在剩余空间最多的分支放置新文件' },
+  { value: 'eplus', label: 'EP Plus (eplus)', description: '在绝对剩余空间最多的分支放置新文件' },
+  { value: 'eprand', label: 'EP Random (eprand)', description: '随机选择分支放置新文件' },
+  { value: 'lus', label: 'LUS (lus)', description: '选择使用空间最少的分支' },
+  { value: 'mfs', label: 'MFS (mfs)', description: '选择剩余空间最多的分支' },
+  { value: 'lfs', label: 'LFS (lfs)', description: '选择剩余空间最少的分支' },
+  { value: 'rand', label: 'Random (rand)', description: '完全随机选择分支' }
 ]
 
 export const STORAGE_POOL_STATUS_COLORS = {

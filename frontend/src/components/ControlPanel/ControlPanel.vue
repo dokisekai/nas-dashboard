@@ -108,8 +108,13 @@
 
         <!-- 分类设置 -->
         <div v-else-if="activeCategory && !searchQuery" class="cp-category-content">
+          <!-- SMB 管理 -->
+          <div v-if="activeCategory === 'smb'" class="cp-special-section">
+            <SMBManager />
+          </div>
+
           <!-- 常规设置 -->
-          <div class="cp-settings-section">
+          <div v-else class="cp-settings-section">
             <h3 class="cp-section-title">常规设置</h3>
             <div class="cp-settings-grid">
               <div
@@ -257,6 +262,7 @@ import { ref, onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useControlPanelStore } from '../../stores/controlPanel'
 import ControlPanelSettingComponent from './ControlPanelSettingComponent.vue'
+import SMBManager from './SMBManager.vue'
 import {
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -277,7 +283,8 @@ import {
   BellIcon,
   PaintBrushIcon,
   BeakerIcon,
-  CircleStackIcon
+  CircleStackIcon,
+  FolderIcon
 } from '@heroicons/vue/24/outline'
 
 // 图标映射 - 现在使用直接导入的图标
@@ -289,7 +296,8 @@ const iconComponents: Record<string, any> = {
   BellIcon,
   PaintBrushIcon,
   BeakerIcon,
-  CircleStackIcon
+  CircleStackIcon,
+  FolderIcon
 }
 
 const controlPanel = useControlPanelStore()

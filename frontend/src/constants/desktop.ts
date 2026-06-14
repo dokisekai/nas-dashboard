@@ -44,10 +44,10 @@ export const defaultDockItems: DockItem[] = [
     badge: null
   },
   {
-    id: 'settings',
-    label: '系统设置',
-    icon: 'CogIcon',
-    appId: 'settings',
+    id: 'sync-manager',
+    label: '同步备份',
+    icon: 'CloudArrowUpIcon',
+    appId: 'sync-manager',
     badge: null
   },
   {
@@ -288,21 +288,21 @@ export const availableApps: AppDefinition[] = [
     permissions: ['users.read', 'users.write']
   },
   {
-    id: 'settings',
-    name: '系统设置',
-    component: 'SystemSettings',
-    icon: 'CogIcon',
-    description: '系统配置和管理',
-    category: 'system',
+    id: 'sync-manager',
+    name: '同步备份',
+    component: 'SyncManager',
+    icon: 'CloudArrowUpIcon',
+    description: 'Restic 备份管理和多存储同步',
+    category: 'storage',
     windowConfig: {
-      width: 800,
-      height: 600,
-      minWidth: 600,
-      minHeight: 400,
+      width: 1000,
+      height: 700,
+      minWidth: 800,
+      minHeight: 500,
       resizable: true,
       maximizable: true
     },
-    permissions: ['config.read', 'config.write']
+    permissions: ['storage.read', 'storage.write', 'backup.read', 'backup.write']
   },
   {
     id: 'plugin-store',

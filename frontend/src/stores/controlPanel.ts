@@ -433,6 +433,15 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
           advanced: true
         }
       ]
+    },
+    {
+      id: 'smb',
+      name: '文件共享',
+      icon: 'FolderIcon',
+      description: 'SMB文件共享和访问权限设置',
+      order: 6,
+      accessLevel: 'user',
+      settings: [] // SMB管理使用自定义组件，不需要传统设置
     }
   ]
 

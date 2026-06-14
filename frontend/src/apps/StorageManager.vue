@@ -277,7 +277,13 @@
       </div>
     </div>
 
-    <!-- Enhanced SMB Share Modal -->
+    <!-- Format Disk Dialog -->
+    <DiskFormatDialog
+      v-if="showFormatDialog && selectedDisk"
+      v-model:visible="showFormatDialog"
+      :disk="selectedDisk"
+      @formatted="onDiskFormatted"
+    />
     <div v-if="showCreateSMBModal" class="modal-overlay" @click="closeSMBModal">
       <div class="modal-content smb-modal" @click.stop>
         <div class="modal-header">
@@ -482,6 +488,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import { storageApi, fileApi } from '../api'
 import StoragePoolManager from './StoragePoolManager.vue'
+import DiskFormatDialog from '../components/Disk/DiskFormatDialog.vue'
 
 const activeTab = ref('disks')
 const loading = ref(false)
@@ -497,6 +504,8 @@ const tabs = [
 
 // Disk Management
 const disks = ref<any[]>([])
+const selectedDisk = ref<any>(null)
+const showFormatDialog = ref(false)
 
 // SMB Management
 const smbShares = ref<any[]>([])
@@ -587,25 +596,16 @@ const unmountDisk = async (disk: any) => {
 
 const formatDisk = async (disk: any) => {
   if (disk.label?.includes('System')) {
-    alert('无法格式化系统磁盘！')
+    showError('无法格式化系统磁盘！')
     return
   }
   if (disk.mounted) {
-    alert('请先卸载磁盘再进行格式化')
+    showError('请先卸载磁盘再进行格式化')
     return
   }
 
-  const fsType = prompt('输入文件系统类型 (ext4, xfs, btrfs, ntfs):', 'ext4')
-  if (fsType && confirm(`危险：确定要格式化整块硬盘 ${disk.name} 吗? \n此操作将清除该硬盘上的所有分区和数据！`)) {
-    try {
-      await storageApi.formatDisk(disk.name, fsType)
-      showSuccess(`成功格式化 ${disk.name} 为 ${fsType}`)
-      await refreshDisks()
-    } catch (error: any) {
-      console.error('Failed to format disk:', error)
-      showError('格式化失败: ' + (error.response?.data?.error || error.message))
-    }
-  }
+  selectedDisk.value = disk
+  showFormatDialog.value = true
 }
 
 // SMB Functions
@@ -872,6 +872,10 @@ const formatFileSize = (bytes: number) => {
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+const onDiskFormatted = () => {
+  refreshDisks()
 }
 
 onMounted(() => {

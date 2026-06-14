@@ -167,12 +167,21 @@ const userForm = ref({
   comment: ''
 })
 
-// 过滤后的用户列表
+// 过滤后的用户列表 - 只显示普通用户（UID >= 1000）
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value
-  return users.value.filter(user =>
-    user.username.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  let result = users.value.filter(user => {
+    // 只显示普通用户，过滤掉系统用户
+    const uid = parseInt(user.uid)
+    return uid >= 1000
+  })
+
+  if (searchQuery.value) {
+    result = result.filter(user =>
+      user.username.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  }
+
+  return result
 })
 
 // 获取用户数据

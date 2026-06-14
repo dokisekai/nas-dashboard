@@ -250,12 +250,21 @@ const groupForm = ref({
   description: ''
 })
 
-// 过滤后的组列表
+// 过滤后的组列表 - 只显示普通用户组（GID >= 1000）
 const filteredGroups = computed(() => {
-  if (!searchQuery.value) return groups.value
-  return groups.value.filter(group =>
-    group.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
+  let result = groups.value.filter(group => {
+    // 只显示普通用户组，过滤掉系统组
+    const gid = parseInt(group.gid)
+    return gid >= 1000
+  })
+
+  if (searchQuery.value) {
+    result = result.filter(group =>
+      group.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+  }
+
+  return result
 })
 
 // 当前组成员
@@ -263,12 +272,14 @@ const currentGroupMembers = computed(() => {
   return currentGroup.value?.members || []
 })
 
-// 可添加的用户（不在当前组中的用户）
+// 可添加的用户（不在当前组中的用户） - 只显示普通用户
 const availableUsersToAdd = computed(() => {
   if (!currentGroup.value) return []
-  return users.value.filter(user =>
-    !currentGroupMembers.value.includes(user.username)
-  )
+  return users.value.filter(user => {
+    // 过滤掉系统用户
+    const uid = parseInt(user.uid)
+    return uid >= 1000 && !currentGroupMembers.value.includes(user.username)
+  })
 })
 
 // 判断是否为系统组

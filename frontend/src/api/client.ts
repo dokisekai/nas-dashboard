@@ -2,6 +2,8 @@ import axios from 'axios'
 
 // Debug mode - log all API calls
 const DEBUG = true // 强制开启DEBUG模式
+console.log('[API CLIENT INIT] - Creating axios instance with DEBUG mode')
+console.log('[API CLIENT INIT] - Base URL:', import.meta.env.VITE_API_URL || 'http://192.168.50.10:8888')
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://192.168.50.10:8888',
@@ -11,6 +13,8 @@ const api = axios.create({
   },
 })
 
+console.log('[API CLIENT INIT] - Axios instance created')
+
 // 请求拦截器 - 添加 JWT token
 api.interceptors.request.use(
   (config) => {
@@ -19,7 +23,12 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
     if (DEBUG) {
-      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data || config.params)
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`)
+      console.log(`[Token Debug] Token exists: ${!!token}`)
+      console.log(`[Token Debug] Token length: ${token?.length}`)
+      console.log(`[Token Debug] Authorization header:`, config.headers.Authorization?.substring(0, 30) + '...')
+      console.log(`[Token Debug] All headers:`, JSON.stringify(config.headers, null, 2))
+      console.log(`[Request Data]`, config.data || config.params)
     }
     return config
   },
@@ -50,20 +59,7 @@ api.interceptors.response.use(
       const data = error.response.data
 
       if (status === 401) {
-        // 开发模式：不自动重定向，只记录日志
-        const isDevMode = import.meta.env.DEV || localStorage.getItem('dev_mode') === 'true'
-        if (isDevMode) {
-          console.warn('401 Unauthorized in dev mode - skipping redirect')
-          // 在开发模式下，不清除token，只是记录警告
-          return Promise.reject({
-            message: '开发模式：认证失败（忽略）',
-            originalError: data || error.message,
-            status: 401,
-            isDevMode: true
-          })
-        }
-
-        // 生产模式：清除本地存储并重定向
+        // 清除本地存储并重定向到登录页
         console.warn('401 Unauthorized - clearing token and redirecting to login')
 
         // 检查是否已经在登录页，避免循环重定向
@@ -80,11 +76,9 @@ api.interceptors.response.use(
         localStorage.removeItem('token')
         localStorage.removeItem('user')
 
-        // 延迟重定向，给用户一些时间看到响应
+        // 重定向到登录页
         console.log('Redirecting to login page due to 401')
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 100)
+        window.location.href = '/login'
 
         return Promise.reject({
           message: '登录已过期，请重新登录',

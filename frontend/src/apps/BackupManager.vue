@@ -245,7 +245,7 @@ const backupForm = ref({
 const refreshBackups = async () => {
   loading.value = true
   try {
-    const response = await backupApi.getBackups()
+    const response = await backupApi.getBackups() as any
     backups.value = response.backups || []
   } catch (error) {
     console.error('Failed to fetch backups:', error)

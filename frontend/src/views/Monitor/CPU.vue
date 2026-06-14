@@ -108,7 +108,7 @@
         </div>
       </div>
       <div class="h-80">
-        <ApexChart ref="chartRef" type="area" :options="chartOptions" :series="chartSeries" height="320" />
+        <ApexChart ref="chartRef" type="area" :options="chartOptions" :series="chartSeries" :height="320" />
       </div>
     </div>
 
@@ -310,10 +310,6 @@ const getStatusText = (usage: number) => {
   if (percent >= 80) return '警告'
   if (percent >= 60) return '较高'
   return '正常'
-}
-
-const formatTime = (date: Date) => {
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 const calculateAverage = () => {

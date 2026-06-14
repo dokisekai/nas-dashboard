@@ -324,15 +324,12 @@ func GetTemperature() (*TemperatureInfo, error) {
 	// 解析各个传感器的温度
 	for chipName, chipData := range sensorsData {
 		if chipMap, ok := chipData.(map[string]interface{}); ok {
-			for adapterName, adapterData := range chipMap {
-				if adapterList, ok := adapterData.([]interface{}); ok {
-					for _, item := range adapterList {
-						if sensorMap, ok := item.(map[string]interface{}); ok {
-							sensor := parseSensorData(chipName, adapterName, sensorMap)
-							if sensor != nil {
-								temp.Sensors = append(temp.Sensors, *sensor)
-							}
-						}
+			// 直接解析chipMap中的传感器数据
+			for sensorName, sensorData := range chipMap {
+				if sensorMap, ok := sensorData.(map[string]interface{}); ok {
+					sensor := parseSensorDataV2(chipName, sensorName, sensorMap)
+					if sensor != nil {
+						temp.Sensors = append(temp.Sensors, *sensor)
 					}
 				}
 			}
@@ -364,6 +361,45 @@ func parseSensorData(chipName, adapterName string, data map[string]interface{}) 
 				}
 
 				if critVal, ok := data["temp"+strings.TrimPrefix(key, "temp")+"_crit"]; ok {
+					if critFloat, ok := critVal.(float64); ok {
+						sensor.Critical = critFloat
+					}
+				}
+
+				return sensor
+			}
+		}
+	}
+
+	return nil
+}
+
+// parseSensorDataV2 解析传感器数据（新版本，适配实际sensors -j输出格式）
+func parseSensorDataV2(chipName, sensorName string, data map[string]interface{}) *Sensor {
+	// 查找温度输入
+	for key, value := range data {
+		if strings.HasSuffix(key, "_input") && strings.HasPrefix(key, "temp") {
+			if tempValue, ok := value.(float64); ok {
+				sensor := &Sensor{
+					Name:     fmt.Sprintf("%s - %s", chipName, sensorName),
+					Current:  tempValue,
+					Max:      tempValue * 1.2, // 估算最大值
+					Critical: tempValue * 1.5, // 估算临界值
+					Unit:     "C",
+				}
+
+				// 提取temp数字编号
+				tempNum := strings.TrimPrefix(key, "temp")
+				tempNum = strings.TrimSuffix(tempNum, "_input")
+
+				// 尝试获取最大和临界值
+				if maxVal, ok := data["temp"+tempNum+"_max"]; ok {
+					if maxFloat, ok := maxVal.(float64); ok {
+						sensor.Max = maxFloat
+					}
+				}
+
+				if critVal, ok := data["temp"+tempNum+"_crit"]; ok {
 					if critFloat, ok := critVal.(float64); ok {
 						sensor.Critical = critFloat
 					}

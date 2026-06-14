@@ -219,7 +219,7 @@ import {
   XCircleIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
-  BugIcon,
+  BeakerIcon,
   ChevronDownIcon,
   DocumentIcon
 } from '@heroicons/vue/24/outline'

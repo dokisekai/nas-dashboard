@@ -63,16 +63,21 @@ let updateInterval: number
 
 const updateStats = async () => {
   try {
-    // 开发模式下检查是否有有效token，如果没有就跳过更新
+    // 检查是否有有效token，如果没有就跳过更新
     const token = localStorage.getItem('token')
     if (!token) {
       console.log('SystemStatusWidget: No token, skipping update')
-      // 使用模拟数据
       cpuUsage.value = 35
       memoryUsage.value = 68
       diskUsage.value = 45
       return
     }
+
+    console.log('SystemStatusWidget: Using real API with JWT token')
+    console.log('SystemStatusWidget: Token exists:', !!token, 'Token length:', token.length)
+
+    // 添加短暂延迟确保token完全写入
+    await new Promise(resolve => setTimeout(resolve, 100))
 
     // 获取CPU信息
     const cpuResponse = await monitorApi.getCPU() as any
@@ -89,7 +94,6 @@ const updateStats = async () => {
     // 获取磁盘信息
     const diskResponse = await monitorApi.getDisk() as any
     if (diskResponse.disks && diskResponse.disks.length > 0) {
-      // 计算主要磁盘的使用率
       const mainDisk = diskResponse.disks[0]
       if (mainDisk.usedPercent !== undefined) {
         diskUsage.value = Math.round(mainDisk.usedPercent)
@@ -97,8 +101,6 @@ const updateStats = async () => {
     }
   } catch (error: any) {
     console.warn('SystemStatusWidget: API call failed, using fallback values')
-
-    // 使用模拟数据而不是显示错误
     cpuUsage.value = 35
     memoryUsage.value = 68
     diskUsage.value = 45

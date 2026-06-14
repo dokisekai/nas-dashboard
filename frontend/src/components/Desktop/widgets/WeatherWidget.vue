@@ -23,7 +23,7 @@
           </div>
         </div>
         <div class="detail-item">
-          <WindIcon class="icon" />
+          <FlagIcon class="icon" />
           <div class="detail-info">
             <span class="label">风速</span>
             <span class="value">{{ windSpeed }} km/h</span>
@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { CloudIcon, SunIcon, CloudRainIcon, SnowIcon, WindIcon } from '@heroicons/vue/24/outline'
+import { CloudIcon, SunIcon, FlagIcon } from '@heroicons/vue/24/outline'
 
 interface Props {
   config: {
@@ -63,10 +63,11 @@ const getWeatherIcon = () => {
   switch (condition.value) {
     case '晴':
       return SunIcon
-    case '雨':
-      return CloudRainIcon
-    case '雪':
-      return SnowIcon
+    case 'rain':
+      return CloudIcon
+    case 'snow':
+      return CloudIcon
+
     default:
       return CloudIcon
   }

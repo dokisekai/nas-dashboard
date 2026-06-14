@@ -308,6 +308,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useStoragePoolStore } from '@/stores/storage_pool'
+import { storageApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import type { StoragePoolCreateRequest, BranchConfig, MergerFSCategory } from '@/types/storage_pool'
 import { MERGERFS_CATEGORIES } from '@/types/storage_pool'
@@ -325,56 +326,37 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const storagePoolStore = useStoragePoolStore()
+const availableDisks = ref<any[]>([])
 
 const dialogVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value)
 })
 
-const steps = ['基本信息', '选择磁盘', '配置选项', '确认创建']
-const currentStep = ref(0)
-const creating = ref(false)
-const formRef = ref()
-
-const form = ref({
-  name: '',
-  type: 'mergerfs',
-  mountPoint: '',
-  description: '',
-  config: {
-    branches: [],
-    category: 'epmfs',
-    minfreespace: '10G',
-    direct_io: false,
-    async_read: true,
-    use_ino: false,
-    hard_remove: false,
-    auto_unshare: false,
-    follow_symlinks: false,
-    link_exas: false
+// Fetch available disks
+const loadAvailableDisks = async () => {
+  try {
+    const response = await storageApi.getDisks()
+    // 过滤掉已挂载的磁盘或者系统磁盘（可选策略）
+    // 或者允许用户选择任何磁盘，但在确认步骤给予警告
+    availableDisks.value = (response.disks || []).map((disk: any) => ({
+      device: disk.name,
+      size: disk.size,
+      model: disk.label || 'Unknown',
+      status: disk.mounted ? 'mounted' : 'available',
+      fstype: disk.type
+    }))
+  } catch (error) {
+    console.error('Failed to fetch disks:', error)
+    ElMessage.error('获取磁盘列表失败')
   }
-})
-
-const rules = {
-  name: [
-    { required: true, message: '请输入存储池名称', trigger: 'blur' },
-    { pattern: /^[a-zA-Z0-9_-]+$/, message: '名称只能包含字母、数字、下划线和连字符', trigger: 'blur' }
-  ],
-  type: [
-    { required: true, message: '请选择存储池类型', trigger: 'change' }
-  ],
-  mountPoint: [
-    { required: true, message: '请输入挂载点', trigger: 'blur' },
-    { pattern: /^\/[a-zA-Z0-9/-]*$/, message: '请输入有效的挂载点路径', trigger: 'blur' }
-  ]
 }
 
-// Mock disk data - in real implementation, fetch from API
-const availableDisks = ref([
-  { device: '/dev/sdb', size: 1024 * 1024 * 1024 * 1024 * 2, model: 'Samsung SSD', status: 'available' },
-  { device: '/dev/sdc', size: 1024 * 1024 * 1024 * 1024 * 2, model: 'Western Digital', status: 'available' },
-  { device: '/dev/sdd', size: 1024 * 1024 * 1024 * 512, model: 'Seagate HDD', status: 'available' }
-])
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    loadAvailableDisks()
+  }
+})
 
 const selectedDisks = ref<any[]>([])
 
@@ -489,14 +471,14 @@ const createPool = async () => {
       type: form.value.type as any,
       mountPoint: form.value.mountPoint,
       description: form.value.description,
-      config: form.value.type === 'mergerfs' ? form.value.config : undefined,
+      config: form.value.type === 'mergerfs' ? form.value.config as any : undefined,
       disks: selectedDisks.value.map(disk => ({
         device: disk.device,
         size: disk.size,
         priority: disk.priority,
         branchPath: disk.device,
         mode: disk.mode
-      }))
+      })) as any
     }
 
     const newPool = await storagePoolStore.createPool(poolData)

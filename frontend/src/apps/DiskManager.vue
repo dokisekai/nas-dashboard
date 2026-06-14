@@ -118,7 +118,7 @@
             <el-table-column prop="name" label="阵列名称" min-width="150" />
             <el-table-column prop="level" label="RAID级别" width="100">
               <template #default="{ row }">
-                <el-tag size="small">{{ RAID_LEVEL_LABELS[row.level] }}</el-tag>
+                <el-tag size="small">{{ (RAID_LEVEL_LABELS as any)[row.level] || row.level }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="status" label="状态" width="100">
@@ -333,20 +333,20 @@ const getDiskClass = (disk: DiskInfo): string => {
 }
 
 const getHealthType = (health: string): string => {
-  return DISK_HEALTH_COLORS[health] || 'info'
+  return (DISK_HEALTH_COLORS as any)[health] || 'info'
 }
 
 const getHealthLabel = (health: string): string => {
-  const labels = { good: '健康', warning: '警告', failed: '故障' }
+  const labels: any = { good: '健康', warning: '警告', failed: '故障' }
   return labels[health] || health
 }
 
 const getRAIDStatusType = (status: string): string => {
-  return RAID_STATUS_COLORS[status] || 'info'
+  return (RAID_STATUS_COLORS as any)[status] || 'info'
 }
 
 const getRAIDStatusLabel = (status: string): string => {
-  const labels = { active: '活动', degraded: '降级', failed: '故障', rebuilding: '重建中' }
+  const labels: any = { active: '活动', degraded: '降级', failed: '故障', rebuilding: '重建中' }
   return labels[status] || status
 }
 

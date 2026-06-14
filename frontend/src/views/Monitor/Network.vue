@@ -181,7 +181,7 @@
         </div>
       </div>
       <div class="h-80">
-        <ApexChart ref="chartRef" type="line" :options="chartOptions" :series="chartSeries" height="320" />
+        <ApexChart ref="chartRef" type="line" :options="chartOptions" :series="chartSeries" :height="320" />
       </div>
     </div>
 
@@ -237,7 +237,7 @@
       <div class="bg-gray-800/50 backdrop-blur rounded-2xl p-6 border border-gray-700/50">
         <h3 class="text-lg font-semibold text-white mb-4">流量分布</h3>
         <div class="h-64">
-          <ApexChart type="donut" :options="donutOptions" :series="donutSeries" height="256" />
+          <ApexChart type="donut" :options="donutOptions" :series="donutSeries" :height="256" />
         </div>
       </div>
 

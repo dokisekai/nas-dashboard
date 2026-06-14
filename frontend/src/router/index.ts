@@ -55,6 +55,12 @@ const router = createRouter({
       component: () => import('../views/Monitor/Network.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/monitor/power',
+      name: 'MonitorPower',
+      component: () => import('../views/Monitor/Power.vue'),
+      meta: { requiresAuth: true },
+    },
     // 存储管理路由
     {
       path: '/storage',
@@ -79,64 +85,39 @@ const router = createRouter({
   ],
 })
 
-// 路由守卫 - 包含初始化检查
+// 路由守卫 - 简化认证检查
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  const systemStore = useSystemStore()
-
-  console.log('Route guard - navigating to:', to.path)
-  console.log('Is dev mode:', authStore.isDevMode())
-  console.log('Is logged in:', authStore.isLoggedIn())
-  console.log('Token in store:', authStore.token?.substring(0, 20) + '...')
-  console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
-
-  // 跳过初始化页面本身的状态检查，避免循环
-  if (to.path === '/initialization') {
-    return next()
-  }
-
-  // 开发模式：直接跳过初始化检查和认证检查
-  if (authStore.isDevMode()) {
-    console.log('Dev mode: allowing access to', to.path)
-    // 如果要去登录页面但已经有token，直接跳转到桌面
-    if (to.path === '/login' && authStore.isLoggedIn()) {
-      console.log('Dev mode: already logged in, redirecting to desktop')
-      return next('/desktop')
-    }
-    // 其他页面直接允许访问
-    return next()
-  }
-
-  // 生产模式：检查系统初始化状态
-  try {
-    await systemStore.checkInitStatus()
-    if (!systemStore.initialized) {
-      return next('/initialization')
-    }
-  } catch (error) {
-    console.error('Failed to check initialization status:', error)
-  }
-
   const loggedIn = authStore.isLoggedIn()
 
-  // 处理登录页面的特殊逻辑
+  console.log('Route guard - navigating to:', to.path, 'name:', to.name)
+  console.log('Is logged in:', loggedIn)
+  console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
+
+  // 登录页面：如果已登录则跳转到桌面
   if (to.path === '/login') {
     if (loggedIn) {
+      console.log('Already logged in, redirecting to desktop')
       return next('/desktop')
     }
+    console.log('Showing login page')
     return next()
   }
 
-  // 处理需要认证的页面
-  if (to.meta.requiresAuth || to.path.startsWith('/apps/')) {
-    if (loggedIn) {
-      return next()
-    }
+  // 初始化页面：直接放行
+  if (to.path === '/initialization') {
+    console.log('Showing initialization page')
+    return next()
+  }
 
-    // 未登录跳转到登录页
+  // 所有其他页面：需要登录
+  if (!loggedIn) {
+    console.log('Not logged in, redirecting to login')
     return next('/login')
   }
 
+  // 已登录用户：允许访问
+  console.log('Logged in, allowing access to', to.path)
   next()
 })
 

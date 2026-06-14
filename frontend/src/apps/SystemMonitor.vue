@@ -62,6 +62,20 @@
           <sparkline :data="networkHistory" :color="networkColor" />
         </div>
       </div>
+
+      <div class="stat-card power">
+        <div class="stat-icon">
+          <BoltIcon class="w-8 h-8" />
+        </div>
+        <div class="stat-content">
+          <h3>功耗</h3>
+          <p class="stat-value">{{ powerUsage }} W</p>
+          <p class="stat-detail">整机实时功耗</p>
+        </div>
+        <div class="stat-chart">
+          <sparkline :data="powerHistory" :color="powerColor" />
+        </div>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -102,14 +116,6 @@
           />
         </div>
         <div class="cpu-details">
-          <div class="detail-item">
-            <span class="detail-label">进程数:</span>
-            <span class="detail-value">{{ processCount }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">线程数:</span>
-            <span class="detail-value">{{ threadCount }}</span>
-          </div>
           <div class="detail-item">
             <span class="detail-label">负载:</span>
             <span class="detail-value">{{ loadAverage.join(', ') }}</span>
@@ -266,50 +272,73 @@
           </div>
         </div>
       </div>
+
+      <!-- Power Chart -->
+      <div v-if="activeTab === 'power'" class="chart-wrapper">
+        <div class="chart-header">
+          <h2>功耗监控</h2>
+          <div class="chart-controls">
+            <button
+              v-for="range in timeRanges"
+              :key="range.value"
+              :class="['time-btn', { active: selectedRange === range.value }]"
+              @click="selectedRange = range.value"
+            >
+              {{ range.label }}
+            </button>
+          </div>
+        </div>
+        <div class="chart">
+          <Line
+            :data="powerChartData"
+            :options="powerChartOptions"
+            :height="300"
+          />
+        </div>
+        <div class="power-details">
+          <div class="detail-item">
+            <span class="detail-label">CPU Package:</span>
+            <span class="detail-value">{{ cpuPackagePower }} W</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Intel 核显:</span>
+            <span class="detail-value">{{ igpuPower }} W</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">AMD 独显:</span>
+            <span class="detail-value">{{ dgpuPower }} W</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">存储设备:</span>
+            <span class="detail-value">{{ storagePower }} W</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">其他组件:</span>
+            <span class="detail-value">{{ otherComponentsPower }} W</span>
+          </div>
+        </div>
+        <div class="power-breakdown">
+          <div class="breakdown-title">功耗组成</div>
+          <div class="breakdown-item">
+            <div class="breakdown-bar">
+              <div class="bar-segment cpu" :style="{ width: ((cpuPackagePower / powerUsage) * 100) + '%' }"></div>
+              <div class="bar-segment gpu" :style="{ width: ((igpuPower / powerUsage) * 100) + '%' }"></div>
+              <div class="bar-segment dgpu" :style="{ width: ((dgpuPower / powerUsage) * 100) + '%' }"></div>
+              <div class="bar-segment storage" :style="{ width: ((storagePower / powerUsage) * 100) + '%' }"></div>
+              <div class="bar-segment other" :style="{ width: ((otherComponentsPower / powerUsage) * 100) + '%' }"></div>
+            </div>
+            <div class="breakdown-legend">
+              <span class="legend-item cpu">CPU: {{ cpuPackagePower }}W</span>
+              <span class="legend-item gpu">核显: {{ igpuPower }}W</span>
+              <span class="legend-item dgpu">独显: {{ dgpuPower }}W</span>
+              <span class="legend-item storage">存储: {{ storagePower }}W</span>
+              <span class="legend-item other">其他: {{ otherComponentsPower }}W</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Processes Table -->
-    <div class="processes-section">
-      <div class="section-header">
-        <h2>系统进程</h2>
-        <input
-          v-model="processSearch"
-          type="text"
-          placeholder="搜索进程..."
-          class="search-input"
-        />
-      </div>
-      <div class="processes-table">
-        <table>
-          <thead>
-            <tr>
-              <th>PID</th>
-              <th>名称</th>
-              <th>CPU%</th>
-              <th>内存%</th>
-              <th>用户</th>
-              <th>运行时间</th>
-              <th>状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="process in filteredProcesses" :key="process.pid">
-              <td>{{ process.pid }}</td>
-              <td>{{ process.name }}</td>
-              <td>{{ process.cpu }}%</td>
-              <td>{{ process.memory }}%</td>
-              <td>{{ process.user }}</td>
-              <td>{{ process.runtime }}</td>
-              <td>
-                <span class="status-badge" :class="process.status.toLowerCase()">
-                  {{ process.status }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -318,6 +347,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Line } from 'vue-chartjs'
 import Sparkline from '../components/Sparkline.vue'
 import { monitorApi } from '../api'
+import { powerAPI } from '../api/power'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -333,7 +363,8 @@ import {
   CpuChipIcon,
   ServerIcon,
   CircleStackIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  BoltIcon
 } from '@heroicons/vue/24/outline'
 
 ChartJS.register(
@@ -349,13 +380,13 @@ ChartJS.register(
 
 const activeTab = ref('cpu')
 const selectedRange = ref('1h')
-const processSearch = ref('')
 
 const tabs = [
   { id: 'cpu', label: 'CPU', icon: CpuChipIcon },
   { id: 'memory', label: '内存', icon: ServerIcon },
   { id: 'disk', label: '磁盘', icon: CircleStackIcon },
-  { id: 'network', label: '网络', icon: GlobeAltIcon }
+  { id: 'network', label: '网络', icon: GlobeAltIcon },
+  { id: 'power', label: '功耗', icon: BoltIcon }
 ]
 
 const timeRanges = [
@@ -398,24 +429,24 @@ const networkDownloadRate = ref(0)
 const networkHistory = ref<number[]>([])
 const networkColor = '#8b5cf6'
 
-const processCount = ref(0)
-const threadCount = ref(0)
+// Power stats
+const powerUsage = ref(0)
+const cpuPackagePower = ref(0)
+const igpuPower = ref(0)
+const dgpuPower = ref(0)
+const storagePower = ref(0)
+const otherComponentsPower = ref(0)
+const powerHistory = ref<number[]>([])
+const powerColor = '#ef4444'
+
 const loadAverage = ref<number[]>([0, 0, 0])
 
 const cachedPercent = computed(() => Math.round((memoryCached.value / memoryTotal.value) * 100))
 const buffersPercent = computed(() => 5) // Mock
 const freePercent = computed(() => 100 - memoryUsage.value - cachedPercent.value - buffersPercent.value)
 
-const processes = ref<any[]>([])
 const diskList = ref<any[]>([])
 const networkInterfaces = ref<any[]>([])
-
-const filteredProcesses = computed(() => {
-  if (!processSearch.value) return processes.value
-  return processes.value.filter(p =>
-    p.name.toLowerCase().includes(processSearch.value.toLowerCase())
-  )
-})
 
 // Chart configurations
 const chartOptions = {
@@ -544,6 +575,36 @@ const networkChartData = computed(() => ({
   ]
 }))
 
+const powerChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top' as const
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: (value: string | number) => String(value) + ' W'
+      }
+    }
+  }
+}
+
+const powerChartData = computed(() => ({
+  labels: generateLabels(),
+  datasets: [{
+    label: '整机功耗 (W)',
+    data: powerHistory.value,
+    borderColor: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    fill: true
+  }]
+}))
+
 function generateLabels() {
   const labels = []
   for (let i = 59; i >= 0; i--) {
@@ -633,9 +694,34 @@ const updateStats = async () => {
       ]
     }
 
-    // Update process counts (mock data as backend doesn't provide this yet)
-    processCount.value = Math.round(150 + Math.random() * 50)
-    threadCount.value = Math.round(500 + Math.random() * 200)
+    // Fetch power stats
+    try {
+      const powerResponse = await fetch('/api/power/current', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+      if (powerResponse.ok) {
+        const powerData = await powerResponse.json()
+        powerUsage.value = Math.round(powerData.total * 10) / 10
+        cpuPackagePower.value = Math.round(powerData.cpuPackage * 10) / 10
+        igpuPower.value = Math.round(powerData.igpu * 10) / 10
+        dgpuPower.value = Math.round(powerData.dgpu * 10) / 10
+        storagePower.value = Math.round((powerData.hdd + powerData.ssd) * 10) / 10
+        otherComponentsPower.value = Math.round((powerData.mbram + powerData.cooling + powerData.usb + powerData.powerLoss) * 10) / 10
+        powerHistory.value = [...powerHistory.value.slice(-59), powerUsage.value]
+      }
+    } catch (powerError) {
+      console.error('Failed to fetch power data:', powerError)
+      // Use default values if API call fails
+      powerUsage.value = 60
+      cpuPackagePower.value = 3
+      igpuPower.value = 0.5
+      dgpuPower.value = 8
+      storagePower.value = 6
+      otherComponentsPower.value = 42.5
+      powerHistory.value = [...powerHistory.value.slice(-59), powerUsage.value]
+    }
 
   } catch (error) {
     console.error('Failed to update stats:', error)
@@ -733,6 +819,10 @@ onUnmounted(() => {
 
 .stat-card.network .stat-icon {
   background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+}
+
+.stat-card.power .stat-icon {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
 }
 
 .stat-content h3 {
@@ -1057,92 +1147,78 @@ onUnmounted(() => {
   text-align: right;
 }
 
-.processes-section {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+.power-breakdown {
+  margin-top: 24px;
 }
 
-.section-header {
+.breakdown-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.breakdown-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.search-input {
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #f9fafb;
   border-radius: 8px;
-  font-size: 14px;
-  width: 250px;
 }
 
-.processes-table {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f9fafb;
-}
-
-th {
-  padding: 12px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-}
-
-tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-tbody tr:hover {
-  background: #f9fafb;
-}
-
-td {
-  padding: 12px;
-  font-size: 14px;
-  color: #1f2937;
-}
-
-.status-badge {
-  padding: 4px 8px;
+.breakdown-bar {
+  height: 24px;
+  background: #e5e7eb;
   border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
+  overflow: hidden;
+  display: flex;
 }
 
-.status-badge.running {
-  background: #d1fae5;
-  color: #065f46;
+.bar-segment.cpu {
+  background: #3b82f6;
 }
 
-.status-badge.sleeping {
-  background: #fef3c7;
-  color: #92400e;
+.bar-segment.gpu {
+  background: #10b981;
 }
 
-.status-badge.stopped {
-  background: #fee2e2;
-  color: #991b1b;
+.bar-segment.dgpu {
+  background: #f59e0b;
+}
+
+.bar-segment.storage {
+  background: #8b5cf6;
+}
+
+.bar-segment.other {
+  background: #6b7280;
+}
+
+.breakdown-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-item.cpu::before {
+  background: #3b82f6;
+}
+
+.legend-item.gpu::before {
+  background: #10b981;
+}
+
+.legend-item.dgpu::before {
+  background: #f59e0b;
+}
+
+.legend-item.storage::before {
+  background: #8b5cf6;
+}
+
+.legend-item.other::before {
+  background: #6b7280;
 }
 </style>

@@ -550,13 +550,25 @@ func GetSystemInfo(c *gin.Context) {
 	// 获取CPU信息
 	if cpuInfo, err := system.GetCPUInfo(); err == nil {
 		info["cpu"] = map[string]interface{}{
-			"model":    cpuInfo.Model,
-			"cores":    cpuInfo.Cores,
-			"mhz":      cpuInfo.Mhz,
-			"usage":    cpuInfo.Usage,
-			"load1":    cpuInfo.Load1,
-			"load5":    cpuInfo.Load5,
-			"load15":   cpuInfo.Load15,
+			"model":       cpuInfo.Model,
+			"cores":       cpuInfo.Cores,
+			"mhz":         cpuInfo.Mhz,
+			"usage":       cpuInfo.Usage,
+			"load1":       cpuInfo.Load1,
+			"load5":       cpuInfo.Load5,
+			"load15":      cpuInfo.Load15,
+			"architecture": cpuInfo.Model,
+		}
+	}
+
+	// 获取GPU信息
+	if gpuInfo, err := system.GetGPUInfo(); err == nil {
+		info["gpu"] = map[string]interface{}{
+			"model":   gpuInfo.Model,
+			"vendor":  gpuInfo.Vendor,
+			"memory":  gpuInfo.Memory,
+			"driver":  gpuInfo.Driver,
+			"enabled": gpuInfo.Enabled,
 		}
 	}
 
@@ -587,9 +599,25 @@ func GetSystemInfo(c *gin.Context) {
 		info["disks"] = disks
 	}
 
-	// 系统运行时间
-	if uptime, err := getSystemUptime(); err == nil {
-		info["uptime"] = uptime
+	// 系统运行时间（使用真实的秒数）
+	if uptimeSeconds, err := system.GetRealUptime(); err == nil {
+		info["uptimeSeconds"] = uptimeSeconds
+		info["uptime"] = system.FormatUptime(uptimeSeconds)
+	}
+
+	// 系统负载信息
+	if loadAvg, err := getLoadAverage(); err == nil {
+		info["loadAverage"] = loadAvg
+	}
+
+	// 获取详细硬件信息
+	if hardwareDetails, err := system.GetHardwareDetails(); err == nil {
+		info["hardwareDetails"] = hardwareDetails
+	}
+
+	// 获取真实功耗信息
+	if powerInfo, err := system.GetRealPowerUsage(); err == nil {
+		info["powerUsage"] = powerInfo
 	}
 
 	c.JSON(200, gin.H{"info": info})
@@ -683,4 +711,60 @@ func getSystemUptime() (string, error) {
 	} else {
 		return fmt.Sprintf("%d minutes", minutes), nil
 	}
+}
+
+// getLoadAverage 获取系统负载平均值
+func getLoadAverage() (string, error) {
+	// 读取 /proc/loadavg 获取系统负载
+	data, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return "", err
+	}
+
+	// 格式: "0.50 0.70 0.60 2/120 5000"
+	// 我们只需要前三个负载值（1分钟、5分钟、15分钟）
+	fields := strings.Fields(string(data))
+	if len(fields) >= 3 {
+		return fmt.Sprintf("%s %s %s", fields[0], fields[1], fields[2]), nil
+	}
+
+	return "0.00 0.00 0.00", nil
+}
+
+// GetHardwareDetails 获取详细硬件信息
+func GetHardwareDetails(c *gin.Context) {
+	hardwareDetails, err := system.GetHardwareDetails()
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get hardware details: %v", err)})
+		return
+	}
+
+	c.JSON(200, gin.H{"hardware": hardwareDetails})
+}
+
+// GetPowerUsage 获取系统功耗信息
+func GetPowerUsage(c *gin.Context) {
+	powerInfo, err := system.GetRealPowerUsage()
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get power usage: %v", err)})
+		return
+	}
+
+	c.JSON(200, powerInfo)
+}
+
+// GetSystemUptime 获取系统运行时间
+func GetSystemUptime(c *gin.Context) {
+	uptimeSeconds, err := system.GetRealUptime()
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get system uptime: %v", err)})
+		return
+	}
+
+	response := map[string]interface{}{
+		"seconds":   uptimeSeconds,
+		"formatted": system.FormatUptime(uptimeSeconds),
+	}
+
+	c.JSON(200, response)
 }

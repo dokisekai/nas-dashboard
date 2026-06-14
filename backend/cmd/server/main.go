@@ -40,6 +40,10 @@ func main() {
 		apiGroup.POST("/auth/login", api.Login)
 		apiGroup.POST("/auth/refresh", api.RefreshToken)
 
+		// 系统初始化路由 (公开)
+		apiGroup.GET("/system/init-status", api.GetInitStatus)
+		apiGroup.POST("/system/initialize", api.InitializeSystem)
+
 		// 监控路由 (需要认证)
 		monitor := apiGroup.Group("/monitor")
 		monitor.Use(middleware.Auth())
@@ -69,6 +73,16 @@ func main() {
 			monitor.DELETE("/alerts/:id", monitorAPI.DeleteAlert)
 		}
 
+		// 功耗监控路由
+		power := apiGroup.Group("/power")
+		power.Use(middleware.Auth())
+		{
+			power.GET("/current", api.GetPowerCurrent)
+			power.GET("/history", api.GetPowerHistory)
+			power.GET("/statistics", api.GetPowerStatistics)
+			power.GET("/overview", api.GetPowerOverview)
+		}
+
 			// 网络管理路由
 			network := apiGroup.Group("/network")
 			network.Use(middleware.Auth())
@@ -77,7 +91,22 @@ func main() {
 				network.GET("/interfaces", api.GetNetworkInterfaces)
 				network.GET("/interfaces/ethernet", api.GetEthernetInterfaces)
 				network.GET("/interfaces/wifi", api.GetWiFiInterfaces)
-				network.POST("/interfaces/:interface/:action", api.ControlInterface)
+						// 接口配置管理（参数化路由）
+						network.GET("/interface/:interface/config", api.GetInterfaceConfig)
+						network.PUT("/interface/:interface/config", api.SetInterfaceConfig)
+						network.POST("/interface/:interface/restart", api.RestartInterface)
+
+						// 通用接口操作路由
+						network.POST("/interface/:interface/:action", api.ControlInterface)
+
+
+				// PPPoE管理
+				network.GET("/interface/:interface/pppoe", api.GetPPPoEConfig)
+				network.POST("/interface/:interface/pppoe", api.ConfigurePPPoE)
+
+				// 代理配置管理
+				network.GET("/proxy", api.GetProxyConfig)
+				network.POST("/proxy", api.SetProxyConfig)
 
 				// Wi-Fi管理
 				network.GET("/wifi/scan", api.ScanWiFiNetworks)
@@ -95,6 +124,7 @@ func main() {
 		storage.Use(middleware.Auth())
 		{
 			storage.GET("/disks", api.GetDisks)
+			storage.POST("/disks/format", api.FormatDisk)
 			storage.POST("/mount", api.MountDisk)
 			storage.POST("/umount", api.UmountDisk)
 			storage.GET("/smb", api.GetSMBShares)
@@ -189,94 +219,150 @@ func main() {
 		groups.Use(middleware.Auth())
 		{
 			groups.GET("", api.GetGroups)
+				groups.POST("", api.CreateGroup)
+				groups.GET("/:name", api.GetGroup)
+				groups.PUT("/:name", api.UpdateGroup)
+				groups.DELETE("/:name", api.DeleteGroup)
+				groups.GET("/:name/members", api.GetGroupMembers)
+				groups.POST("/:name/members", api.AddGroupMembers)
+				groups.DELETE("/:name/members/:user", api.RemoveGroupMember)
+			}
+
+				// SMB用户管理路由
+				smbUsers := apiGroup.Group("/smb")
+				smbUsers.Use(middleware.Auth())
+				{
+					smbUsers.GET("/users", api.GetSMBUsers)
+					smbUsers.POST("/users/:username/password", api.SetSMBPassword)
+					smbUsers.DELETE("/users/:username/password", api.DeleteSMBPassword)
+					smbUsers.POST("/users/:username/enable", api.EnableSMBUser)
+					smbUsers.POST("/users/:username/disable", api.DisableSMBUser)
+					smbUsers.GET("/users/:username/stats", api.GetSMBUserStats)
+					smbUsers.GET("/sessions", api.GetSMBSessions)
+					smbUsers.DELETE("/sessions/:pid", api.DisconnectSMBSession)
+					smbUsers.DELETE("/sessions", api.DisconnectAllSMBSessions)
+				}
+
+				// 权限管理路由
+				permissions := apiGroup.Group("/permissions")
+				permissions.Use(middleware.Auth())
+				{
+					permissions.GET("/shares", api.GetShares)
+					permissions.POST("/shares", api.CreateShare)
+					permissions.PUT("/shares/:name", api.UpdateShare)
+					permissions.DELETE("/shares/:name", api.DeleteShare)
+					permissions.GET("/shares/:name/permissions", api.GetSharePermissions)
+					permissions.PUT("/shares/:name/permissions", api.SetSharePermissions)
+					permissions.GET("/files", api.GetFilePermissions)
+					permissions.PUT("/files/permissions", api.SetFilePermissions)
+					permissions.GET("/files/acl", api.GetFileACL)
+					permissions.PUT("/files/acl", api.SetFileACL)
+				}
+
+			// 系统信息路由
+			system := apiGroup.Group("/system")
+			system.Use(middleware.Auth())
+			{
+				system.GET("/info", api.GetSystemInfo)
+				system.GET("/hardware", api.GetHardwareDetails)
+				system.GET("/power", api.GetPowerUsage)
+				system.GET("/uptime", api.GetSystemUptime)
+
+				// 系统操作路由（需要管理员权限）
+				operations := system.Group("/operations")
+				{
+					operations.POST("/restart", api.RestartSystem)
+					operations.POST("/shutdown", api.ShutdownSystem)
+					operations.POST("/cancel", api.CancelShutdown)
+					operations.POST("/reboot-immediate", api.RebootSystemImmediately)
+					operations.POST("/poweroff-immediate", api.PoweroffSystemImmediately)
+					operations.POST("/schedule-shutdown", api.ScheduleShutdown)
+					operations.POST("/schedule-restart", api.ScheduleRestart)
+					operations.GET("/status", api.GetShutdownStatus)
+				}
+			}
+
+			// 文件管理路由
+			files := apiGroup.Group("/files")
+			files.Use(middleware.Auth())
+			{
+				files.POST("/list", api.ListFiles)
+				files.GET("/info", api.GetFileInfo)
+				files.GET("/download", api.DownloadFile)
+				files.POST("/upload", api.UploadFile)
+				files.POST("/directory", api.CreateDirectory)
+				files.POST("/move", api.MoveFile)
+				files.POST("/delete", api.DeleteFile)
+			}
+
+			// 备份恢复路由
+			backups := apiGroup.Group("/backups")
+			backups.Use(middleware.Auth())
+			{
+				backups.GET("", api.GetBackups)
+				backups.POST("", api.CreateBackup)
+				backups.GET("/:id", api.GetBackup)
+				backups.DELETE("/:id", api.DeleteBackup)
+				backups.POST("/restore", api.RestoreBackup)
+				backups.GET("/:id/download", api.DownloadBackup)
+			}
+
+			// 系统配置路由
+			configs := apiGroup.Group("/configs")
+			configs.Use(middleware.Auth())
+			{
+				configs.GET("", api.GetConfigs)
+				configs.GET("/public", api.GetPublicConfigs)
+				configs.GET("/:key", api.GetConfig)
+				configs.POST("", api.SetConfig)
+				configs.DELETE("/:key", api.DeleteConfig)
+				configs.POST("/bulk", api.BulkSetConfig)
+			}
+
+			// 防火墙路由
+			firewall := apiGroup.Group("/security/firewall")
+			firewall.Use(middleware.Auth())
+			{
+				firewall.GET("/rules", api.GetFirewallRules)
+				firewall.POST("/rules", api.CreateFirewallRule)
+				firewall.PUT("/rules/:id", api.UpdateFirewallRule)
+				firewall.DELETE("/rules/:id", api.DeleteFirewallRule)
+				firewall.POST("/apply", api.ApplyFirewallRules)
+				firewall.GET("/config", api.GetFirewallConfig)
+				firewall.PUT("/config", api.SetFirewallConfig)
+			}
 		}
 
-		// 系统信息路由
-		system := apiGroup.Group("/system")
-		system.Use(middleware.Auth())
-		{
-			system.GET("/info", api.GetSystemInfo)
-		}
+		// WebSocket 路由
+		r.GET("/ws/monitor", api.WSMonitor)
 
-		// 文件管理路由
-		files := apiGroup.Group("/files")
-		files.Use(middleware.Auth())
-		{
-			files.POST("/list", api.ListFiles)
-			files.GET("/info", api.GetFileInfo)
-			files.GET("/download", api.DownloadFile)
-			files.POST("/upload", api.UploadFile)
-			files.POST("/directory", api.CreateDirectory)
-			files.POST("/move", api.MoveFile)
-			files.POST("/delete", api.DeleteFile)
-		}
-
-		// 备份恢复路由
-		backups := apiGroup.Group("/backups")
-		backups.Use(middleware.Auth())
-		{
-			backups.GET("", api.GetBackups)
-			backups.POST("", api.CreateBackup)
-			backups.GET("/:id", api.GetBackup)
-			backups.DELETE("/:id", api.DeleteBackup)
-			backups.POST("/restore", api.RestoreBackup)
-			backups.GET("/:id/download", api.DownloadBackup)
-		}
-
-		// 系统配置路由
-		configs := apiGroup.Group("/configs")
-		configs.Use(middleware.Auth())
-		{
-			configs.GET("", api.GetConfigs)
-			configs.GET("/public", api.GetPublicConfigs)
-			configs.GET("/:key", api.GetConfig)
-			configs.POST("", api.SetConfig)
-			configs.DELETE("/:key", api.DeleteConfig)
-			configs.POST("/bulk", api.BulkSetConfig)
-		}
-
-		// 防火墙路由
-		firewall := apiGroup.Group("/security/firewall")
-		firewall.Use(middleware.Auth())
-		{
-			firewall.GET("/rules", api.GetFirewallRules)
-			firewall.POST("/rules", api.CreateFirewallRule)
-			firewall.PUT("/rules/:id", api.UpdateFirewallRule)
-			firewall.DELETE("/rules/:id", api.DeleteFirewallRule)
-			firewall.POST("/apply", api.ApplyFirewallRules)
+		// 启动服务器
+		log.Println("Server starting on 0.0.0.0:8888")
+		if err := r.Run("0.0.0.0:8888"); err != nil {
+			log.Fatal("Failed to start server:", err)
 		}
 	}
 
-	// WebSocket 路由
-	r.GET("/ws/monitor", api.WSMonitor)
+	// initDatabase 初始化数据库
+	func initDatabase() (*gorm.DB, error) {
+		log.Println("Initializing database...")
 
-	// 启动服务器
-	log.Println("Server starting on 0.0.0.0:8888")
-	if err := r.Run("0.0.0.0:8888"); err != nil {
-		log.Fatal("Failed to start server:", err)
+		// 加载数据库配置
+		cfg := database.LoadConfig()
+
+		// 连接数据库
+		if err := database.Connect(cfg); err != nil {
+			return nil, err
+		}
+
+		// 获取数据库连接
+		db := database.GetDB()
+
+		// 运行迁移
+		if err := database.Migrate(); err != nil {
+			return nil, err
+		}
+
+		log.Println("Database initialized successfully")
+		return db, nil
 	}
-}
-
-// initDatabase 初始化数据库
-func initDatabase() (*gorm.DB, error) {
-	log.Println("Initializing database...")
-
-	// 加载数据库配置
-	cfg := database.LoadConfig()
-
-	// 连接数据库
-	if err := database.Connect(cfg); err != nil {
-		return nil, err
-	}
-
-	// 获取数据库连接
-	db := database.GetDB()
-
-	// 运行迁移
-	if err := database.Migrate(); err != nil {
-		return nil, err
-	}
-
-	log.Println("Database initialized successfully")
-	return db, nil
-}

@@ -17,7 +17,13 @@ interface ChartOptions {
   colors?: string[]
   fill?: any
   dataLabels?: { enabled?: boolean }
-  stroke?: { curve?: string; width?: number }
+  stroke?: {
+    show?: boolean
+    curve?: string | string[]
+    width?: number | number[]
+    colors?: string[]
+    dashArray?: number | number[]
+  }
   xaxis?: {
     categories?: string[]
     labels?: any

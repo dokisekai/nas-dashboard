@@ -15,6 +15,13 @@ export const monitorApi = {
   getNetwork: () => api.get('/api/monitor/network'),
 }
 
+// ==================== 网络管理 API ====================
+export { networkApi, wifiApi, dnsApi, networkUtils } from './network'
+export { interfaceConfigApi, pppoeConfigApi, proxyConfigApi, networkConfigUtils } from './interface_config'
+
+// ==================== 防火墙管理 API ====================
+export { firewallApi, firewallUtils } from './firewall'
+
 // ==================== 存储管理 API ====================
 export const storageApi = {
   getDisks: () => api.get('/api/storage/disks'),
@@ -79,11 +86,36 @@ export const userApi = {
 // ==================== 系统组 API ====================
 export const groupApi = {
   getGroups: () => api.get('/api/groups'),
+  createGroup: (data: { name: string; description?: string; gid?: number }) =>
+    api.post('/api/groups', data),
+  updateGroup: (name: string, data: { description?: string; members?: string[]; gid?: number }) =>
+    api.put(`/api/groups/${name}`, data),
+  deleteGroup: (name: string) => api.delete(`/api/groups/${name}`),
+  getGroupMembers: (name: string) => api.get(`/api/groups/${name}/members`),
+  addGroupMembers: (name: string, members: string[]) =>
+    api.post(`/api/groups/${name}/members`, { members }),
+  removeGroupMember: (name: string, username: string) =>
+    api.delete(`/api/groups/${name}/members/${username}`),
 }
 
 // ==================== 系统信息 API ====================
 export const systemApi = {
   getInfo: () => api.get('/api/system/info'),
+  getHardwareDetails: () => api.get('/api/system/hardware'),
+  getPowerUsage: () => api.get('/api/system/power'),
+  getUptime: () => api.get('/api/system/uptime'),
+
+  // 系统操作
+  restart: () => api.post('/api/system/operations/restart'),
+  shutdown: () => api.post('/api/system/operations/shutdown'),
+  cancel: () => api.post('/api/system/operations/cancel'),
+  rebootImmediate: () => api.post('/api/system/operations/reboot-immediate'),
+  poweroffImmediate: () => api.post('/api/system/operations/poweroff-immediate'),
+  scheduleShutdown: (delayMinutes: number) =>
+    api.post('/api/system/operations/schedule-shutdown', { delayMinutes }),
+  scheduleRestart: (delayMinutes: number) =>
+    api.post('/api/system/operations/schedule-restart', { delayMinutes }),
+  getStatus: () => api.get('/api/system/operations/status')
 }
 
 // ==================== 文件管理 API ====================
@@ -126,3 +158,6 @@ export const configApi = {
   deleteConfig: (key: string) => api.delete(`/api/configs/${key}`),
   bulkSetConfig: (configs: any[]) => api.post('/api/configs/bulk', { configs }),
 }
+
+// ==================== 应用管理 API ====================
+export { applicationApi } from './application'

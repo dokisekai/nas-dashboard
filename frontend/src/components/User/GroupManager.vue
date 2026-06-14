@@ -227,7 +227,7 @@ import {
   PlusIcon,
   MinusIcon
 } from '@heroicons/vue/24/outline'
-import { groupApi, userApi } from '../api'
+import { groupApi, userApi } from '../../api'
 
 // 状态
 const groups = ref<any[]>([])
@@ -301,7 +301,7 @@ const getPrimaryMembers = (group: any) => {
 
 const getGroupMembers = (group: any) => {
   if (!group.users || group.users === '') return []
-  return group.users.split(',').filter(u => u !== '')
+  return group.users.split(',').filter((u: string) => u !== '')
 }
 
 const editGroup = (group: any) => {

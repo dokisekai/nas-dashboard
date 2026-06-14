@@ -70,7 +70,6 @@
             <component :is="getIcon(category.icon)" class="w-5 h-5" />
             <div class="cp-category-info">
               <span class="cp-category-name">{{ category.name }}</span>
-              <span class="cp-category-desc">{{ category.description }}</span>
             </div>
             <ChevronRightIcon class="w-4 h-4 cp-category-arrow" />
           </button>
@@ -109,11 +108,6 @@
 
         <!-- 分类设置 -->
         <div v-else-if="activeCategory && !searchQuery" class="cp-category-content">
-          <div class="cp-section-header">
-            <h2>{{ getCategory(activeCategory)?.name }}</h2>
-            <p>{{ getCategory(activeCategory)?.description }}</p>
-          </div>
-
           <!-- 常规设置 -->
           <div class="cp-settings-section">
             <h3 class="cp-section-title">常规设置</h3>

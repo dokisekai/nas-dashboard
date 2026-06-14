@@ -51,7 +51,7 @@ export interface QuotaAlert {
   id: number
   userId: number | null
   groupId: number | null
-  type: 'user' | 'group'
+  type: 'user' | 'group' | 'user_quota' | 'disk_space'
   path: string
   alertType: 'soft_limit' | 'hard_limit'
   severity: 'warning' | 'critical'
@@ -59,6 +59,13 @@ export interface QuotaAlert {
   resolved: boolean
   createdAt: string
   updatedAt: string
+  // UI 扩展字段
+  name?: string
+  enabled?: boolean
+  threshold?: number
+  duration?: number
+  condition?: string
+  actions?: string
 }
 
 export interface User {

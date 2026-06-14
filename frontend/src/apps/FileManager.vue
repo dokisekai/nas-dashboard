@@ -26,7 +26,7 @@
               v-for="(segment, index) in pathSegments"
               :key="index"
               class="path-segment"
-              @click="navigateToPath(index)"
+              @click="navigateToBreadcrumb(index)"
             >
               {{ segment }}
               <ChevronRightIcon v-if="index < pathSegments.length - 1" class="w-4 h-4" />
@@ -118,7 +118,7 @@
               v-for="bookmark in bookmarks"
               :key="bookmark.id"
               class="sidebar-item"
-              @click="navigateToPath(bookmark.path)"
+              @click="navigateTo(bookmark.path)"
             >
               <StarIcon class="w-4 h-4" />
               <span>{{ bookmark.name }}</span>
@@ -301,7 +301,7 @@ import {
   FolderPlusIcon,
   HomeIcon,
   FolderIcon,
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon,
   StarIcon,
   DocumentIcon,
   ChevronRightIcon,
@@ -419,7 +419,11 @@ const filteredFiles = computed(() => {
 })
 
 // 方法
-const navigateToPath = (index?: number) => {
+const navigateTo = (path: string) => {
+  currentPath.value = path
+}
+
+const navigateToBreadcrumb = (index?: number) => {
   if (index === undefined) {
     currentPath.value = '/'
     return

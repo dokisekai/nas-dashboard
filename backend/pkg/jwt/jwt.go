@@ -14,6 +14,7 @@ var (
 
 // Claims JWT 声明
 type Claims struct {
+	UserID   uint   `json:"userId"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	jwt.RegisteredClaims

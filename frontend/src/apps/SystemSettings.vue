@@ -138,33 +138,8 @@
 
     <!-- System Info Tab -->
     <div v-if="activeTab === 'info'" class="tab-content">
-      <div class="section-header">
-        <h2>系统信息</h2>
-        <div class="header-actions">
-          <div v-if="isLoadingInfo" class="loading-indicator">
-            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            正在获取真实数据...
-          </div>
-          <button class="action-btn" @click="refreshSystemInfo" :disabled="isLoadingInfo">
-            <ArrowPathIcon class="w-4 h-4" :class="{ 'animate-spin': isLoadingInfo }" />
-            {{ isLoadingInfo ? '刷新中...' : '刷新' }}
-          </button>
-        </div>
-      </div>
-
-      <div class="info-status-bar" v-if="showInfoStatus">
-        <div class="status-content">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>系统信息来自真实的硬件检测结果，非模拟数据</span>
-        </div>
-      </div>
-
-      <div class="system-info-grid">
+      <SystemInfoPanel />
+    </div>
         <div class="info-card">
           <div class="info-icon">
             <ServerIcon class="w-8 h-8" />
@@ -505,14 +480,13 @@ import {
   CodeBracketIcon
 } from '@heroicons/vue/24/outline'
 import { systemApi, serviceApi } from '../api'
+import SystemInfoPanel from '../components/SystemInfoPanel.vue'
 
 const activeTab = ref('network')
 
 const tabs = [
   { id: 'network', label: '网络', icon: GlobeAltIcon },
   { id: 'info', label: '系统信息', icon: ServerIcon },
-  { id: 'services', label: '服务', icon: CpuChipIcon },
-  { id: 'updates', label: '更新', icon: BeakerIcon },
   { id: 'backup', label: '备份', icon: CircleStackIcon }
 ]
 

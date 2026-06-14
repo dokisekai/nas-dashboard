@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
@@ -63,6 +64,13 @@ type SMBShareRequest struct {
 	IsTimeMachine bool   `json:"isTimeMachine"`
 }
 
+// FormatRequest 格式化请求
+type FormatRequest struct {
+	Device string `json:"device" binding:"required"`
+	FSType string `json:"fsType" binding:"required"` // ext4, xfs, etc.
+	Label  string `json:"label"`
+}
+
 // GetDisks 获取磁盘列表
 // 使用 lsblk 和 df 命令获取真实的磁盘信息
 func GetDisks(c *gin.Context) {
@@ -77,6 +85,8 @@ func GetDisks(c *gin.Context) {
 // getDisksFromSystem 从系统获取磁盘信息
 func getDisksFromSystem() ([]Disk, error) {
 	// 使用 lsblk 获取块设备信息
+	// -b: 以字节为单位
+	// -o: 指定输出列
 	lsblkCmd := exec.Command("lsblk", "-b", "-o", "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,UUID,LABEL")
 	lsblkOutput, err := lsblkCmd.Output()
 	if err != nil {
@@ -96,12 +106,28 @@ func getDisksFromSystem() ([]Disk, error) {
 	return disks, nil
 }
 
-// parseLsblkOutput 解析 lsblk 输出
+// parseLsblkOutput 解析 lsblk 输出，只返回整块硬盘信息
 func parseLsblkOutput(output []byte, dfMap map[string]map[string]string) []Disk {
 	var disks []Disk
 	lines := strings.Split(string(output), "\n")
 
-	// 跳过标题行
+	// 获取根分区所在的设备
+	rootDevice := getRootDevice()
+
+	// 第一遍：收集所有设备信息
+	type localDeviceRaw struct {
+		name       string
+		size       uint64
+		diskType   string
+		fstype     string
+		mountPoint string
+		uuid       string
+		label      string
+	}
+
+	rawDevices := make(map[string]*localDeviceRaw)
+	var diskNames []string
+
 	for i, line := range lines {
 		if i == 0 || line == "" {
 			continue
@@ -113,6 +139,12 @@ func parseLsblkOutput(output []byte, dfMap map[string]map[string]string) []Disk 
 		}
 
 		name := fields[0]
+		// 处理树状结构输出 (├─ 或 └─)
+		name = strings.TrimPrefix(name, "├─")
+		name = strings.TrimPrefix(name, "└─")
+		name = strings.TrimPrefix(name, "│")
+		name = strings.TrimSpace(name)
+
 		size := parseSize(fields[1])
 		diskType := fields[2]
 		fstype := ""
@@ -133,38 +165,192 @@ func parseLsblkOutput(output []byte, dfMap map[string]map[string]string) []Disk 
 			label = fields[6]
 		}
 
-		// 只返回分区（type 为 "part"）或磁盘（type 为 "disk"）
-		if diskType != "part" && diskType != "disk" && diskType != "lvm" && diskType != "raid" {
-			continue
+		raw := &localDeviceRaw{
+			name:       name,
+			size:       size,
+			diskType:   diskType,
+			fstype:     fstype,
+			mountPoint: mountPoint,
+			uuid:       uuid,
+			label:      label,
+		}
+		rawDevices[name] = raw
+		if diskType == "disk" {
+			diskNames = append(diskNames, name)
+		}
+	}
+
+	// 辅助函数：寻找物理磁盘名称
+	findParentDiskLocal := func(name string) string {
+		reDisk := regexp.MustCompile(`^(sd[a-z]|nvme[0-9]n[0-9]|vd[a-z])`)
+		match := reDisk.FindString(name)
+		if match != "" {
+			return match
+		}
+		return name
+	}
+
+	// 为每个分区寻找父设备并标记系统盘
+	isSystemDisk := make(map[string]bool)
+	
+	// 查找挂载情况
+	type usageInfo struct {
+		used  uint64
+		avail uint64
+		mounted bool
+		mountPoint string
+	}
+	diskUsageInfo := make(map[string]*usageInfo)
+
+	for name, dev := range rawDevices {
+		deviceName := "/dev/" + name
+		parent := findParentDiskLocal(name)
+		
+		// 检查系统挂载点
+		if dev.mountPoint == "/" || dev.mountPoint == "/boot" || strings.HasPrefix(rootDevice, deviceName) {
+			isSystemDisk[parent] = true
 		}
 
+		// 记录挂载和使用信息
+		if dev.mountPoint != "" && dev.mountPoint != "[SWAP]" {
+			info, exists := diskUsageInfo[parent]
+			if !exists {
+				info = &usageInfo{}
+				diskUsageInfo[parent] = info
+			}
+			
+			if df, exists := dfMap[dev.mountPoint]; exists {
+				used := parseSize(df["used"])
+				avail := parseSize(df["avail"])
+				info.used += used
+				info.avail += avail
+				info.mounted = true
+				if info.mountPoint == "" {
+					info.mountPoint = dev.mountPoint
+				} else if !strings.Contains(info.mountPoint, dev.mountPoint) {
+					info.mountPoint += ", " + dev.mountPoint
+				}
+			}
+		}
+	}
+
+	// 最终生成磁盘列表
+	for _, name := range diskNames {
+		dev := rawDevices[name]
+		info, hasInfo := diskUsageInfo[name]
+		
 		disk := Disk{
 			Name:       "/dev/" + name,
-			Size:       size,
-			Type:       fstype,
-			Mounted:    mountPoint != "" && mountPoint != "[SWAP]",
-			MountPoint: mountPoint,
-			UUID:       uuid,
-			Label:      label,
+			Size:       dev.size,
+			Type:       dev.diskType,
+			Label:      dev.label,
+			UUID:       dev.uuid,
 		}
 
-		// 从 df 输出中获取使用情况
-		if mountPoint != "" && mountPoint != "[SWAP]" {
-			if info, exists := dfMap[mountPoint]; exists {
-				disk.Used = parseSize(info["used"])
-				disk.Available = parseSize(info["avail"])
-				disk.Usage = strings.Trim(info["pcent"], "%")
+		if hasInfo {
+			disk.Mounted = info.mounted
+			disk.MountPoint = info.mountPoint
+			disk.Used = info.used
+			disk.Available = info.avail
+			if info.used + info.avail > 0 {
+				disk.Usage = fmt.Sprintf("%.1f", float64(info.used)/float64(info.used+info.avail)*100)
 			}
-		} else if info, exists := dfMap["/dev/"+name]; exists {
-			disk.Used = parseSize(info["used"])
-			disk.Available = parseSize(info["avail"])
-			disk.Usage = strings.Trim(info["pcent"], "%")
 		}
-
+		
+		if isSystemDisk[name] {
+			if disk.Label == "" {
+				disk.Label = "System"
+			} else if !strings.Contains(disk.Label, "System") {
+				disk.Label = disk.Label + " (System)"
+			}
+		}
+		
 		disks = append(disks, disk)
 	}
 
 	return disks
+}
+
+// getRootDevice 获取根分区所在的物理设备
+func getRootDevice() string {
+	cmd := exec.Command("sh", "-c", "findmnt -n -o SOURCE /")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+// FormatDisk 格式化磁盘
+func FormatDisk(c *gin.Context) {
+	var req FormatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// 安全检查：不允许格式化根分区
+	rootDevice := getRootDevice()
+	if req.Device == rootDevice || strings.HasPrefix(rootDevice, req.Device) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot format system disk"})
+		return
+	}
+
+	// 检查磁盘是否已挂载
+	if isDeviceMounted(req.Device) {
+		c.JSON(http.StatusConflict, gin.H{"error": "Disk is currently mounted. Please unmount it first."})
+		return
+	}
+
+	// 验证文件系统类型
+	validFS := map[string]bool{"ext4": true, "xfs": true, "btrfs": true, "ntfs": true, "vfat": true}
+	if !validFS[req.FSType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file system type"})
+		return
+	}
+
+	// 构建格式化命令
+	mkfsCmd := "mkfs." + req.FSType
+	args := []string{req.Device}
+	if req.Label != "" {
+		if req.FSType == "xfs" {
+			args = append([]string{"-L", req.Label}, args...)
+		} else {
+			args = append([]string{"-L", req.Label}, args...)
+		}
+	}
+
+	// 如果是 ext4，添加 -F 强制格式化
+	if req.FSType == "ext4" {
+		args = append([]string{"-F"}, args...)
+	}
+
+	cmd := exec.Command(mkfsCmd, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Format failed: %v, output: %s", err, string(output))})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Disk formatted successfully", "output": string(output)})
+}
+
+// isDeviceMounted 检查特定设备是否已挂载
+func isDeviceMounted(device string) bool {
+	data, err := os.ReadFile("/proc/mounts")
+	if err != nil {
+		return false
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Fields(line)
+		if len(fields) >= 1 && fields[0] == device {
+			return true
+		}
+	}
+	return false
 }
 
 // parseDfOutput 解析 df 输出

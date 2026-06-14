@@ -1,0 +1,10 @@
+{
+  "maxMemoryMB": 512,
+  "maxCPU": 2,
+  "maxDiskGB": 10,
+  "networkAccess": true,
+  "storageAccess": true,
+  "processAccess": false,
+  "portBindings": [8080],
+  "allowedIps": ["0.0.0.0/0"]
+}

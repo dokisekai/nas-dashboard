@@ -1,11 +1,12 @@
 <template>
   <div class="cps-setting" :class="{ 'cps-advanced': setting.advanced }" :data-setting-type="setting.type">
 
-    <!-- 自定义组件类型 - 不显示头部 -->
+    <!-- 自定义组件类型 - 不显示头部 - 支持NetworkSettingsPanel -->
     <template v-if="setting.type === 'custom'">
       <component
         :is="getCustomComponent(setting.component)"
         :value="localValue"
+        :embedded-mode="true"
         @update="handleCustomUpdate"
         v-if="getCustomComponent(setting.component)"
       />
@@ -315,7 +316,22 @@ const getCustomComponent = (componentName?: string) => {
       import('./WiFiScanComponent.vue')
     ),
     'NetworkManager': defineAsyncComponent(() =>
-      import('./NetworkManager.vue')
+      import('../../apps/NetworkManager.vue')
+    ),
+    'NetworkSettingsPanel': defineAsyncComponent(() =>
+      import('./NetworkSettingsPanel.vue')
+    ),
+    'SystemInfoPanel': defineAsyncComponent(() =>
+      import('./SystemInfoPanel.vue')
+    ),
+    'UserManager': defineAsyncComponent(() =>
+      import('./UserManager.vue')
+    ),
+    'GroupManager': defineAsyncComponent(() =>
+      import('./GroupManager.vue')
+    ),
+    'ACLEditor': defineAsyncComponent(() =>
+      import('./ACLEditor.vue')
     )
   }
 
@@ -402,6 +418,19 @@ validate()
   font-size: 12px;
   color: #6b7280;
   line-height: 1.5;
+}
+
+/* 自定义组件样式 */
+.cps-setting:has(.network-manager) {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.cps-setting:has(.network-manager) .network-manager {
+  width: 100%;
+  height: auto;
+  min-height: 400px;
 }
 
 .cps-control {

@@ -122,7 +122,7 @@
         </div>
       </div>
       <div class="h-80">
-        <ApexChart ref="ioChartRef" type="line" :options="ioChartOptions" :series="ioChartSeries" height="320" />
+        <ApexChart ref="ioChartRef" type="line" :options="ioChartOptions" :series="ioChartSeries" :height="320" />
       </div>
     </div>
 

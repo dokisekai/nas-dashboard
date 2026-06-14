@@ -80,3 +80,37 @@ func ApplyFirewallRules(c *gin.Context) {
 	// TODO: Implement actual system call to ufw/iptables
 	c.JSON(http.StatusOK, gin.H{"message": "Firewall rules applied successfully"})
 }
+
+// FirewallConfig 防火墙配置类型
+type FirewallConfig struct {
+	Enabled       bool     `json:"enabled"`
+	DefaultPolicy string   `json:"defaultPolicy"` // accept, drop
+	AllowedPorts  []string `json:"allowedPorts"`
+	Logging       bool     `json:"logging"`
+	ICMP          bool     `json:"icmp"`
+}
+
+func GetFirewallConfig(c *gin.Context) {
+	config := FirewallConfig{
+		Enabled:       true,
+		DefaultPolicy: "drop",
+		AllowedPorts:  []string{"22", "80", "443"},
+		Logging:       false,
+		ICMP:          true,
+	}
+	c.JSON(http.StatusOK, config)
+}
+
+func SetFirewallConfig(c *gin.Context) {
+	var config FirewallConfig
+	if err := c.ShouldBindJSON(&config); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Apply firewall configuration to system
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Firewall configuration updated successfully",
+		"config":  config,
+	})
+}

@@ -206,7 +206,7 @@
 
             <div v-if="selectedFolderData.aclEnabled" class="acl-settings">
               <div class="acl-info">
-                <InfoIcon class="w-4 h-4" />
+                <InformationCircleIcon class="w-4 h-4" />
                 <p>启用 Windows ACL 可以提供更精细的权限控制，但会降低系统性能。</p>
               </div>
 
@@ -294,7 +294,7 @@
 
             <div class="inheritance-settings">
               <div class="inheritance-info">
-                <InfoIcon class="w-4 h-4" />
+                <InformationCircleIcon class="w-4 h-4" />
                 <p>子文件夹和文件可以继承父文件夹的权限设置。</p>
               </div>
 
@@ -401,7 +401,7 @@ import {
   UserPlusIcon,
   UserIcon,
   XMarkIcon,
-  InfoIcon,
+  InformationCircleIcon,
   ArrowDownIcon
 } from '@heroicons/vue/24/outline'
 
@@ -536,7 +536,7 @@ const folders = ref<Folder[]>([
   {
     id: '3',
     name: 'Public',
-    path '/home/Public',
+    path: '/home/Public',
     description: '公共共享文件夹',
     status: 'active',
     fileCount: 85,
@@ -582,8 +582,8 @@ const filteredFolders = computed(() => {
   if (selectedFilter.value === 'all') return folders.value
   return folders.value.filter(folder => {
     if (selectedFilter.value === 'home') return folder.path.startsWith('/home')
-    if (selectedFilter.value === 'shared') => folder.status === 'active'
-    if (selectedFilter.value === 'external') => folder.path.startsWith('/external')
+    if (selectedFilter.value === 'shared') return folder.status === 'active'
+    if (selectedFilter.value === 'external') return folder.path.startsWith('/external')
     return true
   })
 })

@@ -37,17 +37,17 @@ export interface BranchConfig {
 }
 
 export interface PoolDisk {
-  id: number
-  poolId: number
+  id?: number
+  poolId?: number
   device: string
   size: number
-  status: 'active' | 'failed' | 'removed' | 'ro' | 'rw'
+  status?: 'active' | 'failed' | 'removed' | 'ro' | 'rw'
   priority: number
   branchPath: string
-  used: number
-  free: number
-  createdAt: string
-  updatedAt: string
+  used?: number
+  free?: number
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface PoolSnapshot {

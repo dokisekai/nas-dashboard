@@ -38,32 +38,35 @@
           v-for="disk in disks"
           :key="disk.name"
           class="disk-item"
-          :class="{ offline: !disk.online }"
+          :class="{ offline: !disk.size }"
         >
           <div class="disk-info">
-            <div class="disk-icon" :class="{ offline: !disk.online }">
-              <ServerIcon class="w-8 h-8" />
+            <div class="disk-icon">
+              <CircleStackIcon class="w-8 h-8" />
             </div>
             <div class="disk-details">
               <h3>{{ disk.name }}</h3>
-              <p>{{ disk.model || 'Unknown Model' }}</p>
+              <p>{{ disk.label || '物理硬盘' }}</p>
               <div class="disk-specs">
-                <span>{{ disk.size }}</span>
-                <span>{{ disk.type }}</span>
-                <span v-if="disk.temperature">🌡️ {{ disk.temperature }}°C</span>
+                <span>{{ formatFileSize(disk.size) }}</span>
+                <span>{{ disk.type === 'disk' ? '物理磁盘' : disk.type }}</span>
+                <span v-if="disk.uuid" class="uuid">UUID: {{ disk.uuid.substring(0, 8) }}...</span>
               </div>
             </div>
           </div>
 
           <div class="disk-status">
-            <div class="status-badge" :class="disk.online ? 'online' : 'offline'">
-              {{ disk.online ? '在线' : '离线' }}
+            <div class="status-badge" :class="disk.mounted ? 'online' : 'offline'">
+              {{ disk.mounted ? '已挂载 (包含分区)' : '未挂载/空闲' }}
             </div>
-            <div class="disk-usage" v-if="disk.usage">
+            <div class="disk-usage" v-if="disk.mounted">
               <div class="usage-bar">
-                <div class="usage-fill" :style="{ width: disk.usage.percent + '%' }"></div>
+                <div class="usage-fill" :style="{ width: disk.usage + '%' }"></div>
               </div>
-              <span class="usage-text">{{ disk.usage.used }} / {{ disk.usage.total }} ({{ disk.usage.percent }}%)</span>
+              <span class="usage-text">已用: {{ formatFileSize(disk.used) }} / 总计: {{ formatFileSize(disk.size) }} ({{ disk.usage }}%)</span>
+            </div>
+            <div v-if="disk.mountPoint" class="mount-point-list" :title="disk.mountPoint">
+              <span class="label">挂载点:</span> {{ disk.mountPoint.length > 30 ? disk.mountPoint.substring(0, 30) + '...' : disk.mountPoint }}
             </div>
           </div>
 
@@ -84,13 +87,22 @@
               <ArrowDownOnSquareIcon class="w-4 h-4" />
               卸载
             </button>
-            <button class="action-btn" @click="formatDisk(disk)">
+            <button 
+              class="action-btn danger" 
+              @click="formatDisk(disk)"
+              :disabled="disk.mounted || disk.label?.includes('System')"
+            >
               <PencilIcon class="w-4 h-4" />
               格式化
             </button>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Storage Pools Tab -->
+    <div v-if="activeTab === 'pools'" class="tab-content">
+      <StoragePoolManager />
     </div>
 
     <!-- SMB Shares Tab -->
@@ -465,9 +477,11 @@ import {
   FolderOpenIcon,
   LockClosedIcon,
   CheckIcon,
-  SparklesIcon
+  SparklesIcon,
+  CircleStackIcon
 } from '@heroicons/vue/24/outline'
 import { storageApi, fileApi } from '../api'
+import StoragePoolManager from './StoragePoolManager.vue'
 
 const activeTab = ref('disks')
 const loading = ref(false)
@@ -476,6 +490,7 @@ const loadingFiles = ref(false)
 
 const tabs = [
   { id: 'disks', label: '磁盘管理', icon: ServerIcon },
+  { id: 'pools', label: '存储池', icon: CircleStackIcon },
   { id: 'smb', label: 'SMB共享', icon: FolderIcon },
   { id: 'files', label: '文件浏览', icon: DocumentIcon }
 ]
@@ -571,14 +586,24 @@ const unmountDisk = async (disk: any) => {
 }
 
 const formatDisk = async (disk: any) => {
-  const fsType = prompt('输入文件系统类型 (ext4, btrfs, xfs):', 'ext4')
-  if (fsType && confirm(`确定要格式化 ${disk.name} 吗? 所有数据将丢失!`)) {
+  if (disk.label?.includes('System')) {
+    alert('无法格式化系统磁盘！')
+    return
+  }
+  if (disk.mounted) {
+    alert('请先卸载磁盘再进行格式化')
+    return
+  }
+
+  const fsType = prompt('输入文件系统类型 (ext4, xfs, btrfs, ntfs):', 'ext4')
+  if (fsType && confirm(`危险：确定要格式化整块硬盘 ${disk.name} 吗? \n此操作将清除该硬盘上的所有分区和数据！`)) {
     try {
       await storageApi.formatDisk(disk.name, fsType)
+      showSuccess(`成功格式化 ${disk.name} 为 ${fsType}`)
       await refreshDisks()
     } catch (error: any) {
       console.error('Failed to format disk:', error)
-      alert('格式化失败: ' + error.message)
+      showError('格式化失败: ' + (error.response?.data?.error || error.message))
     }
   }
 }
@@ -1134,6 +1159,23 @@ onMounted(() => {
   font-size: 12px;
   color: #6b7280;
   text-align: center;
+}
+
+.mount-point-list {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+  background: #f9fafb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mount-point-list .label {
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 .disk-actions {

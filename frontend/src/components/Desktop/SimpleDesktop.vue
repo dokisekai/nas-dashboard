@@ -664,10 +664,16 @@ const handleClickOutsideWindow = (event: MouseEvent) => {
 let timeUpdateInterval: number
 
 onMounted(() => {
-  // 初始化时间
-  updateTime()
-  // 每秒更新时间
-  timeUpdateInterval = window.setInterval(updateTime, 1000)
+  console.log('SimpleDesktop mounted')
+  try {
+    // 初始化时间
+    updateTime()
+    // 每秒更新时间
+    timeUpdateInterval = window.setInterval(updateTime, 1000)
+    console.log('SimpleDesktop initialization completed')
+  } catch (error) {
+    console.error('Error in SimpleDesktop onMounted:', error)
+  }
 })
 
 onUnmounted(() => {

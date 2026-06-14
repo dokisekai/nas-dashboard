@@ -53,46 +53,32 @@
             v-if="isAppInstalled(app.id)"
             class="action-btn secondary"
             @click="launchApp(app)"
-            :disabled="!app.launchable"
+            :disabled="!app.launching"
           >
             <PlayIcon class="w-4 h-4" />
-            {{ app.launchable ? '打开' : '已安装' }}
+            {{ app.launching ? '打开' : '已安装' }}
           </button>
           <button
             v-else
             class="action-btn primary"
             @click="installApp(app)"
-            :disabled="installingApp === app.id"
+            :disabled="showInstallProgress && selectedApp?.id === app.id"
           >
-            <DownloadIcon class="w-4 h-4" />
-            {{ installingApp === app.id ? '安装中...' : '安装' }}
+            <ArrowDownTrayIcon class="w-4 h-4" />
+            {{ (showInstallProgress && selectedApp?.id === app.id) ? '安装中...' : '安装' }}
           </button>
           <button
             v-if="isAppInstalled(app.id)"
             class="action-btn danger"
             @click="uninstallApp(app)"
-            :disabled="uninstallingApp === app.id"
+            :disabled="showInstallProgress && selectedApp?.id === app.id"
           >
             <TrashIcon class="w-4 h-4" />
-            {{ uninstallingApp === app.id ? '卸载中...' : '卸载' }}
+            {{ (showInstallProgress && selectedApp?.id === app.id) ? '卸载中...' : '卸载' }}
           </button>
-          <button class="action-btn" @click="showAppDetails(app)">
+          <button class="action-btn" @click="viewAppDetails(app)">
             <InformationCircleIcon class="w-4 h-4" />
             详情
-          </button>
-        </div>
-      </div>
-    </div>
-          <button class="action-btn secondary" @click="viewAppDetails(app)">
-            <EyeIcon class="w-4 h-4" />
-            详情
-          </button>
-          <button
-            class="install-btn"
-            :class="{ installed: app.installed, uninstall: app.installed }"
-            @click.stop="app.installed ? uninstallApp(app) : installApp(app)"
-          >
-            {{ app.installed ? '卸载' : '安装' }}
           </button>
         </div>
       </div>
@@ -277,7 +263,11 @@ import {
   EyeIcon,
   CloudArrowDownIcon,
   XMarkIcon,
-  CheckIcon
+  CheckIcon,
+  PlayIcon,
+  ArrowDownTrayIcon,
+  TrashIcon,
+  InformationCircleIcon
 } from '@heroicons/vue/24/outline'
 
 const searchQuery = ref('')
@@ -289,6 +279,10 @@ const installStep = ref<'downloading' | 'installing' | 'completed' | 'error'>('d
 const installProgress = ref(0)
 const installTitle = ref('')
 const installMessage = ref('')
+
+// 用于追踪正在进行的操作
+const installingApp = ref<string | null>(null)
+const uninstallingApp = ref<string | null>(null)
 
 const categories = [
   { id: 'all', label: '全部' },
@@ -466,6 +460,7 @@ const closeAppDetails = () => {
 }
 
 const installApp = async (app: any) => {
+  installingApp.value = app.id
   selectedApp.value = app
   showInstallProgress.value = true
   installStep.value = 'downloading'
@@ -489,6 +484,7 @@ const installApp = async (app: any) => {
         installTitle.value = '安装完成'
         installMessage.value = app.name + ' 已成功安装！'
         app.installed = true
+        installingApp.value = null
 
         setTimeout(() => {
           showInstallProgress.value = false
@@ -501,12 +497,17 @@ const installApp = async (app: any) => {
 
 const uninstallApp = async (app: any) => {
   if (confirm(`确定要卸载 "${app.name}" 吗?`)) {
+    uninstallingApp.value = app.id
     try {
       // Simulate uninstallation
-      app.installed = false
-      alert(app.name + ' 已成功卸载')
+      setTimeout(() => {
+        app.installed = false
+        uninstallingApp.value = null
+        alert(app.name + ' 已成功卸载')
+      }, 1500)
     } catch (error: any) {
       console.error('Failed to uninstall app:', error)
+      uninstallingApp.value = null
       alert('卸载失败: ' + error.message)
     }
   }

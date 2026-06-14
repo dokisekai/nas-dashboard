@@ -175,30 +175,31 @@ const getHealthClass = (health: string): string => {
   return `health-${health}`
 }
 
-const getHealthLabel = (health: string): string => {
-  const labels = { good: '良好', warning: '警告', failed: '故障' }
+const getHealthLabel = (health: string) => {
+  const labels: any = { good: '健康', warning: '警告', failed: '故障' }
   return labels[health] || health
 }
 
-const getStatusType = (status: string): string => {
-  const types = { ok: 'success', warning: 'warning', failed: 'danger' }
+const getStatusType = (status: string) => {
+  const types: any = { ok: 'success', warning: 'warning', failed: 'danger' }
   return types[status] || 'info'
 }
 
-const getStatusLabel = (status: string): string => {
-  const labels = { ok: '正常', warning: '警告', failed: '故障' }
+const getStatusLabel = (status: string) => {
+  const labels: any = { ok: '正常', warning: '警告', failed: '失败' }
   return labels[status] || status
 }
 
-const getTestStatusType = (status: string): string => {
-  const types = { running: 'warning', completed: 'success', failed: 'danger' }
+const getTestStatusType = (status: string) => {
+  const types: any = { running: 'primary', completed: 'success', failed: 'danger' }
   return types[status] || 'info'
 }
 
-const getTestStatusLabel = (status: string): string => {
-  const labels = { running: '运行中', completed: '完成', failed: '失败' }
+const getTestStatusLabel = (status: string) => {
+  const labels: any = { running: '进行中', completed: '已完成', failed: '已失败' }
   return labels[status] || status
 }
+
 
 const formatHours = (hours: number): string => {
   if (hours < 24) return `${hours}小时`

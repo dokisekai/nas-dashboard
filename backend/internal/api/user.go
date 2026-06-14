@@ -355,49 +355,6 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "User deleted successfully"})
 }
 
-// GetGroups 获取系统组列表
-func GetGroups(c *gin.Context) {
-	groups, err := getSystemGroups()
-	if err != nil {
-		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get groups: %v", err)})
-		return
-	}
-	c.JSON(200, gin.H{"groups": groups})
-}
-
-// getSystemGroups 从 /etc/group 获取系统组
-func getSystemGroups() ([]map[string]string, error) {
-	data, err := os.ReadFile("/etc/group")
-	if err != nil {
-		return nil, fmt.Errorf("failed to read /etc/group: %w", err)
-	}
-
-	var groups []map[string]string
-	scanner := bufio.NewScanner(bytes.NewReader(data))
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-
-		fields := strings.Split(line, ":")
-		if len(fields) < 4 {
-			continue
-		}
-
-		group := map[string]string{
-			"name":  fields[0],
-			"gid":   fields[2],
-			"users": fields[3],
-		}
-
-		groups = append(groups, group)
-	}
-
-	return groups, nil
-}
-
 // GetSSHKeys 获取 SSH 密钥列表
 func GetSSHKeys(c *gin.Context) {
 	// 获取指定用户的 SSH 密钥，默认当前用户

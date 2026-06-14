@@ -38,7 +38,7 @@
                   <span>最少磁盘: {{ level.minDisks }}</span>
                 </div>
                 <div class="requirement">
-                  <el-icon><Shield /></el-icon>
+                  <el-icon><TrendCharts /></el-icon>
                   <span>冗余保护: {{ level.redundancy ? '是' : '否' }}</span>
                 </div>
                 <div class="requirement">
@@ -246,7 +246,7 @@ import { diskAPI } from '@/api/disk'
 import { ElMessage } from 'element-plus'
 import type { DiskInfo } from '@/types/disk'
 import { RAID_LEVEL_LABELS, RAID_LEVEL_DESCRIPTIONS } from '@/types/disk'
-import { Document, Shield, TrendCharts } from '@element-plus/icons-vue'
+import { Document, TrendCharts } from '@element-plus/icons-vue'
 
 interface Props {
   visible: boolean
@@ -399,16 +399,16 @@ const formatSize = (bytes: number): string => {
 }
 
 const getRAIDLevelLabel = (level: string): string => {
-  return RAID_LEVEL_LABELS[level] || level
+  return (RAID_LEVEL_LABELS as any)[level] || level
 }
 
 const getHealthType = (health: string): string => {
-  const types = { good: 'success', warning: 'warning', failed: 'danger' }
+  const types: any = { good: 'success', warning: 'warning', failed: 'danger' }
   return types[health] || 'info'
 }
 
 const getHealthLabel = (health: string): string => {
-  const labels = { good: '健康', warning: '警告', failed: '故障' }
+  const labels: any = { good: '健康', warning: '警告', failed: '故障' }
   return labels[health] || health
 }
 

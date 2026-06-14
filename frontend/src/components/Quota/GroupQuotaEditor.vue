@@ -111,17 +111,18 @@
         <div class="quota-preview">
           <div class="preview-info">
             <span class="info-label">软限制:</span>
-            <span class="info-value">{{ formatSize(form.softLimit) }}</span>
+            <span class="info-value">{{ formatSize(softLimit) }}</span>
           </div>
           <div class="preview-info">
             <span class="info-label">硬限制:</span>
-            <span class="info-value">{{ formatSize(form.hardLimit) }}</span>
+            <span class="info-value">{{ formatSize(hardLimit) }}</span>
           </div>
           <div class="preview-info">
             <span class="info-label">宽限期:</span>
             <span class="info-value">{{ form.gracePeriod }} 天</span>
           </div>
-          <div class="preview-info">
+        </div>
+
             <span class="info-label">继承设置:</span>
             <span class="info-value">{{ form.inheritUserQuota ? '是' : '否' }}</span>
           </div>
@@ -181,6 +182,20 @@ const form = ref({
   inheritUserQuota: false
 })
 
+const convertToBytes = (value: number, unit: string): number => {
+  const units: Record<string, number> = {
+    'B': 1,
+    'KB': 1024,
+    'MB': 1024 * 1024,
+    'GB': 1024 * 1024 * 1024,
+    'TB': 1024 * 1024 * 1024 * 1024
+  }
+  return value * (units[unit] || 1)
+}
+
+const softLimit = computed(() => convertToBytes(form.value.softLimitValue, form.value.softLimitUnit))
+const hardLimit = computed(() => convertToBytes(form.value.hardLimitValue, form.value.hardLimitUnit))
+
 const rules = {
   groupId: [
     { required: true, message: '请选择组', trigger: 'change' }
@@ -218,10 +233,6 @@ const loadAvailableGroups = async () => {
     availableGroups.value = []
   }
 }
-
-// Computed
-const softLimit = computed(() => convertToBytes(form.value.softLimitValue, form.value.softLimitUnit))
-const hardLimit = computed(() => convertToBytes(form.value.hardLimitValue, form.value.hardLimitUnit))
 
 // Methods
 const formatSize = (bytes: number): string => {

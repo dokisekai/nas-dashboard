@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -17,6 +19,7 @@ var DB *gorm.DB
 
 // Config 数据库配置
 type Config struct {
+	Driver   string
 	Host     string
 	Port     string
 	User     string
@@ -32,7 +35,14 @@ func LoadConfig() *Config {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	driver := getEnv("DB_DRIVER", "sqlite")
+	if driver == "postgres" && getEnv("DB_HOST", "") == "" {
+		// 如果指定了 postgres 但没有配置 Host，回退到 sqlite
+		driver = "sqlite"
+	}
+
 	return &Config{
+		Driver:   driver,
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
 		User:     getEnv("DB_USER", "nasdashboard"),
@@ -52,18 +62,29 @@ func getEnv(key, defaultVal string) string {
 
 // Connect 连接到数据库
 func Connect(cfg *Config) error {
-	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host,
-		cfg.Port,
-		cfg.User,
-		cfg.Password,
-		cfg.DBName,
-		cfg.SSLMode,
-	)
+	var dialer gorm.Dialector
+
+	if cfg.Driver == "postgres" {
+		dsn := fmt.Sprintf(
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			cfg.Host,
+			cfg.Port,
+			cfg.User,
+			cfg.Password,
+			cfg.DBName,
+			cfg.SSLMode,
+		)
+		dialer = postgres.Open(dsn)
+		log.Printf("Connecting to PostgreSQL: %s:%s", cfg.Host, cfg.Port)
+	} else {
+		// 默认使用 SQLite
+		dbPath := getEnv("DB_PATH", "nas-dashboard.db")
+		dialer = sqlite.Open(dbPath)
+		log.Printf("Using SQLite database: %s", dbPath)
+	}
 
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+	DB, err = gorm.Open(dialer, &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
@@ -157,22 +178,26 @@ func createDefaultAdmin() error {
 		return nil // 已经存在管理员用户
 	}
 
-	// 创建默认管理员
+	// 创建默认管理员并设置密码
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash admin password: %w", err)
+	}
+
 	admin := &models.User{
 		Username:    "admin",
 		DisplayName: "Administrator",
 		Email:       "admin@localhost",
 		Role:        "admin",
+		PasswordHash: string(hashedPassword),
 		IsActive:    true,
 	}
 
-	// 注意：这里应该在实际使用时调用 AuthService 来设置密码哈希
-	// 这里只是创建基础结构
 	if err := DB.Create(admin).Error; err != nil {
 		return err
 	}
 
-	log.Println("Default admin user created")
+	log.Println("Default admin user created with password: admin")
 	return nil
 }
 

@@ -27,27 +27,34 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
   // 默认分类配置 - 合并系统设置功能
   const defaultCategories: ControlPanelCategory[] = [
     {
-      id: 'general',
-      name: '通用设置',
-      icon: 'CogIcon',
-      description: '系统基础设置和配置',
+      id: 'locale',
+      name: '语言和时区',
+      icon: 'GlobeAltIcon',
+      description: '系统语言、时区和地区设置',
       order: 1,
       accessLevel: 'user',
       settings: [
         {
-          id: 'system.hostname',
-          type: 'string',
-          category: 'general',
-          label: '系统名称',
-          description: '设置NAS系统的主机名',
-          defaultValue: 'nas-server',
-          currentValue: 'nas-server',
-          restartRequired: true
+          id: 'locale.language',
+          type: 'select',
+          category: 'locale',
+          label: '系统语言',
+          description: '选择界面显示语言',
+          defaultValue: 'zh-CN',
+          currentValue: 'zh-CN',
+          options: [
+            { label: '简体中文', value: 'zh-CN' },
+            { label: 'English', value: 'en-US' },
+            { label: '日本語', value: 'ja-JP' },
+            { label: 'Deutsch', value: 'de-DE' },
+            { label: 'Français', value: 'fr-FR' },
+            { label: 'Español', value: 'es-ES' }
+          ]
         },
         {
-          id: 'system.timezone',
+          id: 'locale.timezone',
           type: 'select',
-          category: 'general',
+          category: 'locale',
           label: '时区设置',
           description: '选择系统所在时区',
           defaultValue: 'Asia/Shanghai',
@@ -56,45 +63,53 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
             { label: '北京/上海 (GMT+8)', value: 'Asia/Shanghai' },
             { label: '纽约 (GMT-5)', value: 'America/New_York' },
             { label: '伦敦 (GMT+0)', value: 'Europe/London' },
-            { label: '东京 (GMT+9)', value: 'Asia/Tokyo' }
+            { label: '东京 (GMT+9)', value: 'Asia/Tokyo' },
+            { label: '巴黎 (GMT+1)', value: 'Europe/Paris' },
+            { label: '悉尼 (GMT+10)', value: 'Australia/Sydney' },
+            { label: '迪拜 (GMT+4)', value: 'Asia/Dubai' },
+            { label: '洛杉矶 (GMT-8)', value: 'America/Los_Angeles' }
           ]
         },
         {
-          id: 'system.language',
+          id: 'locale.dateFormat',
           type: 'select',
-          category: 'general',
-          label: '系统语言',
-          description: '选择界面显示语言',
-          defaultValue: 'zh-CN',
-          currentValue: 'zh-CN',
+          category: 'locale',
+          label: '日期格式',
+          description: '选择日期显示格式',
+          defaultValue: 'YYYY-MM-DD',
+          currentValue: 'YYYY-MM-DD',
           options: [
-            { label: '简体中文', value: 'zh-CN' },
-            { label: 'English', value: 'en-US' },
-            { label: '日本語', value: 'ja-JP' }
+            { label: '2024-06-13', value: 'YYYY-MM-DD' },
+            { label: '06/13/2024', value: 'MM/DD/YYYY' },
+            { label: '13.06.2024', value: 'DD.MM.YYYY' },
+            { label: '13/06/2024', value: 'DD/MM/YYYY' }
           ]
         },
         {
-          id: 'system.autoUpdate',
-          type: 'boolean',
-          category: 'general',
-          label: '自动更新',
-          description: '自动下载和安装系统更新',
-          defaultValue: true,
-          currentValue: true
+          id: 'locale.timeFormat',
+          type: 'select',
+          category: 'locale',
+          label: '时间格式',
+          description: '选择时间显示格式',
+          defaultValue: '24h',
+          currentValue: '24h',
+          options: [
+            { label: '24小时制 (14:30)', value: '24h' },
+            { label: '12小时制 (02:30 PM)', value: '12h' }
+          ]
         },
         {
-          id: 'system.maintenanceTime',
+          id: 'locale.firstDayOfWeek',
           type: 'select',
-          category: 'general',
-          label: '维护时间',
-          description: '系统自动维护时间窗口',
-          defaultValue: '03:00',
-          currentValue: '03:00',
-          advanced: true,
+          category: 'locale',
+          label: '每周开始日',
+          description: '设置日历中每周的起始日',
+          defaultValue: '1',
+          currentValue: '1',
           options: [
-            { label: '凌晨 3:00', value: '03:00' },
-            { label: '凌晨 4:00', value: '04:00' },
-            { label: '凌晨 5:00', value: '05:00' }
+            { label: '星期一', value: '1' },
+            { label: '星期日', value: '0' },
+            { label: '星期六', value: '6' }
           ]
         }
       ]
@@ -105,140 +120,112 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       icon: 'GlobeAltIcon',
       description: '网络连接和接口配置',
       order: 2,
-      accessLevel: 'admin',
+      accessLevel: 'user',
       settings: [
         {
-          id: 'network.manager',
-          type: 'custom',
+          id: 'network.hostname',
+          type: 'string',
           category: 'network',
-          label: '网络管理',
-          description: '管理以太网和Wi-Fi连接',
-          defaultValue: {},
-          currentValue: {},
-          component: 'NetworkManager'
-        }
-      ]
-    },
-    {
-      id: 'security',
-      name: '安全设置',
-      icon: 'ShieldCheckIcon',
-      description: '系统安全和访问控制',
-      order: 3,
-      accessLevel: 'admin',
-      settings: [
+          label: '主机名',
+          description: '设置系统主机名',
+          defaultValue: 'nas-server',
+          currentValue: 'nas-server'
+        },
         {
-          id: 'security.firewall.enabled',
+          id: 'network.dhcp',
           type: 'boolean',
-          category: 'security',
-          label: '启用防火墙',
-          description: '启用系统防火墙保护',
+          category: 'network',
+          label: '启用DHCP',
+          description: '自动获取IP地址',
           defaultValue: true,
           currentValue: true
         },
         {
-          id: 'security.ssl.enabled',
+          id: 'network.settings',
+          type: 'custom',
+          category: 'network',
+          label: '网络配置',
+          description: '直接配置网络接口、IP地址、DNS和代理设置',
+          defaultValue: {},
+          currentValue: {},
+          component: 'NetworkSettingsPanel',
+          advanced: false
+        }
+      ]
+    },
+    {
+      id: 'firewall',
+      name: '防火墙设置',
+      icon: 'FireIcon',
+      description: '网络防火墙和安全规则管理',
+      order: 3,
+      accessLevel: 'admin',
+      settings: [
+        {
+          id: 'firewall.enabled',
           type: 'boolean',
-          category: 'security',
-          label: '启用SSL/TLS',
-          description: '使用HTTPS加密连接',
+          category: 'firewall',
+          label: '启用防火墙',
+          description: '启用系统防火墙保护网络连接',
           defaultValue: true,
           currentValue: true,
           restartRequired: true
         },
         {
-          id: 'security.ssl.port',
-          type: 'number',
-          category: 'security',
-          label: 'HTTPS端口',
-          description: 'HTTPS服务端口',
-          defaultValue: 443,
-          currentValue: 443,
-          dependencies: ['security.ssl.enabled']
+          id: 'firewall.defaultPolicy',
+          type: 'select',
+          category: 'firewall',
+          label: '默认策略',
+          description: '设置防火墙的默认处理策略',
+          defaultValue: 'drop',
+          currentValue: 'drop',
+          options: [
+            { label: '拒绝(推荐)', value: 'drop', disabled: false },
+            { label: '接受', value: 'accept', disabled: false }
+          ],
+          dependencies: ['firewall.enabled']
         },
         {
-          id: 'security.fail2ban.enabled',
+          id: 'firewall.allowedPorts',
+          type: 'multiselect',
+          category: 'firewall',
+          label: '允许的端口',
+          description: '选择允许通过防火墙的网络端口',
+          defaultValue: ['22', '80', '443'],
+          currentValue: ['22', '80', '443'],
+          options: [
+            { label: 'SSH (22)', value: '22', disabled: false },
+            { label: 'HTTP (80)', value: '80', disabled: false },
+            { label: 'HTTPS (443)', value: '443', disabled: false },
+            { label: 'FTP (21)', value: '21', disabled: false },
+            { label: 'SMB (445)', value: '445', disabled: false },
+            { label: 'NFS (2049)', value: '2049', disabled: false },
+            { label: 'DNS (53)', value: '53', disabled: false },
+            { label: 'DHCP (67-68)', value: '67-68', disabled: false }
+          ],
+          dependencies: ['firewall.enabled']
+        },
+        {
+          id: 'firewall.logging',
           type: 'boolean',
-          category: 'security',
-          label: '启用防暴力破解',
-          description: '自动封禁多次登录失败的IP',
-          defaultValue: true,
-          currentValue: true,
-          advanced: true
-        },
-        {
-          id: 'security.fail2ban.maxAttempts',
-          type: 'number',
-          category: 'security',
-          label: '最大尝试次数',
-          description: '允许的最大登录失败次数',
-          defaultValue: 5,
-          currentValue: 5,
-          dependencies: ['security.fail2ban.enabled'],
-          advanced: true
-        },
-        {
-          id: 'security.session.timeout',
-          type: 'number',
-          category: 'security',
-          label: '会话超时(分钟)',
-          description: '用户会话自动超时时间',
-          defaultValue: 30,
-          currentValue: 30,
-          advanced: true
-        }
-      ]
-    },
-    {
-      id: 'storage',
-      name: '存储设置',
-      icon: 'ServerIcon',
-      description: '存储管理和配置',
-      order: 4,
-      accessLevel: 'admin',
-      settings: [
-        {
-          id: 'storage.autoMount',
-          type: 'boolean',
-          category: 'storage',
-          label: '自动挂载',
-          description: '系统启动时自动挂载存储设备',
-          defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'storage.powerManagement',
-          type: 'boolean',
-          category: 'storage',
-          label: '硬盘省电模式',
-          description: '空闲时自动降低硬盘转速',
+          category: 'firewall',
+          label: '启用防火墙日志',
+          description: '记录所有防火墙规则匹配的数据包',
           defaultValue: false,
           currentValue: false,
+          dependencies: ['firewall.enabled'],
           advanced: true
         },
         {
-          id: 'storage.smart.enabled',
+          id: 'firewall.icmp',
           type: 'boolean',
-          category: 'storage',
-          label: 'S.M.A.R.T.监控',
-          description: '启用硬盘健康监控',
+          category: 'firewall',
+          label: '允许ICMP(PING)',
+          description: '允许网络ICMP数据包用于网络诊断',
           defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'storage.smart.interval',
-          type: 'select',
-          category: 'storage',
-          label: '检查间隔',
-          description: '硬盘健康检查间隔时间',
-          defaultValue: 'daily',
-          currentValue: 'daily',
-          dependencies: ['storage.smart.enabled'],
-          options: [
-            { label: '每小时', value: 'hourly' },
-            { label: '每天', value: 'daily' },
-            { label: '每周', value: 'weekly' }
-          ]
+          currentValue: true,
+          dependencies: ['firewall.enabled'],
+          advanced: true
         }
       ]
     },
@@ -247,7 +234,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       name: '通知设置',
       icon: 'BellIcon',
       description: '系统通知和告警配置',
-      order: 5,
+      order: 4,
       accessLevel: 'user',
       settings: [
         {
@@ -290,264 +277,72 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       ]
     },
     {
-      id: 'appearance',
-      name: '外观设置',
-      icon: 'PaintBrushIcon',
-      description: '界面主题和显示配置',
-      order: 6,
-      accessLevel: 'user',
-      settings: [
-        {
-          id: 'appearance.theme',
-          type: 'select',
-          category: 'appearance',
-          label: '界面主题',
-          description: '选择界面显示主题',
-          defaultValue: 'default',
-          currentValue: 'default',
-          options: [
-            { label: '默认主题', value: 'default' },
-            { label: '暗色主题', value: 'dark' },
-            { label: '简约主题', value: 'minimal' }
-          ]
-        },
-        {
-          id: 'appearance.wallpaper.enabled',
-          type: 'boolean',
-          category: 'appearance',
-          label: '启用桌面壁纸',
-          description: '显示桌面背景图片',
-          defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'appearance.animation.enabled',
-          type: 'boolean',
-          category: 'appearance',
-          label: '界面动画',
-          description: '启用界面过渡动画效果',
-          defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'appearance.density',
-          type: 'select',
-          category: 'appearance',
-          label: '界面密度',
-          description: '界面元素的紧凑程度',
-          defaultValue: 'comfortable',
-          currentValue: 'comfortable',
-          options: [
-            { label: '紧凑', value: 'compact' },
-            { label: '舒适', value: 'comfortable' },
-            { label: '宽松', value: 'spacious' }
-          ]
-        }
-      ]
-    },
-    {
       id: 'system-info',
       name: '系统信息',
       icon: 'ServerIcon',
-      description: '查看系统硬件和运行信息',
-      order: 7,
+      description: '查看系统硬件、运行信息和网络状态',
+      order: 5,
       accessLevel: 'user',
-      readonly: true,
       settings: [
         {
-          id: 'system.hostname.info',
-          type: 'string',
-          category: 'system-info',
-          label: '主机名',
-          description: '系统主机名',
-          defaultValue: 'nas-server',
-          currentValue: 'nas-server',
-          readonly: true
-        },
-        {
-          id: 'system.cpu',
-          type: 'string',
-          category: 'system-info',
-          label: 'CPU',
-          description: '处理器型号和核心数',
-          defaultValue: 'Intel Core i7-8700 (8 cores)',
-          currentValue: 'Intel Core i7-8700 (8 cores)',
-          readonly: true
-        },
-        {
-          id: 'system.memory',
-          type: 'string',
-          category: 'system-info',
-          label: '内存',
-          description: '系统内存容量和使用情况',
-          defaultValue: '16GB total, 8GB used',
-          currentValue: '16GB total, 8GB used',
-          readonly: true
-        },
-        {
-          id: 'system.storage',
-          type: 'string',
-          category: 'system-info',
-          label: '存储',
-          description: '存储容量和使用情况',
-          defaultValue: '2TB total, 1.2TB used',
-          currentValue: '2TB total, 1.2TB used',
-          readonly: true
-        },
-        {
-          id: 'system.os',
-          type: 'string',
-          category: 'system-info',
-          label: '操作系统',
-          description: '操作系统版本和发行版',
-          defaultValue: 'Ubuntu 22.04 LTS',
-          currentValue: 'Ubuntu 22.04 LTS',
-          readonly: true
-        },
-        {
-          id: 'system.uptime',
-          type: 'string',
-          category: 'system-info',
-          label: '运行时间',
-          description: '系统持续运行时间',
-          defaultValue: '15 days, 6 hours',
-          currentValue: '15 days, 6 hours',
-          readonly: true
-        },
-        {
-          id: 'system.kernel',
-          type: 'string',
-          category: 'system-info',
-          label: '内核版本',
-          description: 'Linux内核版本',
-          defaultValue: '5.15.0-72-generic',
-          currentValue: '5.15.0-72-generic',
-          readonly: true,
-          advanced: true
-        },
-        {
-          id: 'system.architecture',
-          type: 'string',
-          category: 'system-info',
-          label: '系统架构',
-          description: '处理器架构类型',
-          defaultValue: 'x86_64',
-          currentValue: 'x86_64',
-          readonly: true,
-          advanced: true
-        }
-      ]
-    },
-    {
-      id: 'services',
-      name: '服务管理',
-      icon: 'CogIcon',
-      description: '管理系统服务和守护进程',
-      order: 8,
-      accessLevel: 'admin',
-      settings: [
-        {
-          id: 'services.list',
+          id: 'system.info.panel',
           type: 'custom',
-          category: 'services',
-          label: '系统服务',
-          description: '管理系统启停的服务',
-          defaultValue: [],
-          currentValue: [],
-          component: 'ServicesListComponent'
-        },
-        {
-          id: 'services.autoStart',
-          type: 'boolean',
-          category: 'services',
-          label: '自动启动关键服务',
-          description: '系统启动时自动启动关键服务',
-          defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'services.monitoring',
-          type: 'boolean',
-          category: 'services',
-          label: '服务监控',
-          description: '监控服务状态并自动重启失败的服务',
-          defaultValue: true,
-          currentValue: true,
-          advanced: true
+          category: 'system-info',
+          label: '系统信息面板',
+          description: '显示系统硬件、运行状态和网络接口信息',
+          defaultValue: {},
+          currentValue: {},
+          component: 'SystemInfoPanel'
         }
       ]
     },
     {
-      id: 'updates',
-      name: '更新管理',
-      icon: 'BeakerIcon',
-      description: '系统更新和版本管理',
-      order: 9,
+      id: 'user-management',
+      name: '用户管理',
+      icon: 'UserIcon',
+      description: '用户账户和用户组管理',
+      order: 6,
       accessLevel: 'admin',
       settings: [
         {
-          id: 'updates.currentVersion',
-          type: 'string',
-          category: 'updates',
-          label: '当前版本',
-          description: '当前运行的系统版本',
-          defaultValue: '1.0.0',
-          currentValue: '1.0.0',
-          readonly: true
+          id: 'users.manager',
+          type: 'custom',
+          category: 'user-management',
+          label: '用户管理',
+          description: '管理系统用户账户',
+          defaultValue: {},
+          currentValue: {},
+          component: 'UserManager'
         },
         {
-          id: 'updates.autoCheck',
-          type: 'boolean',
-          category: 'updates',
-          label: '自动检查更新',
-          description: '定期自动检查系统更新',
-          defaultValue: true,
-          currentValue: true
-        },
+          id: 'users.groups',
+          type: 'custom',
+          category: 'user-management',
+          label: '用户组管理',
+          description: '管理系统用户组',
+          defaultValue: {},
+          currentValue: {},
+          component: 'GroupManager'
+        }
+      ]
+    },
+    {
+      id: 'permission-management',
+      name: '权限管理',
+      icon: 'LockClosedIcon',
+      description: '文件和文件夹权限设置',
+      order: 7,
+      accessLevel: 'admin',
+      settings: [
         {
-          id: 'updates.autoInstall',
-          type: 'boolean',
-          category: 'updates',
-          label: '自动安装安全更新',
-          description: '自动安装安全相关的重要更新',
-          defaultValue: true,
-          currentValue: true,
-          advanced: true
-        },
-        {
-          id: 'updates.frequency',
-          type: 'select',
-          category: 'updates',
-          label: '检查频率',
-          description: '自动检查更新的频率',
-          defaultValue: 'weekly',
-          currentValue: 'weekly',
-          options: [
-            { label: '每天', value: 'daily' },
-            { label: '每周', value: 'weekly' },
-            { label: '每月', value: 'monthly' }
-          ],
-          dependencies: ['updates.autoCheck']
-        },
-        {
-          id: 'updates.notify',
-          type: 'boolean',
-          category: 'updates',
-          label: '更新通知',
-          description: '有可用更新时发送通知',
-          defaultValue: true,
-          currentValue: true
-        },
-        {
-          id: 'updates.maintenanceWindow',
-          type: 'string',
-          category: 'updates',
-          label: '维护时间窗口',
-          description: '自动安装更新的时间窗口',
-          defaultValue: '03:00-05:00',
-          currentValue: '03:00-05:00',
-          dependencies: ['updates.autoInstall'],
-          advanced: true
+          id: 'permissions.acl',
+          type: 'custom',
+          category: 'permission-management',
+          label: 'ACL编辑器',
+          description: '访问控制列表高级编辑器',
+          defaultValue: {},
+          currentValue: {},
+          component: 'ACLEditor'
         }
       ]
     },
@@ -556,7 +351,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
       name: '备份管理',
       icon: 'CircleStackIcon',
       description: '系统备份和恢复',
-      order: 10,
+      order: 8,
       accessLevel: 'admin',
       settings: [
         {
@@ -695,7 +490,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
 
       // 获取网络信息
       try {
-        const networkData = await api.get('/api/monitor/network')
+        const networkData = await api.get('/api/monitor/network') as any
         console.log('Network data loaded:', networkData)
         updateNetworkMetrics(networkData)
       } catch (err) {
@@ -704,7 +499,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
 
       // 获取CPU信息
       try {
-        const cpuData = await api.get('/api/monitor/cpu')
+        const cpuData = await api.get('/api/monitor/cpu') as any
         updateSystemInfo('system.cpu', `${cpuData.model || 'Unknown'} (${cpuData.cores || 0} cores)`)
       } catch (err) {
         console.error('CPU API error:', err)
@@ -712,7 +507,7 @@ export const useControlPanelStore = defineStore('controlPanel', () => {
 
       // 获取内存信息
       try {
-        const memData = await api.get('/api/monitor/memory')
+        const memData = await api.get('/api/monitor/memory') as any
         const totalGB = (memData.total / (1024 ** 3)).toFixed(0)
         const usedGB = (memData.used / (1024 ** 3)).toFixed(1)
         updateSystemInfo('system.memory', `${totalGB}GB total, ${usedGB}GB used`)

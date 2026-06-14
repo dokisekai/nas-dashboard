@@ -301,7 +301,7 @@
             >
               <div class="consumer-rank">{{ index + 1 }}</div>
               <div class="consumer-info">
-                <div class="consumer-name">{{ item.name || item.user?.username || item.group?.name }}</div>
+                <div class="consumer-name">{{ (item as any).name || (item as any).user?.username || (item as any).group?.name }}</div>
                 <div class="consumer-path">{{ item.path }}</div>
                 <div class="consumer-usage">
                   <el-progress
@@ -325,14 +325,14 @@
     <!-- User Quota Dialog -->
     <UserQuotaEditor
       v-model:visible="showUserQuotaDialog"
-      :quota="editingQuota"
+      :quota="editingQuota as any"
       @saved="onQuotaSaved"
     />
 
     <!-- Group Quota Dialog -->
     <GroupQuotaEditor
       v-model:visible="showGroupQuotaDialog"
-      :quota="editingQuota"
+      :quota="editingQuota as any"
       @saved="onQuotaSaved"
     />
   </div>
@@ -410,6 +410,12 @@ const topConsumers = computed(() => quotaStore.topQuotaConsumers)
 // Methods
 const formatSize = (bytes: number): string => formatBytes(bytes)
 
+const formatTime = (time: string): string => {
+  if (!time) return 'N/A'
+  const date = new Date(time)
+  return date.toLocaleString()
+}
+
 const getUsagePercent = (used: number, limit: number): number => {
   if (limit === 0) return 0
   return Math.min((used / limit) * 100, 100)
@@ -466,9 +472,10 @@ const refreshQuotas = async () => {
 
 const generateReport = async () => {
   try {
-    await quotaStore.fetchQuotaReports({
-      type: reportType.value === 'all' ? undefined : reportType.value
+    await quotaStore.generateReport({
+      type: reportType.value === 'all' ? undefined : reportType.value as any
     })
+
     ElMessage.success('配额报告已生成')
   } catch (error) {
     ElMessage.error('生成配额报告失败')

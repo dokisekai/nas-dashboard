@@ -114,7 +114,6 @@ export const monitorAPI = {
 
   // Basic Monitoring Stats
   async getStats(): Promise<MonitorStats> {
-    const response = await axios.get('/api/monitor/cpu')
     const [cpuData, memData, diskData, netData] = await Promise.all([
       axios.get('/api/monitor/cpu'),
       axios.get('/api/monitor/memory'),
@@ -138,8 +137,13 @@ export class MonitorWebSocket {
   private reconnectTimer: number | null = null
   private reconnectAttempts = 0
   private maxReconnectAttempts = 5
+  private url: string
+  private onMessage: (data: any) => void
 
-  constructor(private url: string, private onMessage: (data: any) => void) {}
+  constructor(url: string, onMessage: (data: any) => void) {
+    this.url = url
+    this.onMessage = onMessage
+  }
 
   connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN) return

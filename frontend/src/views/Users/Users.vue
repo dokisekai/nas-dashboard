@@ -476,6 +476,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { userApi } from '../../api'
+import { useAuthStore } from '../../stores/auth'
+
+const authStore = useAuthStore()
 
 // 用户列表相关
 const users = ref<any[]>([])
@@ -573,7 +576,7 @@ const loadUsers = async () => {
   usersLoading.value = true
   usersError.value = ''
   try {
-    const data = await userApi.getUsers()
+    const data = await userApi.getUsers() as any
     users.value = data.users || []
   } catch (error: any) {
     console.error('获取用户列表失败:', error)
@@ -588,7 +591,7 @@ const loadSSHKeys = async () => {
   keysLoading.value = true
   keysError.value = ''
   try {
-    const data = await userApi.getSSHKeys()
+    const data = await userApi.getSSHKeys() as any
     sshKeys.value = data.keys || []
   } catch (error: any) {
     console.error('获取SSH密钥失败:', error)
@@ -761,7 +764,8 @@ const saveKey = async () => {
 
   keySaving.value = true
   try {
-    await userApi.addKey(keyForm.value)
+    const username = authStore.user?.username || 'admin'
+    await userApi.addKey({ ...keyForm.value, user: username })
     showToast('SSH 密钥添加成功', 'success')
     await loadSSHKeys()
     closeKeyModal()

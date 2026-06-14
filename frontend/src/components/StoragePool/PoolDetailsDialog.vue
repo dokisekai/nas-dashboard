@@ -359,27 +359,36 @@ const handleRefresh = () => {
   ElMessage.success('数据已刷新')
 }
 
+import { useStoragePoolStore } from '@/stores/storage_pool'
+
+const storagePoolStore = useStoragePoolStore()
+
 const handleAction = async (command: string) => {
   if (!props.pool) return
+
+  const poolName = props.pool.name
 
   try {
     switch (command) {
       case 'mount':
-        ElMessage.info('挂载功能即将推出')
+        await storagePoolStore.mountPool(poolName)
+        ElMessage.success('存储池已挂载')
         break
 
       case 'umount':
         await ElMessageBox.confirm('确定要卸载此存储池吗？', '确认操作', {
           type: 'warning'
         })
-        ElMessage.info('卸载功能即将推出')
+        await storagePoolStore.umountPool(poolName)
+        ElMessage.success('存储池已卸载')
         break
 
       case 'balance':
         await ElMessageBox.confirm('重新平衡可能需要较长时间，确定要继续吗？', '确认操作', {
           type: 'warning'
         })
-        ElMessage.info('重新平衡功能即将推出')
+        await storagePoolStore.balancePool(poolName)
+        ElMessage.success('存储池重新平衡已完成')
         break
 
       case 'delete':
@@ -388,9 +397,12 @@ const handleAction = async (command: string) => {
           confirmButtonText: '确定删除',
           cancelButtonText: '取消'
         })
-        ElMessage.info('删除功能即将推出')
+        await storagePoolStore.deletePool(poolName)
+        ElMessage.success('存储池已删除')
+        handleClose()
         break
     }
+    emit('refresh')
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('操作失败')

@@ -1,0 +1,29 @@
+[package]
+name=hello-world
+version=1.0.0
+displayname=Hello World
+description=一个简单的示例应用，用于测试应用包系统
+author=NAS Dashboard Team
+website=https://nas-dashboard.example.com
+category=utilities
+license=MIT
+
+[system]
+architecture=x86_64
+min_os_version=1.0.0
+min_ram=128
+min_disk_space=50
+dependencies=docker
+
+[installation]
+install_path=/var/packages/hello-world
+data_path=/var/packages/hello-world/target
+backup_paths=config,data
+requires_restart=false
+auto_start=true
+
+[permissions]
+network_access=true
+storage_access=true
+process_access=false
+port_bindings=8080

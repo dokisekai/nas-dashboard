@@ -23,7 +23,7 @@
       </div>
 
       <!-- 添加快捷方式按钮 -->
-      <button v-if="shortcuts.length < maxShortcuts" class="add-shortcut-btn" @click="showAddDialog = true">
+      <button v-if="shortcuts.length < (maxShortcuts || 8)" class="add-shortcut-btn" @click="showAddDialog = true">
         <PlusIcon class="w-5 h-5" />
         <span>添加</span>
       </button>

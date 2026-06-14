@@ -1,80 +1,52 @@
 <template>
-  <div class="user-manager">
-    <div class="manager-header">
-      <h1>用户管理器</h1>
-      <p class="subtitle">管理系统用户和权限</p>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
+  <div class="user-manager-app">
+    <!-- 顶部标签页 -->
+    <div class="uma-tabs">
       <button
         v-for="tab in tabs"
         :key="tab.id"
-        :class="['tab-btn', { active: activeTab === tab.id }]"
+        :class="['uma-tab', { active: activeTab === tab.id }]"
         @click="activeTab = tab.id"
       >
-        <component :is="tab.icon" class="w-5 h-5" />
         {{ tab.label }}
       </button>
     </div>
 
-    <!-- Users Tab -->
-    <div v-if="activeTab === 'users'" class="tab-content">
-      <div class="section-header">
-        <h2>用户列表</h2>
-        <button class="action-btn primary" @click="showCreateUserModal = true">
-          <UserPlusIcon class="w-4 h-4" />
-          添加用户
-        </button>
+    <!-- 用户管理 -->
+    <div v-if="activeTab === 'users'" class="uma-content">
+      <div class="uma-toolbar">
+        <div class="uma-title">用户</div>
+        <div class="uma-actions">
+          <button class="uma-btn" @click="showAddUser = true">
+            <PlusIcon class="w-4 h-4" />
+            新增
+          </button>
+        </div>
       </div>
 
-      <div v-if="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>加载中...</p>
-      </div>
-
-      <div v-else class="users-table">
+      <!-- 用户列表 -->
+      <div class="uma-table">
         <table>
           <thead>
             <tr>
-              <th>用户名</th>
-              <th>全名</th>
+              <th>用户</th>
               <th>用户组</th>
-              <th>Shell</th>
-              <th>磁盘配额</th>
               <th>状态</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.username">
+            <tr v-for="user in users" :key="user.id">
+              <td>{{ user.displayName }}</td>
+              <td>{{ user.groups.join(', ') }}</td>
               <td>
-                <div class="user-info">
-                  <div class="user-avatar">{{ user.username.charAt(0).toUpperCase() }}</div>
-                  <span>{{ user.username }}</span>
-                </div>
-              </td>
-              <td>{{ user.comment || '-' }}</td>
-              <td>{{ user.group || 'users' }}</td>
-              <td>{{ user.shell || '/bin/bash' }}</td>
-              <td>{{ user.quota || '无限制' }}</td>
-              <td>
-                <span class="status-badge" :class="user.status?.toLowerCase()">
-                  {{ user.status || 'Active' }}
+                <span :class="['uma-status', user.status === 'active' ? 'active' : 'disabled']">
+                  {{ user.status === 'active' ? '正常' : '停用' }}
                 </span>
               </td>
               <td>
-                <div class="action-buttons">
-                  <button class="icon-btn" @click="editUser(user)" title="编辑">
-                    <PencilIcon class="w-4 h-4" />
-                  </button>
-                  <button class="icon-btn" @click="manageUserQuota(user)" title="配额">
-                    <CircleStackIcon class="w-4 h-4" />
-                  </button>
-                  <button class="icon-btn danger" @click="deleteUser(user)" title="删除">
-                    <TrashIcon class="w-4 h-4" />
-                  </button>
-                </div>
+                <button class="uma-link" @click="editUser(user)">编辑</button>
+                <button class="uma-link danger" @click="deleteUser(user.id)">删除</button>
               </td>
             </tr>
           </tbody>
@@ -82,1021 +54,1098 @@
       </div>
     </div>
 
-    <!-- SSH Keys Tab -->
-    <div v-if="activeTab === 'ssh'" class="tab-content">
-      <div class="section-header">
-        <h2>SSH 密钥管理</h2>
-        <button class="action-btn primary" @click="showAddSSHKeyModal = true">
-          <KeyIcon class="w-4 h-4" />
-          添加密钥
-        </button>
-      </div>
-
-      <div v-if="loadingSSH" class="loading-state">
-        <div class="spinner"></div>
-        <p>加载中...</p>
-      </div>
-
-      <div v-else class="ssh-keys-list">
-        <div
-          v-for="key in sshKeys"
-          :key="key.id"
-          class="ssh-key-item"
-        >
-          <div class="key-info">
-            <div class="key-icon">
-              <KeyIcon class="w-8 h-8" />
-            </div>
-            <div class="key-details">
-              <h3>{{ key.name }}</h3>
-              <p class="key-fingerprint">指纹: {{ key.fingerprint }}</p>
-              <p class="key-user">用户: {{ key.user }}</p>
-              <p class="key-date">添加时间: {{ formatDate(key.addedAt) }}</p>
-            </div>
-          </div>
-
-          <div class="key-actions">
-            <button class="action-btn" @click="viewKey(key)">
-              <EyeIcon class="w-4 h-4" />
-              查看
-            </button>
-            <button class="action-btn danger" @click="deleteSSHKey(key)">
-              <TrashIcon class="w-4 h-4" />
-              删除
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Groups Tab -->
-    <div v-if="activeTab === 'groups'" class="tab-content">
-      <GroupManager />
-    </div>
-
-    <!-- User Modal -->
-    <div v-if="showCreateUserModal" class="modal-overlay" @click="closeUserModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>{{ isEditing ? '编辑用户' : '添加用户' }}</h3>
-          <button class="close-btn" @click="closeUserModal">
-            <XMarkIcon class="w-5 h-5" />
+    <!-- 用户组管理 -->
+    <div v-if="activeTab === 'groups'" class="uma-content">
+      <div class="uma-toolbar">
+        <div class="uma-title">用户组</div>
+        <div class="uma-actions">
+          <button class="uma-btn" @click="showAddGroup = true">
+            <PlusIcon class="w-4 h-4" />
+            新增
           </button>
         </div>
+      </div>
 
-        <form @submit.prevent="saveUser" class="modal-body">
-          <div class="form-group">
-            <label>用户名 *</label>
-            <input
-              v-model="userForm.username"
-              type="text"
-              required
-              :disabled="isEditing"
-              placeholder="输入用户名"
-            />
-          </div>
-
-          <div class="form-group" v-if="!isEditing">
-            <label>密码 *</label>
-            <div class="password-input">
-              <input
-                v-model="userForm.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
-                placeholder="输入密码"
-              />
-              <button type="button" class="icon-btn" @click="showPassword = !showPassword">
-                <EyeIcon v-if="!showPassword" class="w-4 h-4" />
-                <EyeSlashIcon v-else class="w-4 h-4" />
+      <!-- 用户组列表 -->
+      <div class="uma-groups">
+        <div
+          v-for="group in groups"
+          :key="group.id"
+          class="uma-group-item"
+          :class="{ expanded: expandedGroups.includes(group.id) }"
+        >
+          <div class="uma-group-header" @click="toggleGroup(group.id)">
+            <div class="group-info">
+              <ChevronRightIcon class="expand-icon" />
+              <span class="group-name">{{ group.name }}</span>
+            </div>
+            <div class="group-actions">
+              <button class="uma-link" @click.stop="editGroup(group)">编辑</button>
+              <button
+                v-if="!isSystemGroup(group)"
+                class="uma-link danger"
+                @click.stop="deleteGroup(group.id)"
+              >
+                删除
               </button>
             </div>
           </div>
 
-          <div class="form-group">
-            <label>全名</label>
+          <div v-if="expandedGroups.includes(group.id)" class="uma-group-details">
+            <div class="group-description">{{ group.description }}</div>
+            <div class="group-permissions">
+              <strong>权限：</strong>
+              <span v-for="perm in group.permissions" :key="perm" class="perm-tag">{{ perm }}</span>
+            </div>
+            <div class="group-members">
+              <strong>成员 ({{ group.memberCount }})：</strong>
+              <span v-for="member in group.members" :key="member" class="member-tag">{{ member }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 权限管理 -->
+    <div v-if="activeTab === 'permissions'" class="uma-content">
+      <div class="uma-toolbar">
+        <div class="uma-title">权限管理</div>
+        <div class="uma-actions">
+          <button class="uma-btn" @click="createFolder">
+            <PlusIcon class="w-4 h-4" />
+            新增共享文件夹
+          </button>
+        </div>
+      </div>
+
+      <!-- 共享文件夹列表 -->
+      <div class="uma-folders">
+        <div
+          v-for="folder in folders"
+          :key="folder.id"
+          class="uma-folder-item"
+          :class="{ expanded: expandedFolders.includes(folder.id) }"
+        >
+          <div class="uma-folder-header" @click="toggleFolder(folder.id)">
+            <div class="folder-info">
+              <ChevronRightIcon class="expand-icon" />
+              <FolderIcon class="folder-icon" />
+              <span class="folder-name">{{ folder.name }}</span>
+            </div>
+            <div class="folder-actions">
+              <button class="uma-link" @click.stop="editFolder(folder)">编辑</button>
+              <button class="uma-link danger" @click.stop="deleteFolder(folder.id)">删除</button>
+            </div>
+          </div>
+
+          <div v-if="expandedFolders.includes(folder.id)" class="uma-folder-details">
+            <!-- 权限列表 -->
+            <div class="permissions-section">
+              <div class="section-header">
+                <h3>用户权限</h3>
+                <button class="uma-btn small" @click.stop="addPermission(folder)">
+                  <PlusIcon class="w-3 h-3" />
+                  添加用户
+                </button>
+              </div>
+
+              <div class="permissions-list">
+                <div
+                  v-for="permission in folder.permissions"
+                  :key="permission.userId"
+                  class="permission-item"
+                >
+                  <div class="user-info">
+                    <UserIcon class="w-4 h-4" />
+                    <span>{{ permission.userName }}</span>
+                  </div>
+                  <div class="permission-level">
+                    <select
+                      :value="getPermissionLevel(permission)"
+                      @change="updatePermission(folder.id, permission.userId, $event)"
+                    >
+                      <option value="none">无权限</option>
+                      <option value="read">只读</option>
+                      <option value="write">读写</option>
+                      <option value="admin">管理</option>
+                    </select>
+                  </div>
+                  <button
+                    class="uma-link danger"
+                    @click="removePermission(folder.id, permission.userId)"
+                  >
+                    移除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加用户对话框 -->
+    <div v-if="showAddUser" class="uma-modal" @click.self="closeUserModal">
+      <div class="uma-modal-content">
+        <div class="uma-modal-header">
+          <h3>{{ editingUser ? '编辑用户' : '新增用户' }}</h3>
+          <button class="uma-close" @click="closeUserModal">
+            <XMarkIcon class="w-5 h-5" />
+          </button>
+        </div>
+
+        <form @submit.prevent="saveUser" class="uma-form">
+          <div class="uma-form-group">
+            <label>用户名 *</label>
             <input
-              v-model="userForm.comment"
+              v-model="userForm.name"
               type="text"
-              placeholder="可选全名"
+              required
+              :disabled="editingUser"
+              placeholder="用户名"
             />
           </div>
 
-          <div class="form-group">
+          <div class="uma-form-group">
+            <label>显示名称</label>
+            <input v-model="userForm.displayName" type="text" placeholder="显示名称" />
+          </div>
+
+          <div class="uma-form-group" v-if="!editingUser">
+            <label>密码 *</label>
+            <input v-model="userForm.password" type="password" required placeholder="密码" />
+          </div>
+
+          <div class="uma-form-group">
             <label>用户组</label>
-            <select v-model="userForm.group">
-              <option value="">默认组 (users)</option>
-              <option v-for="group in groups" :key="group.name" :value="group.name">
+            <div class="uma-checkbox-group">
+              <label
+                v-for="group in groups"
+                :key="group.id"
+                class="uma-checkbox"
+              >
+                <input type="checkbox" v-model="userForm.groups" :value="group.name" />
                 {{ group.name }}
-              </option>
-            </select>
+              </label>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label>Shell</label>
-            <select v-model="userForm.shell">
-              <option value="/bin/bash">/bin/bash</option>
-              <option value="/bin/zsh">/bin/zsh</option>
-              <option value="/bin/sh">/bin/sh</option>
-              <option value="/usr/sbin/nologin">nologin (无登录权限)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>磁盘配额</label>
-            <input
-              v-model="userForm.quota"
-              type="text"
-              placeholder="例如: 100GB, 1TB"
-            />
-          </div>
-
-          <div class="modal-footer">
-            <button type="button" class="action-btn" @click="closeUserModal">
+          <div class="uma-modal-footer">
+            <button type="button" class="uma-btn secondary" @click="closeUserModal">
               取消
             </button>
-            <button type="submit" class="action-btn primary">
-              {{ isEditing ? '更新' : '创建' }}
+            <button type="submit" class="uma-btn primary">
+              {{ editingUser ? '确定' : '确定' }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- SSH Key Modal -->
-    <div v-if="showAddSSHKeyModal" class="modal-overlay" @click="closeSSHKeyModal">
-      <div class="modal-content large" @click.stop>
-        <div class="modal-header">
-          <h3>{{ editingSSHKey ? '编辑密钥' : '添加SSH密钥' }}</h3>
-          <button class="close-btn" @click="closeSSHKeyModal">
+    <!-- 添加用户组对话框 -->
+    <div v-if="showAddGroup" class="uma-modal" @click.self="closeGroupModal">
+      <div class="uma-modal-content">
+        <div class="uma-modal-header">
+          <h3>{{ editingGroup ? '编辑用户组' : '新增用户组' }}</h3>
+          <button class="uma-close" @click="closeGroupModal">
             <XMarkIcon class="w-5 h-5" />
           </button>
         </div>
 
-        <form @submit.prevent="saveSSHKey" class="modal-body">
-          <div class="form-group">
-            <label>名称 *</label>
+        <form @submit.prevent="saveGroup" class="uma-form">
+          <div class="uma-form-group">
+            <label>用户组名称 *</label>
             <input
-              v-model="sshKeyForm.name"
+              v-model="groupForm.name"
               type="text"
               required
-              placeholder="密钥名称"
+              :disabled="editingGroup?.isSystem"
+              placeholder="用户组名称"
             />
           </div>
 
-          <div class="form-group">
-            <label>用户 *</label>
-            <select v-model="sshKeyForm.user" required>
-              <option value="">选择用户</option>
-              <option v-for="user in users" :key="user.username" :value="user.username">
-                {{ user.username }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>公钥 *</label>
+          <div class="uma-form-group">
+            <label>描述</label>
             <textarea
-              v-model="sshKeyForm.content"
-              required
-              rows="6"
-              placeholder="ssh-rsa AAAA... 或 ssh-ed25519 AAAA..."
+              v-model="groupForm.description"
+              rows="3"
+              placeholder="用户组描述"
             ></textarea>
           </div>
 
-          <div class="modal-footer">
-            <button type="button" class="action-btn" @click="closeSSHKeyModal">
+          <div class="uma-modal-footer">
+            <button type="button" class="uma-btn secondary" @click="closeGroupModal">
               取消
             </button>
-            <button type="submit" class="action-btn primary">
-              {{ editingSSHKey ? '更新' : '添加' }}
+            <button type="submit" class="uma-btn primary">
+              {{ editingGroup ? '确定' : '确定' }}
             </button>
           </div>
         </form>
       </div>
     </div>
 
-    <!-- Quota Modal -->
-    <div v-if="showQuotaModal" class="modal-overlay" @click="closeQuotaModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>磁盘配额管理</h3>
-          <button class="close-btn" @click="closeQuotaModal">
+    <!-- 添加权限模态框 -->
+    <div v-if="showAddPermissionModal" class="uma-modal" @click.self="closeAddPermissionModal">
+      <div class="uma-modal-content">
+        <div class="uma-modal-header">
+          <h3>添加用户权限</h3>
+          <button class="uma-close" @click="closeAddPermissionModal">
             <XMarkIcon class="w-5 h-5" />
           </button>
         </div>
 
-        <div class="modal-body">
-          <div class="quota-info">
-            <p><strong>用户:</strong> {{ quotaUser?.username }}</p>
-            <p><strong>当前配额:</strong> {{ quotaUser?.quota || '无限制' }}</p>
-            <p><strong>已使用:</strong> {{ quotaUser?.usedSpace || '0 GB' }}</p>
+        <form @submit.prevent="confirmAddPermission" class="uma-form">
+          <div class="uma-form-group">
+            <label>选择用户</label>
+            <select v-model="newPermission.userId" required>
+              <option value="">选择用户...</option>
+              <option v-for="user in availableUsers" :key="user.id" :value="user.id">
+                {{ user.name }}
+              </option>
+            </select>
           </div>
 
-          <form @submit.prevent="saveQuota" class="quota-form">
-            <div class="form-group">
-              <label>空间限制</label>
-              <input
-                v-model="quotaForm.space"
-                type="text"
-                placeholder="例如: 100GB, 1TB, unlimited"
-              />
+          <div class="uma-form-group">
+            <label>权限级别</label>
+            <div class="permission-options">
+              <label class="radio-option">
+                <input type="radio" v-model="newPermission.level" value="read" />
+                <div class="radio-content">
+                  <div class="radio-title">只读</div>
+                  <div class="radio-desc">可以浏览和下载文件</div>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" v-model="newPermission.level" value="write" />
+                <div class="radio-content">
+                  <div class="radio-title">读写</div>
+                  <div class="radio-desc">可以读取、上传和修改文件</div>
+                </div>
+              </label>
+              <label class="radio-option">
+                <input type="radio" v-model="newPermission.level" value="admin" />
+                <div class="radio-content">
+                  <div class="radio-title">管理</div>
+                  <div class="radio-desc">完全控制权限</div>
+                </div>
+              </label>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label>文件数量限制</label>
-              <input
-                v-model="quotaForm.files"
-                type="text"
-                placeholder="例如: 1000000, unlimited"
-              />
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="action-btn" @click="closeQuotaModal">
-                取消
-              </button>
-              <button type="submit" class="action-btn primary">
-                应用配额
-              </button>
-            </div>
-          </form>
-        </div>
+          <div class="uma-modal-footer">
+            <button type="button" class="uma-btn secondary" @click="closeAddPermissionModal">取消</button>
+            <button type="submit" class="uma-btn primary">添加</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import GroupManager from '../components/User/GroupManager.vue'
+import { ref } from 'vue'
 import {
-  UserGroupIcon,
-  KeyIcon,
-  UserPlusIcon,
-  PencilIcon,
-  TrashIcon,
+  PlusIcon,
+  ChevronRightIcon,
   XMarkIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  CircleStackIcon
+  FolderIcon,
+  UserIcon
 } from '@heroicons/vue/24/outline'
-import { userApi, groupApi } from '../api'
 
 const activeTab = ref('users')
-const loading = ref(false)
-const loadingSSH = ref(false)
-const loadingGroups = ref(false)
 
 const tabs = [
-  { id: 'users', label: '用户', icon: UserGroupIcon },
-  { id: 'ssh', label: 'SSH密钥', icon: KeyIcon },
-  { id: 'groups', label: '用户组', icon: UserGroupIcon }
+  { id: 'users', label: '用户' },
+  { id: 'groups', label: '用户组' },
+  { id: 'permissions', label: '权限' }
 ]
 
-// User Management
-const users = ref<any[]>([])
-const showCreateUserModal = ref(false)
+// 用户数据
+const users = ref([
+  { id: '1', displayName: 'admin', name: 'admin', groups: ['administrators'], status: 'active' },
+  { id: '2', displayName: '张三', name: 'zhangsan', groups: ['users'], status: 'active' },
+  { id: '3', displayName: '李四', name: 'lisi', groups: ['users'], status: 'active' }
+])
+
+// 用户组数据
+const groups = ref([
+  {
+    id: 'administrators',
+    name: 'administrators',
+    description: '系统管理员组，拥有完整的管理权限',
+    isSystem: true,
+    memberCount: 1,
+    members: ['admin'],
+    permissions: ['用户管理', '系统设置', '文件管理']
+  },
+  {
+    id: 'users',
+    name: 'users',
+    description: '普通用户组，基本的文件访问权限',
+    isSystem: true,
+    memberCount: 3,
+    members: ['zhangsan', 'lisi'],
+    permissions: ['文件访问', '个人设置']
+  }
+])
+
+// 共享文件夹数据
+const folders = ref([
+  {
+    id: '1',
+    name: 'Documents',
+    path: '/home/Documents',
+    permissions: [
+      { userId: 'u1', userName: 'admin', read: true, write: true, admin: true },
+      { userId: 'u2', userName: 'zhangsan', read: true, write: true, admin: false }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Photos',
+    path: '/home/Photos',
+    permissions: [
+      { userId: 'u1', userName: 'admin', read: true, write: true, admin: true },
+      { userId: 'u2', userName: 'zhangsan', read: true, write: false, admin: false }
+    ]
+  }
+])
+
+const expandedGroups = ref<string[]>([])
+const expandedFolders = ref<string[]>([])
+
+const showAddUser = ref(false)
+const showAddGroup = ref(false)
+const showAddPermissionModal = ref(false)
 const editingUser = ref<any>(null)
-const isEditing = computed(() => editingUser.value !== null)
-const showPassword = ref(false)
+const editingGroup = ref<any>(null)
+const currentFolderId = ref('')
+
 const userForm = ref({
-  username: '',
-  password: '',
-  comment: '',
-  group: '',
-  shell: '/bin/bash',
-  quota: ''
-})
-
-// SSH Key Management
-const sshKeys = ref<any[]>([])
-const showAddSSHKeyModal = ref(false)
-const editingSSHKey = ref(null)
-const sshKeyForm = ref({
   name: '',
-  user: '',
-  content: ''
+  displayName: '',
+  password: '',
+  groups: ['users']
 })
 
-// Group Management
-const groups = ref<any[]>([])
-const showCreateGroupModal = ref(false)
-
-// Quota Management
-const showQuotaModal = ref(false)
-const quotaUser = ref<any>(null)
-const quotaForm = ref({
-  space: '',
-  files: ''
+const groupForm = ref({
+  name: '',
+  description: ''
 })
 
-// API Functions
-const loadUsers = async () => {
-  loading.value = true
-  try {
-    const response = await userApi.getUsers()
-    // 处理可能的响应格式
-    if (response && response.users) {
-      users.value = response.users
-    } else if (Array.isArray(response)) {
-      users.value = response
-    } else {
-      users.value = []
-    }
-  } catch (error: any) {
-    console.error('Failed to load users:', error)
-    // 设置为空数组而不是Mock数据
-    users.value = []
-    // 可以选择显示错误提示给用户
-  } finally {
-    loading.value = false
+const newPermission = ref({
+  userId: '',
+  level: 'read'
+})
+
+const availableUsers = ref([
+  { id: 'u1', name: 'admin' },
+  { id: 'u2', name: 'zhangsan' },
+  { id: 'u3', name: 'lisi' }
+])
+
+// 方法
+const toggleGroup = (groupId: string) => {
+  const index = expandedGroups.value.indexOf(groupId)
+  if (index > -1) {
+    expandedGroups.value.splice(index, 1)
+  } else {
+    expandedGroups.value.push(groupId)
   }
 }
 
-const loadSSHKeys = async () => {
-  loadingSSH.value = true
-  try {
-    const response = await userApi.getSSHKeys()
-    // 处理可能的响应格式
-    if (response && response.keys) {
-      sshKeys.value = response.keys
-    } else if (Array.isArray(response)) {
-      sshKeys.value = response
-    } else {
-      sshKeys.value = []
-    }
-  } catch (error: any) {
-    console.error('Failed to load SSH keys:', error)
-    // 设置为空数组而不是Mock数据
-    sshKeys.value = []
-    // 可以选择显示错误提示给用户
-  } finally {
-    loadingSSH.value = false
+const toggleFolder = (folderId: string) => {
+  const index = expandedFolders.value.indexOf(folderId)
+  if (index > -1) {
+    expandedFolders.value.splice(index, 1)
+  } else {
+    expandedFolders.value.push(folderId)
   }
 }
 
-const loadGroups = async () => {
-  loadingGroups.value = true
-  try {
-    const response = await groupApi.getGroups()
-    groups.value = response.groups || response  // axios拦截器已返回response.data
-  } catch (error: any) {
-    console.error('Failed to load groups:', error)
-    // 设置为空数组而不是Mock数据
-    groups.value = []
-    // 可以选择显示错误提示给用户
-  } finally {
-    loadingGroups.value = false
+const isSystemGroup = (group: any) => group.isSystem
+
+const getPermissionLevel = (permission: any): string => {
+  if (permission.admin) return 'admin'
+  if (permission.write) return 'write'
+  if (permission.read) return 'read'
+  return 'none'
+}
+
+const updatePermission = (folderId: string, userId: string, event: Event) => {
+  const level = (event.target as HTMLSelectElement).value
+  const folder = folders.value.find(f => f.id === folderId)
+  if (!folder) return
+
+  const permission = folder.permissions.find((p: any) => p.userId === userId)
+  if (!permission) return
+
+  permission.read = level !== 'none'
+  permission.write = level === 'write' || level === 'admin'
+  permission.admin = level === 'admin'
+}
+
+const removePermission = (folderId: string, userId: string) => {
+  const folder = folders.value.find(f => f.id === folderId)
+  if (!folder) return
+  folder.permissions = folder.permissions.filter((p: any) => p.userId !== userId)
+}
+
+const addPermission = (folder: any) => {
+  currentFolderId.value = folder.id
+  newPermission.value = {
+    userId: '',
+    level: 'read'
+  }
+  showAddPermissionModal.value = true
+}
+
+const confirmAddPermission = () => {
+  const folder = folders.value.find(f => f.id === currentFolderId.value)
+  if (!folder || !newPermission.value.userId) return
+
+  const user = availableUsers.value.find(u => u.id === newPermission.value.userId)
+  if (!user) return
+
+  const level = newPermission.value.level
+  folder.permissions.push({
+    userId: user.id,
+    userName: user.name,
+    read: level !== 'none',
+    write: level === 'write' || level === 'admin',
+    admin: level === 'admin'
+  })
+
+  closeAddPermissionModal()
+}
+
+const closeAddPermissionModal = () => {
+  showAddPermissionModal.value = false
+  newPermission.value = {
+    userId: '',
+    level: 'read'
   }
 }
 
 const editUser = (user: any) => {
   editingUser.value = user
   userForm.value = {
-    username: user.username,
+    name: user.name,
+    displayName: user.displayName,
     password: '',
-    comment: user.comment || '',
-    group: user.group || '',
-    shell: user.shell || '/bin/bash',
-    quota: user.quota || ''
+    groups: [...user.groups]
   }
-  showCreateUserModal.value = true
+  showAddUser.value = true
 }
 
-const deleteUser = async (user: any) => {
-  if (confirm(`确定要删除用户 "${user.username}" 吗?`)) {
-    try {
-      await userApi.deleteUser(user.username)
-      await loadUsers()
-    } catch (error: any) {
-      console.error('Failed to delete user:', error)
-      alert('删除失败: ' + error.message)
-    }
-  }
-}
-
-const saveUser = async () => {
-  try {
-    if (editingUser.value) {
-      await userApi.updateUser(editingUser.value.username, {
-        comment: userForm.value.comment,
-        group: userForm.value.group,
-        shell: userForm.value.shell
-      })
-    } else {
-      await userApi.createUser({
-        username: userForm.value.username,
-        password: userForm.value.password,
-        comment: userForm.value.comment,
-        group: userForm.value.group,
-        shell: userForm.value.shell
-      })
-    }
-    closeUserModal()
-    await loadUsers()
-  } catch (error: any) {
-    console.error('Failed to save user:', error)
-    alert('保存失败: ' + error.message)
-  }
-}
-
-const closeUserModal = () => {
-  showCreateUserModal.value = false
-  editingUser.value = null
-  userForm.value = {
-    username: '',
-    password: '',
-    comment: '',
-    group: '',
-    shell: '/bin/bash',
-    quota: ''
-  }
-  showPassword.value = false
-}
-
-const viewKey = (key: any) => {
-  alert(`公钥内容:\n\n${key.content}`)
-}
-
-const deleteSSHKey = async (key: any) => {
-  if (confirm(`确定要删除密钥 "${key.name}" 吗?`)) {
-    try {
-      await userApi.deleteKey(key.id, key.user)
-      await loadSSHKeys()
-    } catch (error: any) {
-      console.error('Failed to delete SSH key:', error)
-      alert('删除失败: ' + error.message)
-    }
-  }
-}
-
-const saveSSHKey = async () => {
-  try {
-    await userApi.addKey({
-      name: sshKeyForm.value.name,
-      user: sshKeyForm.value.user,
-      content: sshKeyForm.value.content
-    })
-    closeSSHKeyModal()
-    await loadSSHKeys()
-  } catch (error: any) {
-    console.error('Failed to save SSH key:', error)
-    alert('保存失败: ' + error.message)
-  }
-}
-
-const closeSSHKeyModal = () => {
-  showAddSSHKeyModal.value = false
-  editingSSHKey.value = null
-  sshKeyForm.value = {
-    name: '',
-    user: '',
-    content: ''
-  }
-}
-
-const manageUserQuota = (user: any) => {
-  quotaUser.value = user
-  quotaForm.value = {
-    space: user.quota || '',
-    files: ''
-  }
-  showQuotaModal.value = true
-}
-
-const saveQuota = async () => {
-  try {
-    // 调用配额API设置用户配额
-    await userApi.setUserQuota(quotaUser.value?.username, {
-      space: quotaForm.value.space,
-      files: quotaForm.value.files
-    })
-    closeQuotaModal()
-    await loadUsers()
-    alert('配额设置成功')
-  } catch (error: any) {
-    console.error('Failed to set quota:', error)
-    alert('配额设置失败: ' + error.message)
-  }
-}
-
-const closeQuotaModal = () => {
-  showQuotaModal.value = false
-  quotaUser.value = null
-  quotaForm.value = {
-    space: '',
-    files: ''
+const deleteUser = (userId: string) => {
+  if (confirm('确定要删除此用户吗？')) {
+    users.value = users.value.filter(u => u.id !== userId)
   }
 }
 
 const editGroup = (group: any) => {
-  console.log('Editing group:', group.name)
-  alert('编辑组: ' + group.name)
+  editingGroup.value = group
+  groupForm.value = {
+    name: group.name,
+    description: group.description
+  }
+  showAddGroup.value = true
 }
 
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('zh-CN')
+const deleteGroup = (groupId: string) => {
+  if (confirm('确定要删除此用户组吗？')) {
+    groups.value = groups.value.filter(g => g.id !== groupId)
+  }
 }
 
-onMounted(() => {
-  loadUsers()
-  loadSSHKeys()
-  loadGroups()
-})
+const saveUser = () => {
+  if (editingUser.value) {
+    const index = users.value.findIndex(u => u.id === editingUser.value.id)
+    if (index > -1) {
+      users.value[index] = {
+        ...editingUser.value,
+        name: userForm.value.name,
+        displayName: userForm.value.displayName,
+        groups: userForm.value.groups,
+        status: 'active'
+      }
+    }
+  } else {
+    users.value.push({
+      id: Date.now().toString(),
+      name: userForm.value.name,
+      displayName: userForm.value.displayName,
+      groups: userForm.value.groups,
+      status: 'active'
+    })
+  }
+  closeUserModal()
+}
+
+const saveGroup = () => {
+  if (editingGroup.value) {
+    const index = groups.value.findIndex(g => g.id === editingGroup.value.id)
+    if (index > -1) {
+      groups.value[index] = {
+        ...editingGroup.value,
+        name: groupForm.value.name,
+        description: groupForm.value.description
+      }
+    }
+  } else {
+    groups.value.push({
+      id: Date.now().toString(),
+      name: groupForm.value.name,
+      description: groupForm.value.description,
+      isSystem: false,
+      memberCount: 0,
+      members: [],
+      permissions: ['文件访问']
+    })
+  }
+  closeGroupModal()
+}
+
+const closeUserModal = () => {
+  showAddUser.value = false
+  editingUser.value = null
+  userForm.value = {
+    name: '',
+    displayName: '',
+    password: '',
+    groups: ['users']
+  }
+}
+
+const closeGroupModal = () => {
+  showAddGroup.value = false
+  editingGroup.value = null
+  groupForm.value = {
+    name: '',
+    description: ''
+  }
+}
+
+const createFolder = () => {
+  console.log('创建新共享文件夹')
+}
+
+const editFolder = (folder: any) => {
+  console.log('编辑文件夹:', folder.name)
+}
+
+const deleteFolder = (folderId: string) => {
+  const folder = folders.value.find(f => f.id === folderId)
+  if (!folder) return
+
+  if (confirm(`确定要删除共享文件夹 "${folder.name}" 吗？`)) {
+    folders.value = folders.value.filter(f => f.id !== folderId)
+  }
+}
 </script>
 
 <style scoped>
-.user-manager {
+.user-manager-app {
   width: 100%;
   height: 100%;
-  padding: 32px;
-  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  background: #f5f5f5;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
 }
 
-.manager-header {
-  margin-bottom: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-}
-
-.manager-header h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: white;
-  margin-bottom: 8px;
-}
-
-.subtitle {
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.tabs {
+.uma-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+  border-bottom: 1px solid #d8d8d8;
+  background: white;
 }
 
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+.uma-tab {
+  padding: 12px 24px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   font-size: 14px;
-  font-weight: 500;
-  color: #6b7280;
+  color: #666;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: -2px;
-  border-radius: 8px 8px 0 0;
+  transition: all 0.2s;
 }
 
-.tab-btn:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+.uma-tab:hover {
+  color: #333;
 }
 
-.tab-btn.active {
-  color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-bottom-color: transparent;
+.uma-tab.active {
+  color: #1890ff;
+  border-bottom-color: #1890ff;
 }
 
-.tab-content {
+.uma-content {
   flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.uma-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.uma-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.uma-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.uma-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  border: 1px solid #d9d9d9;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.uma-btn:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.uma-btn.primary {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.uma-btn.primary:hover {
+  background: #40a9ff;
+  border-color: #40a9ff;
+}
+
+.uma-btn.secondary {
+  background: white;
+  border-color: #d9d9d9;
+}
+
+.uma-btn.small {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.uma-table {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-collapse: collapse;
+}
+
+.uma-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.uma-table th,
+.uma-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.uma-table th {
+  background: #fafafa;
+  font-weight: 500;
+  color: #666;
+  font-size: 13px;
+}
+
+.uma-table td {
+  font-size: 14px;
+  color: #333;
+}
+
+.uma-status {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.uma-status.active {
+  background: #52c41a;
+  color: white;
+}
+
+.uma-status.disabled {
+  background: #d9d9d9;
+  color: #666;
+}
+
+.uma-link {
+  background: none;
+  border: none;
+  color: #1890ff;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.uma-link:hover {
+  color: #40a9ff;
+}
+
+.uma-link.danger {
+  color: #ff4d4f;
+}
+
+.uma-link.danger:hover {
+  color: #ff7875;
+}
+
+.uma-groups {
+  background: white;
+  border: 1px solid #e8e8e8;
+}
+
+.uma-group-item {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.uma-group-item:last-child {
+  border-bottom: none;
+}
+
+.uma-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.uma-group-header:hover {
+  background: #fafafa;
+}
+
+.group-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-icon {
+  width: 16px;
+  height: 16px;
+  color: #999;
+  transition: transform 0.2s;
+}
+
+.uma-group-item.expanded .expand-icon {
+  transform: rotate(90deg);
+}
+
+.group-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.group-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.uma-group-details {
+  padding: 16px;
+  background: #fafafa;
+  border-top: 1px solid #e8e8e8;
+}
+
+.group-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.group-permissions,
+.group-members {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.perm-tag,
+.member-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: white;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  margin-right: 8px;
+  font-size: 12px;
+}
+
+.uma-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uma-folder-item {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.uma-folder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.uma-folder-header:hover {
+  background: #fafafa;
+}
+
+.folder-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-icon {
+  width: 20px;
+  height: 20px;
+  color: #1890ff;
+}
+
+.folder-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.folder-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.uma-folder-details {
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.permissions-section {
+  padding: 16px;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
-.section-header h2 {
-  font-size: 24px;
+.section-header h3 {
+  font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: #666;
 }
 
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
-}
-
-.action-btn.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: transparent;
-  color: white;
-}
-
-.action-btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.action-btn.danger {
-  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  border-color: transparent;
-  color: white;
-}
-
-.action-btn.danger:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
-.loading-state {
+.permissions-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}
+
+.permission-item {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 48px;
-  color: #6b7280;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.users-table {
+  gap: 12px;
+  padding: 8px 12px;
   background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f9fafb;
-}
-
-th {
-  padding: 16px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-}
-
-tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-}
-
-tbody tr:hover {
-  background: #f9fafb;
-}
-
-td {
-  padding: 16px;
-  font-size: 14px;
-  color: #1f2937;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.action-buttons {
-  display: flex;
   gap: 8px;
+  flex: 1;
+  font-size: 14px;
+  color: #333;
 }
 
-.icon-btn {
-  padding: 6px;
-  background: none;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  color: #6b7280;
+.permission-level select {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.icon-btn:hover {
-  background: #f3f4f6;
-  color: #1f2937;
-}
-
-.icon-btn.danger:hover {
-  background: #fee2e2;
-  color: #ef4444;
-  border-color: #ef4444;
-}
-
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-}
-
-.status-badge.active {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.status-badge.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.ssh-keys-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.ssh-key-item {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 20px;
-  align-items: center;
-}
-
-.key-info {
-  display: flex;
-  gap: 16px;
-}
-
-.key-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.key-details h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 6px;
-}
-
-.key-details p {
-  font-size: 14px;
-  color: #6b7280;
-  margin-bottom: 4px;
-}
-
-.key-fingerprint {
-  font-family: monospace;
-  font-size: 12px;
-}
-
-.key-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.groups-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.group-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.group-header {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.group-icon {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.group-info h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 4px;
-}
-
-.group-info p {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.group-members {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.member-chip {
-  padding: 6px 12px;
-  background: #f3f4f6;
-  border-radius: 16px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.member-chip.more {
-  background: #e5e7eb;
-  color: #9ca3af;
-}
-
-.group-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.modal-overlay {
+.uma-modal {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
-.modal-content {
+.uma-modal-content {
   background: white;
-  border-radius: 16px;
-  padding: 24px;
-  min-width: 500px;
+  border-radius: 8px;
+  width: 500px;
   max-width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.modal-content.large {
-  min-width: 600px;
-}
-
-.modal-header {
+.uma-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8e8e8;
 }
 
-.modal-header h3 {
-  font-size: 20px;
+.uma-modal-header h3 {
+  font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: #333;
+  margin: 0;
 }
 
-.close-btn {
-  background: none;
+.uma-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
   border: none;
-  color: #6b7280;
+  background: transparent;
+  color: #999;
   cursor: pointer;
-  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.close-btn:hover {
-  color: #1f2937;
+.uma-close:hover {
+  background: #f5f5f5;
 }
 
-.modal-body {
+.uma-form {
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
-.form-group {
+.uma-form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-group input[type="text"],
-.form-group input[type="password"],
-.form-group select,
-.form-group textarea {
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.form-group input[type="text"]:disabled,
-.form-group select:disabled {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.password-input {
-  display: flex;
   gap: 8px;
 }
 
-.password-input input {
+.uma-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+}
+
+.uma-form-group input,
+.uma-form-group select,
+.uma-form-group textarea {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.uma-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uma-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.permission-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  border-color: #1890ff;
+  background: #f0f8ff;
+}
+
+.radio-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.radio-content {
   flex: 1;
 }
 
-.modal-footer {
+.radio-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.radio-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.uma-modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.quota-info {
-  padding: 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.quota-info p {
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.quota-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid #e8e8e8;
 }
 </style>

@@ -74,7 +74,7 @@
             <span>用户组: {{ user.groups.join(', ') }}</span>
           </div>
           <div class="user-storage">
-            <DatabaseIcon class="w-4 h-4" />
+            <CircleStackIcon class="w-4 h-4" />
             <span>已用 {{ user.storageUsed }}</span>
             <span v-if="user.storageLimit !== '无限制'">
               / {{ user.storageLimit }}
@@ -245,7 +245,7 @@ import {
   CheckIcon,
   TrashIcon,
   XMarkIcon,
-  DatabaseIcon,
+  CircleStackIcon,
   ClockIcon
 } from '@heroicons/vue/24/outline'
 

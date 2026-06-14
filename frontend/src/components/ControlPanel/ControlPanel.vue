@@ -311,7 +311,7 @@ const iconComponents: Record<string, any> = {
 const controlPanel = useControlPanelStore()
 
 // 状态
-const activeCategory = ref<string>('general')
+const activeCategory = ref<string>('locale')
 const searchQuery = ref('')
 const searchResults = ref<any[]>([])
 const showAdvanced = ref(false)

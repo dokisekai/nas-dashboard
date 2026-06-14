@@ -115,7 +115,7 @@
 
           <!-- 用户权限管理 -->
           <div v-if="activeCategory === 'user-permissions'" class="cp-special-section">
-            <SimpleUserManager />
+            <DSMStyleUserManager />
           </div>
 
           <!-- 常规设置 -->
@@ -268,7 +268,7 @@ import { storeToRefs } from 'pinia'
 import { useControlPanelStore } from '../../stores/controlPanel'
 import ControlPanelSettingComponent from './ControlPanelSettingComponent.vue'
 import SMBManager from './SMBManager.vue'
-import SimpleUserManager from './SimpleUserManager.vue'
+import DSMStyleUserManager from './DSMStyleUserManager.vue'
 import {
   MagnifyingGlassIcon,
   ChevronRightIcon,

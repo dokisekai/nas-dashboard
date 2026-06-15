@@ -13,7 +13,7 @@ const API_BASE = '/api/storage'
 
 export const diskAPI = {
   // Basic Disk Operations
-  async getDisks(): Promise<DiskInfo[]> {
+  async getDisks(): Promise<any[]> {
     const response = await axios.get(`${API_BASE}/disks`)
     return response.data.disks || []
   },

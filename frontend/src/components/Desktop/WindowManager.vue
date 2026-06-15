@@ -3,7 +3,7 @@
     <!-- 窗口标签栏 -->
     <div class="window-tabs" v-if="windowGroups.length > 1">
       <div
-        v-for="(group, index) in windowGroups"
+        v-for="group in windowGroups"
         :key="group.id"
         class="window-tab"
         :class="{ active: activeGroupId === group.id }"

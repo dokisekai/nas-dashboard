@@ -18,7 +18,7 @@
       <div class="weekday" v-for="day in weekdays" :key="day">{{ day }}</div>
       <div
         v-for="date in calendarDates"
-        :key="date.date"
+        :key="date.date.getTime()"
         class="calendar-date"
         :class="{
           'is-today': date.isToday,
@@ -41,6 +41,15 @@ interface Props {
     showEvents?: boolean
   }
   size: 'small' | 'medium' | 'large'
+}
+
+// 定义日历日期接口
+interface CalendarDate {
+  day: number
+  date: Date
+  isToday: boolean
+  isOtherMonth: boolean
+  hasEvents: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -69,7 +78,7 @@ const calendarDates = computed(() => {
   const startDay = firstDay.getDay()
   const totalDays = lastDay.getDate()
 
-  const dates = []
+  const dates: CalendarDate[] = []
 
   // 上个月的日期
   const prevMonthLastDay = new Date(year, month, 0).getDate()

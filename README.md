@@ -105,12 +105,33 @@ docker-compose up -d
 
 详细使用说明请查看 [快速开始指南](docs/QUICKSTART.md)
 
+### 🚀 快速体验模块化功能
+
+```bash
+# 查看所有功能模块
+ls modules/
+
+# 功耗监控
+cd modules/power-monitor/scripts/
+./nas_power_monitor.sh
+
+# 应用管理
+cd modules/application-system/scripts/
+./create-app-template.sh --name "my-app"
+
+# 液冷控制
+cd modules/liquidctl/scripts/
+./liquidctl-status.sh
+```
+
 ## 文档
 
 - [部署指南](docs/DEPLOYMENT.md) - 系统部署和配置
 - [用户手册](docs/USER_MANUAL.md) - 完整功能使用说明
 - [快速开始](docs/QUICKSTART.md) - 5分钟快速上手
 - [API 文档](docs/API_DOCUMENTATION.md) - REST API 接口文档
+- [模块化架构](modules/GUIDE.md) - 功能模块详细说明
+- [模块目录](modules/) - 各功能模块文档和脚本
 
 
 ## 项目结构
@@ -135,6 +156,13 @@ nas-dashboard/
 │   │   ├── stores/       # Pinia 状态管理
 │   │   └── types/        # TypeScript 类型
 │   └── public/
+├── modules/               # 功能模块
+│   ├── power-monitor/    # 功耗监控模块
+│   ├── disk-management/  # 磁盘管理模块
+│   ├── network-management/ # 网络管理模块
+│   ├── system-monitor/   # 系统监控模块
+│   ├── backup-restore/   # 备份恢复模块
+│   └── liquidctl/        # 液冷控制模块
 └── docs/                  # 项目文档
 ```
 

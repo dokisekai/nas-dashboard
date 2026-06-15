@@ -153,6 +153,7 @@ func Migrate() error {
 		&models.SyncJob{},
 		&models.BackupRepo{},
 		&models.BackupTask{},
+		&models.Notification{},
 	)
 
 	if err != nil {

@@ -132,7 +132,7 @@ const loading = ref(false)
 const smartInfo = ref<any>(null)
 
 // Mock data
-const availableDisks = ref<DiskInfo[]>([
+const availableDisks = ref<any[]>([
   { device: '/dev/sdb', model: 'Samsung SSD', size: 512 * 1024 * 1024 * 1024, health: 'good', temperature: 35, partitions: [] },
   { device: '/dev/sdc', model: 'Western Digital', size: 1024 * 1024 * 1024 * 1024, health: 'good', temperature: 40, partitions: [] }
 ])

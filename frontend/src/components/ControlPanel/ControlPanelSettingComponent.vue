@@ -121,8 +121,8 @@
             <input
               v-model.number="localValue"
               type="range"
-              :min="setting.min !== undefined ? setting.min : 0"
-              :max="setting.max !== undefined ? setting.max : 100"
+              :min="(setting as any).min !== undefined ? (setting as any).min : 0"
+              :max="(setting as any).max !== undefined ? (setting as any).max : 100"
               @input="handleChange"
               class="cps-slider"
             />

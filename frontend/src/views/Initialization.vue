@@ -276,8 +276,6 @@
               </div>
             </div>
 
-            <div>
-
             <div class="form-actions">
               <button type="button" class="action-btn" @click="prevStep">
                 <ArrowLeftIcon class="w-4 h-4" />
@@ -389,7 +387,7 @@
                   <span class="info-value">{{ form.storagePath }}</span>
                 </div>
               </div>
-              <button class="action-btn primary large @click="goToDesktop">
+              <button class="action-btn primary large" @click="goToDesktop">
                 进入桌面
                 <ArrowRightIcon class="w-5 h-5" />
               </button>
@@ -1123,21 +1121,21 @@ const checkInitStatus = async () => {
 
   .error-icon,
   .success-icon {
-    margin-bottom 16px;
+    margin-bottom: 16px;
 
     svg {
       width: 64px;
       height: 64px;
       margin: 0 auto;
     }
+  }
 
-    .error-icon svg {
-      color: #ef4444;
-    }
+  .error-icon svg {
+    color: #ef4444;
+  }
 
-    .success-icon svg {
-      color: #10b981;
-    }
+  .success-icon svg {
+    color: #10b981;
   }
 
   h2 {

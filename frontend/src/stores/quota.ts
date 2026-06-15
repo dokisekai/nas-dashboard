@@ -71,8 +71,8 @@ export const useQuotaStore = defineStore('quota', () => {
 
   const topQuotaConsumers = computed(() => {
     const allQuotas = [
-      ...userQuotas.value.map(q => ({ ...q, type: 'user' as const })),
-      ...groupQuotas.value.map(q => ({ ...q, type: 'group' as const }))
+      ...userQuotas.value.map(q => ({ ...q, type: 'user' as any })),
+      ...groupQuotas.value.map(q => ({ ...q, type: 'group' as any }))
     ]
 
     return allQuotas
@@ -236,6 +236,10 @@ export const useQuotaStore = defineStore('quota', () => {
     }
   }
 
+  async function generateReport(params?: { type?: 'user' | 'group' | 'all'; path?: string }) {
+    return fetchQuotaReports(params)
+  }
+
   function getQuotaStatusInfo(used: number, softLimit: number, hardLimit: number) {
     const percent = calculateQuotaPercent(used, hardLimit)
     const status = getQuotaStatus(used, softLimit, hardLimit)
@@ -294,6 +298,7 @@ export const useQuotaStore = defineStore('quota', () => {
     deleteUserQuota,
     deleteGroupQuota,
     resolveQuotaAlert,
+    generateReport,
     getQuotaStatusInfo,
     clearError,
     init

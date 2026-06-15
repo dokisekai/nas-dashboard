@@ -341,15 +341,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useQuotaStore } from '@/stores/quota'
-import { quotaAPI } from '@/api/quota'
 import { ElMessage } from 'element-plus'
-import type { UserQuota, GroupQuota, QuotaReport } from '@/types/quota'
+import type { UserQuota, GroupQuota } from '@/types/quota'
 import {
   User,
   UserFilled,
   Document,
   Refresh,
-  Search,
   Edit,
   Delete,
   Warning,

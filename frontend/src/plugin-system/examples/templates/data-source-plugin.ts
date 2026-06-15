@@ -12,7 +12,7 @@ export const manifest = {
   description: 'A custom data source for the dashboard',
   author: 'Your Name',
   main: 'plugin.ts',
-  permissions: ['network', 'storage'] as const,
+  permissions: ['network', 'storage'] as any,
   category: 'data',
   keywords: ['data', 'source', 'api']
 };

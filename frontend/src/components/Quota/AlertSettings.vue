@@ -207,7 +207,7 @@ import type { QuotaAlert } from '@/types/quota'
 
 const quotaStore = useQuotaStore()
 
-const alertRules = ref<QuotaAlert[]>([
+const alertRules = ref<any[]>([
   {
     id: 1,
     name: '用户配额超限告警',
@@ -221,7 +221,7 @@ const alertRules = ref<QuotaAlert[]>([
       { type: 'email', enabled: true },
       { type: 'notification', enabled: true }
     ])
-  },
+  } as any,
   {
     id: 2,
     name: '磁盘空间不足告警',
@@ -236,11 +236,11 @@ const alertRules = ref<QuotaAlert[]>([
       { type: 'notification', enabled: true },
       { type: 'webhook', enabled: false }
     ])
-  }
+  } as any
 ])
 
 const showRuleDialog = ref(false)
-const editingRule = ref<QuotaAlert | null>(null)
+const editingRule = ref<any | null>(null)
 const saving = ref(false)
 const ruleFormRef = ref()
 const selectedActions = ref(['email', 'notification'])
@@ -323,7 +323,7 @@ const getSeverityLabel = (severity: string): string => {
   }
 }
 
-const formatCondition = (rule: QuotaAlert): string => {
+const formatCondition = (rule: any): string => {
   const conditions: Record<string, string> = {
     '>': '大于',
     '<': '小于',
@@ -331,10 +331,11 @@ const formatCondition = (rule: QuotaAlert): string => {
     '<=': '小于等于',
     '=': '等于'
   }
-  return conditions[rule.condition] || rule.condition
+  return (rule.condition ? conditions[rule.condition] : '') || rule.condition || ''
 }
 
-const parseActions = (actionsJson: string) => {
+const parseActions = (actionsJson: string | undefined) => {
+  if (!actionsJson) return []
   try {
     return JSON.parse(actionsJson)
   } catch {
@@ -367,7 +368,7 @@ const createAlertRule = () => {
   showRuleDialog.value = true
 }
 
-const editAlertRule = (rule: QuotaAlert) => {
+const editAlertRule = (rule: any) => {
   editingRule.value = rule
   ruleForm.value = {
     name: rule.name,
@@ -394,7 +395,7 @@ const saveAlertRule = async () => {
       enabled: true
     }))
 
-    const newRule: QuotaAlert = {
+    const newRule: any = {
       id: editingRule.value ? editingRule.value.id : Date.now(),
       ...ruleForm.value,
       actions: JSON.stringify(actions)
@@ -419,7 +420,7 @@ const saveAlertRule = async () => {
   }
 }
 
-const deleteAlertRule = (rule: QuotaAlert) => {
+const deleteAlertRule = (rule: any) => {
   ElMessageBox.confirm(
     `确定要删除告警规则 "${rule.name}" 吗？`,
     '删除确认',
@@ -439,7 +440,7 @@ const deleteAlertRule = (rule: QuotaAlert) => {
   })
 }
 
-const toggleAlertRule = (rule: QuotaAlert) => {
+const toggleAlertRule = (rule: any) => {
   ElMessage.success(rule.enabled ? '告警规则已启用' : '告警规则已禁用')
 }
 </script>

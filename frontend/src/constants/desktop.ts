@@ -320,8 +320,25 @@ export const availableApps: AppDefinition[] = [
       maximizable: true
     },
     permissions: ['plugins.read', 'plugins.install']
+  },
+  {
+    id: 'docker-manager',
+    name: 'Docker 管理',
+    component: 'DockerManager',
+    icon: 'CubeIcon',
+    description: '管理 Docker 容器和镜像',
+    category: 'system',
+    windowConfig: {
+      width: 1000,
+      height: 700,
+      minWidth: 800,
+      minHeight: 500,
+      resizable: true,
+      maximizable: true
+    },
+    permissions: ['docker.read', 'docker.write']
   }
-]
+  ]
 
 export interface Theme {
   id: string

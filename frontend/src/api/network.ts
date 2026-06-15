@@ -69,13 +69,13 @@ export interface NetworkStats {
 // ==================== 网络接口 API ====================
 export const networkApi = {
   // 获取所有网络接口
-  getInterfaces: () => api.get<{interfaces: NetworkInterface[], timestamp: number}>('/api/network/interfaces'),
+  getInterfaces: () => api.get<{interfaces: any[], timestamp: number}>('/api/network/interfaces'),
 
   // 获取以太网接口
-  getEthernetInterfaces: () => api.get<NetworkInterface[]>('/api/network/interfaces/ethernet'),
+  getEthernetInterfaces: () => api.get<any[]>('/api/network/interfaces/ethernet'),
 
   // 获取WiFi接口
-  getWiFiInterfaces: () => api.get<NetworkInterface[]>('/api/network/interfaces/wifi'),
+  getWiFiInterfaces: () => api.get<any[]>('/api/network/interfaces/wifi'),
 
   // 控制接口（启动/停止/重启）
   controlInterface: (interfaceName: string, action: 'up' | 'down' | 'restart') =>
@@ -102,7 +102,7 @@ export const wifiApi = {
   getCurrentConnection: () => api.get<WiFiNetwork>('/api/network/wifi/current'),
 
   // 获取WiFi接口列表
-  getInterfaces: () => api.get<NetworkInterface[]>('/api/network/interfaces/wifi'),
+  getInterfaces: () => api.get<any[]>('/api/network/interfaces/wifi'),
 }
 
 // ==================== DNS API ====================

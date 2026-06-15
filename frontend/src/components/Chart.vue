@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch, ref } from 'vue'
-import ApexCharts, { type ApexOptions } from 'apexcharts'
+import ApexCharts from 'apexcharts'
 
 interface ChartOptions {
   chart?: {
@@ -71,7 +71,7 @@ const initChart = () => {
     tooltip: { theme: 'dark' },
   }
 
-  const mergedOptions: ApexOptions = {
+  const mergedOptions: any = {
     ...defaultOptions,
     ...props.options,
     chart: {
@@ -98,7 +98,7 @@ watch(() => props.series, (newSeries) => {
 // 监听 options 变化
 watch(() => props.options, (newOptions) => {
   if (chart && newOptions) {
-    chart.updateOptions(newOptions as ApexOptions)
+    chart.updateOptions(newOptions as any)
   }
 }, { deep: true })
 

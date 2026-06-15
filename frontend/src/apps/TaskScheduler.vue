@@ -423,7 +423,7 @@ const editingTask = ref<Task | null>(null)
 
 const taskForm = ref({
   name: '',
-  type: 'backup' as const,
+  type: 'backup' as string,
   description: '',
   scheduleType: 'daily',
   scheduleTime: '02:00',
@@ -670,7 +670,7 @@ const saveTask = () => {
     const newTask: Task = {
       id: Date.now().toString(),
       name: taskForm.value.name,
-      type: taskForm.value.type,
+      type: taskForm.value.type as any,
       status: 'active',
       schedule: '自定义计划',
       enabled: true,

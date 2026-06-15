@@ -2,6 +2,9 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
+	"path/filepath"
 
 	"nas-dashboard/internal/api"
 	"nas-dashboard/internal/database"
@@ -316,6 +319,7 @@ func main() {
 				system.GET("/hardware", api.GetHardwareDetails)
 				system.GET("/power", api.GetPowerUsage)
 				system.GET("/uptime", api.GetSystemUptime)
+				system.GET("/ups/status", api.GetUPSStatus)
 
 				// 系统操作路由（需要管理员权限）
 				operations := system.Group("/operations")
@@ -342,6 +346,17 @@ func main() {
 				files.POST("/directory", api.CreateDirectory)
 				files.POST("/move", api.MoveFile)
 				files.POST("/delete", api.DeleteFile)
+			}
+
+			// 通知管理路由
+			notifications := apiGroup.Group("/notifications")
+			notifications.Use(middleware.Auth())
+			{
+				notifications.GET("", api.GetNotifications)
+				notifications.POST("/read/:id", api.MarkNotificationRead)
+				notifications.POST("/read/all", api.MarkAllNotificationsRead)
+				notifications.DELETE("/clear", api.ClearNotifications)
+				notifications.POST("", api.CreateNotification)
 			}
 
 			// 备份恢复路由
@@ -380,6 +395,21 @@ func main() {
 				firewall.GET("/config", api.GetFirewallConfig)
 				firewall.PUT("/config", api.SetFirewallConfig)
 			}
+		}
+
+		// 托管前端静态文件
+		if _, err := os.Stat("static"); err == nil {
+			r.StaticFS("/assets", http.Dir("static/assets"))
+			r.StaticFile("/favicon.svg", "static/favicon.svg")
+			r.StaticFile("/icons.svg", "static/icons.svg")
+			
+			// SPA 路由：所有非 API 路由都返回 index.html
+			r.NoRoute(func(c *gin.Context) {
+				path := c.Request.URL.Path
+				if !filepath.HasPrefix(path, "/api") && !filepath.HasPrefix(path, "/ws") {
+					c.File("static/index.html")
+				}
+			})
 		}
 
 		// WebSocket 路由

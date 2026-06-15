@@ -124,7 +124,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { CogIcon, XMarkIcon, PinIcon, PencilIcon } from '@heroicons/vue/24/outline'
+import { CogIcon, XMarkIcon, MapPinIcon as PinIcon, PencilIcon } from '@heroicons/vue/24/outline'
 import type { DockItem } from '../../types/desktop'
 
 interface Props {

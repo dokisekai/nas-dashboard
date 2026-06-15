@@ -12,7 +12,7 @@ export const manifest = {
   description: 'A custom dashboard widget',
   author: 'Your Name',
   main: 'plugin.ts',
-  permissions: ['ui', 'storage'] as const,
+  permissions: ['ui', 'storage'] as any,
   category: 'widgets',
   keywords: ['widget', 'dashboard']
 };

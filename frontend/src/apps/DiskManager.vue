@@ -313,7 +313,7 @@ import BenchmarkTool from '@/components/Disk/BenchmarkTool.vue'
 import DiskFormatDialog from '@/components/Disk/DiskFormatDialog.vue'
 
 const activeTab = ref('disks')
-const disks = ref<DiskInfo[]>([])
+const disks = ref<any[]>([])
 const raidArrays = ref<RAIDConfig[]>([])
 const volumeGroups = ref<VolumeGroup[]>([])
 const logicalVolumes = ref<LogicalVolume[]>([])
@@ -342,7 +342,7 @@ const formatSize = (bytes: number): string => {
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
-const getDiskClass = (disk: DiskInfo): string => {
+const getDiskClass = (disk: any): string => {
   return `disk-${disk.health}`
 }
 
@@ -393,27 +393,27 @@ const refreshDisks = async () => {
   }
 }
 
-const showDiskDetails = (disk: DiskInfo) => {
+const showDiskDetails = (disk: any) => {
   selectedDisk.value = disk
   showDiskDetailsDialog.value = true
 }
 
-const partitionDisk = (disk: DiskInfo) => {
+const partitionDisk = (disk: any) => {
   selectedDisk.value = disk
   showPartitionEditor.value = true
 }
 
-const formatDisk = (disk: DiskInfo) => {
+const formatDisk = (disk: any) => {
   selectedDisk.value = disk
   showFormatDialog.value = true
 }
 
-const benchmarkDisk = (disk: DiskInfo) => {
+const benchmarkDisk = (disk: any) => {
   activeTab.value = 'benchmark'
   ElMessage.info(`即将对 ${disk.device} 进行性能测试`)
 }
 
-const viewSMART = (disk: DiskInfo) => {
+const viewSMART = (disk: any) => {
   activeTab.value = 'smart'
   // Pass disk to SMART monitor
   ElMessage.info(`查看 ${disk.device} 的SMART信息`)

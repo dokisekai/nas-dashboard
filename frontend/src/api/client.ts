@@ -3,20 +3,30 @@ import axios from 'axios'
 // Debug mode - log all API calls
 const DEBUG = true // 强制开启DEBUG模式
 console.log('[API CLIENT INIT] - Creating axios instance with DEBUG mode')
-console.log('[API CLIENT INIT] - Base URL:', import.meta.env.VITE_API_URL || 'http://192.168.50.10:8888')
+console.log('[API CLIENT INIT] - Base URL:', import.meta.env.VITE_API_URL || '')
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://192.168.50.10:8888',
+// 创建一个通用的请求函数，自动处理返回数据
+const instance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
+// 增强类型支持
+const api = {
+  get: <T = any>(url: string, config?: any) => instance.get(url, config) as Promise<T>,
+  post: <T = any>(url: string, data?: any, config?: any) => instance.post(url, data, config) as Promise<T>,
+  put: <T = any>(url: string, data?: any, config?: any) => instance.put(url, data, config) as Promise<T>,
+  delete: <T = any>(url: string, config?: any) => instance.delete(url, config) as Promise<T>,
+  patch: <T = any>(url: string, data?: any, config?: any) => instance.patch(url, data, config) as Promise<T>,
+}
+
 console.log('[API CLIENT INIT] - Axios instance created')
 
 // 请求拦截器 - 添加 JWT token
-api.interceptors.request.use(
+instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
     if (token) {
@@ -25,9 +35,9 @@ api.interceptors.request.use(
     if (DEBUG) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`)
       console.log(`[Token Debug] Token exists: ${!!token}`)
-      console.log(`[Token Debug] Token length: ${token?.length}`)
-      console.log(`[Token Debug] Authorization header:`, config.headers.Authorization?.substring(0, 30) + '...')
-      console.log(`[Token Debug] All headers:`, JSON.stringify(config.headers, null, 2))
+      const authHeader = config.headers.Authorization
+      const authStr = typeof authHeader === 'string' ? authHeader : ''
+      console.log(`[Token Debug] Authorization header:`, authStr.substring(0, 30) + '...')
       console.log(`[Request Data]`, config.data || config.params)
     }
     return config
@@ -41,7 +51,7 @@ api.interceptors.request.use(
 )
 
 // 响应拦截器 - 处理错误
-api.interceptors.response.use(
+instance.interceptors.response.use(
   (response) => {
     if (DEBUG) {
       console.log(`[API Response] ${response.config.url}`, response.data)
@@ -49,11 +59,6 @@ api.interceptors.response.use(
     return response.data
   },
   (error) => {
-    if (DEBUG) {
-      console.error('[API Response Error]', error.response?.data || error.message)
-    }
-
-    // 处理不同类型的错误
     if (error.response) {
       const status = error.response.status
       const data = error.response.data

@@ -205,7 +205,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { backupApi } from '../api'
+import { legacyBackupApi } from '@/api'
 import {
   ArchiveBoxIcon,
   PlusIcon,
@@ -245,7 +245,7 @@ const backupForm = ref({
 const refreshBackups = async () => {
   loading.value = true
   try {
-    const response = await backupApi.getBackups() as any
+    const response = await legacyBackupApi.getBackups() as any
     backups.value = response.backups || []
   } catch (error) {
     console.error('Failed to fetch backups:', error)
@@ -267,7 +267,7 @@ const createBackup = async () => {
       filePaths: backupForm.value.filePaths ? backupForm.value.filePaths.split(',').map((p: string) => p.trim()) : []
     }
 
-    await backupApi.createBackup(payload)
+    await legacyBackupApi.createBackup(payload)
     showCreateBackup.value = false
     alert('备份创建成功！')
     refreshBackups()
@@ -291,7 +291,7 @@ const createBackup = async () => {
 
 const downloadBackup = async (backup: any) => {
   try {
-    const url = await backupApi.downloadBackup(backup.id)
+    const url = await legacyBackupApi.downloadBackup(backup.id)
     window.open(url, '_blank')
   } catch (error: any) {
     console.error('Failed to download backup:', error)
@@ -307,7 +307,7 @@ const confirmDeleteBackup = (backup: any) => {
 
 const deleteBackup = async (backup: any) => {
   try {
-    await backupApi.deleteBackup(backup.id)
+    await legacyBackupApi.deleteBackup(backup.id)
     alert('备份删除成功')
     refreshBackups()
   } catch (error: any) {
@@ -327,7 +327,7 @@ const confirmRestore = async () => {
 
   restoringBackup.value = true
   try {
-    await backupApi.restoreBackup({ backupId: selectedBackup.value.id })
+    await legacyBackupApi.restoreBackup({ backupId: selectedBackup.value.id })
     showRestoreConfirm.value = false
     alert('备份恢复成功！系统将重新启动。')
     // 可以考虑自动刷新页面或重启系统

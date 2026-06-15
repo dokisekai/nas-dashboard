@@ -15,7 +15,7 @@ export const manifest = {
   main: 'plugin.ts',
 
   // Permissions your plugin needs
-  permissions: ['storage', 'ui'] as const,
+  permissions: ['storage', 'ui'] as any,
 
   // Dependencies on other plugins
   dependencies: [] as string[],

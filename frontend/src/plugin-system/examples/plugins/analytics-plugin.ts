@@ -12,7 +12,7 @@ export const manifest = {
   description: 'Advanced analytics and reporting dashboard',
   author: 'Dashboard Team',
   main: 'analytics-plugin.ts',
-  permissions: ['network', 'storage', 'ui'] as const,
+  permissions: ['network', 'storage', 'ui'] as any,
   category: 'analytics',
   keywords: ['analytics', 'reporting', 'statistics']
 };

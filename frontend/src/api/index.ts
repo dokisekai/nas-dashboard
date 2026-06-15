@@ -33,10 +33,10 @@ export const storageApi = {
   formatDisk: (device: string, fsType: string) =>
     api.post('/api/storage/format', { device, fsType }),
   getSMBShares: () => api.get('/api/storage/smb'),
-  createSMBShare: (name: string, path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean) =>
-    api.post('/api/storage/smb', { name, path, description, readOnly, guest, isTimeMachine }),
-  updateSMBShare: (name: string, path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean) =>
-    api.put('/api/storage/smb/' + name, { path, description, readOnly, guest, isTimeMachine }),
+  createSMBShare: (data: { name: string, path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean }) =>
+    api.post('/api/storage/smb', data),
+  updateSMBShare: (name: string, data: { path: string, description?: string, readOnly?: boolean, guest?: boolean, isTimeMachine?: boolean }) =>
+    api.put('/api/storage/smb/' + name, data),
   deleteSMBShare: (name: string) =>
     api.delete('/api/storage/smb/' + name),
 }
@@ -104,6 +104,7 @@ export const systemApi = {
   getHardwareDetails: () => api.get('/api/system/hardware'),
   getPowerUsage: () => api.get('/api/system/power'),
   getUptime: () => api.get('/api/system/uptime'),
+  getUPSStatus: (ups?: string) => api.get('/api/system/ups/status', { params: { ups } }),
 
   // 系统操作
   restart: () => api.post('/api/system/operations/restart'),
@@ -140,13 +141,13 @@ export const fileApi = {
 }
 
 // ==================== 备份恢复 API ====================
-export const backupApi = {
+export const legacyBackupApi = {
   getBackups: () => api.get('/api/backups'),
   getBackup: (id: number) => api.get(`/api/backups/${id}`),
   createBackup: (data: any) => api.post('/api/backups', data),
   deleteBackup: (id: number) => api.delete(`/api/backups/${id}`),
   restoreBackup: (data: { backupId: number }) => api.post('/api/backups/restore', data),
-  downloadBackup: (id: number) => `${import.meta.env.VITE_API_URL}/api/backups/${id}/download`,
+  downloadBackup: (id: number) => `/api/backups/${id}/download`,
 }
 
 // ==================== 系统配置 API ====================

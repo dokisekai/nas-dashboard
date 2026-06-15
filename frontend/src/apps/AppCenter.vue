@@ -260,7 +260,6 @@ import {
   CogIcon,
   CloudIcon,
   StarIcon,
-  EyeIcon,
   CloudArrowDownIcon,
   XMarkIcon,
   CheckIcon,

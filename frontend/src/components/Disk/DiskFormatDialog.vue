@@ -174,12 +174,12 @@ import { diskAPI } from '@/api/disk'
 
 interface Props {
   visible: boolean
-  disk: DiskInfo | null
+  disk: any | null
 }
 
 interface Emits {
   (e: 'update:visible', value: boolean): void
-  (e: 'formatted', disk: DiskInfo): void
+  (e: 'formatted', disk: any): void
 }
 
 const props = defineProps<Props>()

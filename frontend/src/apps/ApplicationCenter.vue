@@ -4,11 +4,11 @@
       <h2 class="app-title">应用中心</h2>
       <div class="app-actions">
         <button class="btn-upload" @click="uploadPackage">
-          <UploadIcon />
+          <ArrowUpTrayIcon class="w-5 h-5" />
           <span>上传应用包</span>
         </button>
         <button class="btn-refresh" @click="refreshApps">
-          <RefreshIcon />
+          <ArrowPathIcon class="w-5 h-5" />
           <span>刷新</span>
         </button>
       </div>
@@ -22,7 +22,7 @@
         :class="['category-btn', { active: selectedCategory === category.id }]"
         @click="selectedCategory = category.id"
       >
-        <component :is="category.icon" />
+        <component :is="category.icon" class="w-5 h-5" />
         <span>{{ category.name }}</span>
       </button>
     </div>
@@ -32,7 +32,7 @@
       <div class="app-section">
         <h3 class="section-title">已安装应用</h3>
         <div v-if="installedApps.length === 0" class="empty-state">
-          <EmptyIcon />
+          <InboxIcon class="w-12 h-12" />
           <p>暂无已安装应用</p>
         </div>
         <div v-else class="app-grid">
@@ -53,7 +53,7 @@
       <div class="app-section">
         <h3 class="section-title">可用应用</h3>
         <div v-if="availableApps.length === 0" class="empty-state">
-          <EmptyIcon />
+          <InboxIcon class="w-12 h-12" />
           <p>暂无可用应用</p>
         </div>
         <div v-else class="app-grid">
@@ -100,26 +100,25 @@ import UploadDialog from '../components/Application/UploadDialog.vue'
 import InstallProgressDialog from '../components/Application/InstallProgressDialog.vue'
 import AppDetailDialog from '../components/Application/AppDetailDialog.vue'
 import {
-  UploadIcon,
-  RefreshIcon,
-  EmptyIcon,
-  CubeIcon,
-  GridIcon,
+  ArrowUpTrayIcon,
+  ArrowPathIcon,
+  InboxIcon,
+  Squares2X2Icon,
   FilmIcon,
   DocumentIcon,
   WrenchIcon,
-  ShieldIcon,
-  GlobeIcon
+  ShieldCheckIcon,
+  GlobeAltIcon
 } from '@heroicons/vue/24/outline'
 
 // 应用分类
 const categories = [
-  { id: 'all', name: '全部', icon: GridIcon },
+  { id: 'all', name: '全部', icon: Squares2X2Icon },
   { id: 'media', name: '媒体', icon: FilmIcon },
   { id: 'productivity', name: '办公', icon: DocumentIcon },
   { id: 'utilities', name: '工具', icon: WrenchIcon },
-  { id: 'security', name: '安全', icon: ShieldIcon },
-  { id: 'network', name: '网络', icon: GlobeIcon }
+  { id: 'security', name: '安全', icon: ShieldCheckIcon },
+  { id: 'network', name: '网络', icon: GlobeAltIcon }
 ]
 
 // 状态管理
@@ -246,11 +245,8 @@ const handleSettings = (app: AppInstance) => {
 }
 
 const startProgressMonitoring = (instanceId: number) => {
-  const eventSource = getInstallProgress(instanceId, (progress) => {
-    const app = installingApps.value.find(a => a.id === instanceId)
-    if (app) {
-      // 更新进度
-    }
+  const eventSource = getInstallProgress(instanceId, (_progress) => {
+    // 进度更新逻辑可以在这里添加
   }, () => {
     // 安装完成
     const index = installingApps.value.findIndex(a => a.id === instanceId)

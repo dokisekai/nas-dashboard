@@ -583,11 +583,11 @@ const saveFolder = () => {
       storagePool: folderForm.value.storagePool,
       description: folderForm.value.description,
       protocols: {
-        smb: { enabled: false },
-        ftp: { enabled: false },
-        sftp: { enabled: false },
-        nfs: { enabled: false },
-        webdav: { enabled: false }
+        smb: { enabled: false, shareName: folderForm.value.name, recycleBin: true },
+        ftp: { enabled: false, port: 21, allowShell: false },
+        sftp: { enabled: false, port: 22, allowShell: false },
+        nfs: { enabled: false, port: 2049, allowShell: false },
+        webdav: { enabled: false, port: 80, allowShell: false }
       },
       permissions: []
     })

@@ -114,7 +114,7 @@
               <el-button size="small" @click.stop="editPool(row)" :disabled="row.status === 'creating' || row.status === 'deleting'">
                 <el-icon><Edit /></el-icon>
               </el-button>
-              <el-button size="small" @click.stop="showPoolMenu(row, $event)">
+              <el-button size="small" @click.stop="showPoolMenu(row)">
                 <el-icon><MoreFilled /></el-icon>
               </el-button>
             </el-button-group>
@@ -222,7 +222,6 @@ const showDetailsDialog = ref(false)
 const showAddDiskDialog = ref(false)
 const showEditDialog = ref(false)
 const selectedPool = ref<StoragePool | null>(null)
-const contextMenu = ref()
 
 // Initialize
 onMounted(() => {
@@ -313,7 +312,7 @@ const editPool = (pool: StoragePool) => {
   showEditDialog.value = true
 }
 
-const showPoolMenu = (pool: StoragePool, event: any) => {
+const showPoolMenu = (pool: StoragePool) => {
   selectedPool.value = pool
   // Show context menu at click position
 }

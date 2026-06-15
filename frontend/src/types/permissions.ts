@@ -161,7 +161,7 @@ export const PermissionTemplates = {
     log: { view: 'owner', export: 'owner' },
     monitor: { view: 'owner', configure: 'owner' }
   }
-} as const
+} as any
 
 // 权限级别定义
 export const PermissionLevels = {
@@ -170,7 +170,7 @@ export const PermissionLevels = {
   write: { value: 2, label: '读写', color: 'green' },
   admin: { value: 3, label: '管理', color: 'orange' },
   owner: { value: 4, label: '所有者', color: 'red' }
-} as const
+} as any
 
 // 用户角色定义
 export const UserRoles = {
@@ -202,7 +202,7 @@ export const UserRoles = {
     icon: '👑',
     color: 'red'
   }
-} as const
+} as any
 
 // 系统内置组
 export const SystemGroups = [
@@ -230,7 +230,7 @@ export const SystemGroups = [
     type: 'builtin',
     permissions: PermissionTemplates.guest
   }
-] as const
+] as any
 
 // 权限继承规则
 export function getEffectivePermissions(user: User, groups: Group[]): UserPermissions {

@@ -1,0 +1,645 @@
+package service
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"nas-dashboard/internal/database"
+	"nas-dashboard/internal/models"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
+	"gorm.io/gorm"
+)
+
+// StorageService 存储管理服务
+type StorageService struct {
+	db *gorm.DB
+}
+
+// NewStorageService 创建存储管理服务
+func NewStorageService(db *gorm.DB) *StorageService {
+	return &StorageService{db: db}
+}
+
+// StoragePoolHealth 存储池健康状态
+type StoragePoolHealth struct {
+	PoolID          string             `json:"poolId"`
+	PoolName        string             `json:"poolName"`
+	Status           string             `json:"status"`           // healthy, degraded, failed
+	TotalCapacity   uint64             `json:"totalCapacity"`
+	UsedCapacity    uint64             `json:"usedCapacity"`
+	FreeCapacity    uint64             `json:"freeCapacity"`
+	UsagePercent    float64            `json:"usagePercent"`
+	DiskCount       int                `json:"diskCount"`
+	HealthyDisks    int                `json:"healthyDisks"`
+	FailedDisks     int                `json:"failedDisks"`
+	IOPerformance   IOMetrics          `json:"ioPerformance"`
+	LastCheck       time.Time          `json:"lastCheck"`
+	Issues          []StorageIssue     `json:"issues"`
+	Recommendations []string           `json:"recommendations"`
+}
+
+// StorageIssue 存储问题
+type StorageIssue struct {
+	Type        string    `json:"type"`        // disk_failure, smart_error, high_usage, slow_performance
+	Severity    string    `json:"severity"`    // info, warning, critical, error
+	Description string    `json:"description"`
+	Disk        string    `json:"disk,omitempty"`
+	DetectedAt  time.Time `json:"detectedAt"`
+	Resolved    bool      `json:"resolved"`
+}
+
+// IOMetrics IO性能指标
+type IOMetrics struct {
+	ReadBytesPerSec  uint64 `json:"readBytesPerSec"`
+	WriteBytesPerSec uint64 `json:"writeBytesPerSec"`
+	ReadIOPS        uint64 `json:"readIOPS"`
+	WriteIOPS       uint64 `json:"writeIOPS"`
+	AvgReadLatency  uint64 `json:"avgReadLatency"`
+	AvgWriteLatency uint64 `json:"avgWriteLatency"`
+}
+
+// SnapshotInfo 快照信息
+type SnapshotInfo struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	PoolID      string    `json:"poolId"`
+	CreatedAt   time.Time `json:"createdAt"`
+	Size        uint64    `json:"size"`
+	IsScheduled bool      `json:"isScheduled"`
+	Description string    `json:"description"`
+}
+
+// BackupJob 备份任务
+type BackupJob struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	SourcePoolID  string         `json:"sourcePoolId"`
+	TargetPath    string         `json:"targetPath"`
+	Schedule      string         `json:"schedule"`      // cron expression
+	LastRun       time.Time      `json:"lastRun"`
+	NextRun       time.Time      `json:"nextRun"`
+	Status        string         `json:"status"`        // pending, running, completed, failed
+	Progress      float64        `json:"progress"`
+	BackupSize    uint64         `json:"backupSize"`
+	Duration      time.Duration  `json:"duration"`
+	Compression   bool           `json:"compression"`
+	Encryption    bool           `json:"encryption"`
+	RetentionDays int            `json:"retentionDays"`
+}
+
+// GetStoragePoolHealth 获取存储池健康状态
+func (s *StorageService) GetStoragePoolHealth(poolID string) (*StoragePoolHealth, error) {
+	var pool models.StoragePool
+	if err := s.db.Where("id = ?", poolID).First(&pool).Error; err != nil {
+		return nil, fmt.Errorf("存储池不存在: %v", err)
+	}
+
+	health := &StoragePoolHealth{
+		PoolID:    pool.ID,
+		PoolName:  pool.Name,
+		LastCheck: time.Now(),
+		Issues:    []StorageIssue{},
+	}
+
+	// 获取存储池中的磁盘信息
+	disks, err := s.getPoolDisks(poolID)
+	if err != nil {
+		return nil, fmt.Errorf("获取磁盘信息失败: %v", err)
+	}
+
+	health.DiskCount = len(disks)
+	health.HealthyDisks = 0
+	health.FailedDisks = 0
+
+	var totalCapacity, usedCapacity uint64
+
+	for _, disk := range disks {
+		totalCapacity += disk.Size
+		usedCapacity += disk.Used
+
+		// 检查磁盘健康状态
+		diskHealth, err := s.checkDiskHealth(disk)
+		if err != nil {
+			log.Printf("检查磁盘健康失败: %s - %v", disk.Device, err)
+			continue
+		}
+
+		if diskHealth.Status == "healthy" {
+			health.HealthyDisks++
+		} else {
+			health.FailedDisks++
+			health.Issues = append(health.Issues, StorageIssue{
+				Type:        "disk_failure",
+				Severity:    "critical",
+				Description: fmt.Sprintf("磁盘 %s 状态异常: %s", disk.Device, diskHealth.Status),
+				Disk:        disk.Device,
+				DetectedAt:  time.Now(),
+				Resolved:    false,
+			})
+		}
+	}
+
+	health.TotalCapacity = totalCapacity
+	health.UsedCapacity = usedCapacity
+	health.FreeCapacity = totalCapacity - usedCapacity
+	if totalCapacity > 0 {
+		health.UsagePercent = float64(usedCapacity) / float64(totalCapacity) * 100
+	}
+
+	// 检查空间使用率
+	if health.UsagePercent > 95 {
+		health.Issues = append(health.Issues, StorageIssue{
+			Type:        "high_usage",
+			Severity:    "critical",
+			Description: fmt.Sprintf("存储池空间严重不足: %.1f%%", health.UsagePercent),
+			DetectedAt:  time.Now(),
+			Resolved:    false,
+		})
+		health.Recommendations = append(health.Recommendations, "立即清理不必要的文件或扩展存储容量")
+	} else if health.UsagePercent > 90 {
+		health.Issues = append(health.Issues, StorageIssue{
+			Type:        "high_usage",
+			Severity:    "warning",
+			Description: fmt.Sprintf("存储池空间告警: %.1f%%", health.UsagePercent),
+			DetectedAt:  time.Now(),
+			Resolved:    false,
+		})
+		health.Recommendations = append(health.Recommendations, "建议清理文件或扩展存储容量")
+	}
+
+	// 获取IO性能指标
+	ioMetrics, err := s.getIOMetrics(poolID)
+	if err == nil {
+		health.IOPerformance = ioMetrics
+
+		// 检查性能问题
+		if ioMetrics.AvgReadLatency > 100 { // 100ms
+			health.Issues = append(health.Issues, StorageIssue{
+				Type:        "slow_performance",
+				Severity:    "warning",
+				Description: fmt.Sprintf("磁盘读取延迟过高: %d ms", ioMetrics.AvgReadLatency),
+				DetectedAt:  time.Now(),
+				Resolved:    false,
+			})
+		}
+	}
+
+	// 确定整体健康状态
+	if health.FailedDisks > 0 {
+		health.Status = "failed"
+	} else if len(health.Issues) > 0 && health.hasCriticalIssues() {
+		health.Status = "degraded"
+	} else {
+		health.Status = "healthy"
+	}
+
+	return health, nil
+}
+
+// hasCriticalIssues 检查是否有严重问题
+func (h *StoragePoolHealth) hasCriticalIssues() bool {
+	for _, issue := range h.Issues {
+		if issue.Severity == "critical" && !issue.Resolved {
+			return true
+		}
+	}
+	return false
+}
+
+// getPoolDisks 获取存储池中的磁盘
+func (s *StorageService) getPoolDisks(poolID string) ([]models.Disk, error) {
+	var disks []models.Disk
+
+	// 这里需要根据存储池类型获取磁盘
+	// 简化实现，假设有一个关联表
+	err := s.db.Raw(`
+		SELECT d.* FROM disks d
+		JOIN storage_pool_disks spd ON d.id = spd.disk_id
+		JOIN storage_pools sp ON spd.pool_id = sp.id
+		WHERE sp.id = ?
+	`, poolID).Scan(&disks).Error
+
+	return disks, err
+}
+
+// checkDiskHealth 检查磁盘健康状态
+func (s *StorageService) checkDiskHealth(disk models.Disk) (*DiskHealthInfo, error) {
+	health := &DiskHealthInfo{
+		Device:     disk.Device,
+		Status:     "unknown",
+		Temperature: disk.Temperature,
+		SmartData:  make(map[string]interface{}),
+	}
+
+	// 运行 SMART 检查
+	cmd := exec.Command("smartctl", "-H", disk.Device)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		health.Status = "error"
+		health.Error = fmt.Sprintf("SMART检查失败: %v", err)
+		return health, err
+	}
+
+	// 解析 SMART 输出
+	outputStr := string(output)
+	if strings.Contains(outputStr, "PASSED") {
+		health.Status = "healthy"
+	} else if strings.Contains(outputStr, "FAILED") {
+		health.Status = "failing"
+	}
+
+	// 获取详细 SMART 信息
+	cmd = exec.Command("smartctl", "-A", disk.Device)
+	detailedOutput, _ := cmd.CombinedOutput()
+	s.parseSmartAttributes(string(detailedOutput), health)
+
+	return health, nil
+}
+
+// DiskHealthInfo 磁盘健康信息
+type DiskHealthInfo struct {
+	Device      string                 `json:"device"`
+	Status      string                 `json:"status"`       // healthy, failing, unknown, error
+	Temperature int                    `json:"temperature"`
+	SmartData   map[string]interface{} `json:"smartData"`
+	Error       string                 `json:"error,omitempty"`
+}
+
+// parseSmartAttributes 解析 SMART 属性
+func (s *StorageService) parseSmartAttributes(output string, health *DiskHealthInfo) {
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Temperature") {
+			parts := strings.Fields(line)
+			if len(parts) >= 10 {
+				if temp, err := strconv.Atoi(strings.TrimSpace(parts[9])); err == nil {
+					health.Temperature = temp
+				}
+			}
+		}
+
+		// 可以添加更多 SMART 属性的解析
+		// 比如 Reallocated_Sector_Count, Pending_Sector_Count 等
+	}
+}
+
+// getIOMetrics 获取 IO 性能指标
+func (s *StorageService) getIOMetrics(poolID string) (IOMetrics, error) {
+	metrics := IOMetrics{}
+
+	// 这里需要实现 IO 统计逻辑
+	// 可以从 /proc/diskstats 或 /sys/block/*/stat 获取
+
+	// 简化实现
+	return metrics, nil
+}
+
+// CreateSnapshot 创建快照
+func (s *StorageService) CreateSnapshot(poolID, name, description string) (*SnapshotInfo, error) {
+	snapshot := &SnapshotInfo{
+		ID:          generateUUID(),
+		Name:        name,
+		PoolID:      poolID,
+		CreatedAt:   time.Now(),
+		IsScheduled: false,
+		Description: description,
+	}
+
+	// 获取存储池信息
+	var pool models.StoragePool
+	if err := s.db.Where("id = ?", poolID).First(&pool).Error; err != nil {
+		return nil, fmt.Errorf("存储池不存在: %v", err)
+	}
+
+	// 根据存储池类型创建快照
+	switch pool.Type {
+	case "btrfs":
+		err := s.createBtrfsSnapshot(pool.MountPoint, name)
+		if err != nil {
+			return nil, fmt.Errorf("创建 Btrfs 快照失败: %v", err)
+		}
+	case "lvm":
+		err := s.createLVMSnapshot(pool.Device, name)
+		if err != nil {
+			return nil, fmt.Errorf("创建 LVM 快照失败: %v", err)
+		}
+	case "zfs":
+		err := s.createZFSSnapshot(pool.Name, name)
+		if err != nil {
+			return nil, fmt.Errorf("创建 ZFS 快照失败: %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("不支持的存储池类型: %s", pool.Type)
+	}
+
+	// 获取快照大小
+	size, err := s.getSnapshotSize(poolID, snapshot.ID)
+	if err == nil {
+		snapshot.Size = size
+	}
+
+	// 保存快照记录到数据库
+	snapshotRecord := models.Snapshot{
+		ID:          snapshot.ID,
+		Name:        snapshot.Name,
+		PoolID:      poolID,
+		CreatedAt:   snapshot.CreatedAt,
+		Size:        snapshot.Size,
+		Description: snapshot.Description,
+	}
+
+	if err := s.db.Create(&snapshotRecord).Error; err != nil {
+		return nil, fmt.Errorf("保存快照记录失败: %v", err)
+	}
+
+	return snapshot, nil
+}
+
+// createBtrfsSnapshot 创建 Btrfs 快照
+func (s *StorageService) createBtrfsSnapshot(mountPoint, name string) error {
+	snapshotPath := filepath.Join(mountPoint, ".snapshots", name)
+	cmd := exec.Command("btrfs", "subvolume", "snapshot", "-r", mountPoint, snapshotPath)
+	return cmd.Run()
+}
+
+// createLVMSnapshot 创建 LVM 快照
+func (s *StorageService) createLVMSnapshot(device, name string) error {
+	snapshotName := fmt.Sprintf("%s-snap-%s", device, name)
+	cmd := exec.Command("lvcreate", "-L", "1G", "-s", "-n", snapshotName, device)
+	return cmd.Run()
+}
+
+// createZFSSnapshot 创建 ZFS 快照
+func (s *StorageService) createZFSSnapshot(pool, name string) error {
+	snapshotName := fmt.Sprintf("%s@%s", pool, name)
+	cmd := exec.Command("zfs", "snapshot", snapshotName)
+	return cmd.Run()
+}
+
+// getSnapshotSize 获取快照大小
+func (s *StorageService) getSnapshotSize(poolID, snapshotID string) (uint64, error) {
+	// 这里需要实现获取快照大小的逻辑
+	// 根据不同的文件系统类型使用不同的命令
+	return 0, nil
+}
+
+// ListSnapshots 列出快照
+func (s *StorageService) ListSnapshots(poolID string) ([]SnapshotInfo, error) {
+	var snapshots []models.Snapshot
+	if err := s.db.Where("pool_id = ?", poolID).Order("created_at DESC").Find(&snapshots).Error; err != nil {
+		return nil, err
+	}
+
+	var result []SnapshotInfo
+	for _, snap := range snapshots {
+		result = append(result, SnapshotInfo{
+			ID:          snap.ID,
+			Name:        snap.Name,
+			PoolID:      snap.PoolID,
+			CreatedAt:   snap.CreatedAt,
+			Size:        snap.Size,
+			IsScheduled: snap.IsScheduled,
+			Description: snap.Description,
+		})
+	}
+
+	return result, nil
+}
+
+// DeleteSnapshot 删除快照
+func (s *StorageService) DeleteSnapshot(snapshotID string) error {
+	// 获取快照信息
+	var snapshot models.Snapshot
+	if err := s.db.Where("id = ?", snapshotID).First(&snapshot).Error; err != nil {
+		return fmt.Errorf("快照不存在: %v", err)
+	}
+
+	// 获取存储池信息
+	var pool models.StoragePool
+	if err := s.db.Where("id = ?", snapshot.PoolID).First(&pool).Error; err != nil {
+		return fmt.Errorf("存储池不存在: %v", err)
+	}
+
+	// 根据存储池类型删除快照
+	switch pool.Type {
+	case "btrfs":
+		snapshotPath := filepath.Join(pool.MountPoint, ".snapshots", snapshot.Name)
+		cmd := exec.Command("btrfs", "subvolume", "delete", snapshotPath)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("删除 Btrfs 快照失败: %v", err)
+		}
+	case "lvm":
+		snapshotName := fmt.Sprintf("%s-snap-%s", pool.Device, snapshot.Name)
+		cmd := exec.Command("lvremove", "-f", snapshotName)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("删除 LVM 快照失败: %v", err)
+		}
+	case "zfs":
+		snapshotName := fmt.Sprintf("%s@%s", pool.Name, snapshot.Name)
+		cmd := exec.Command("zfs", "destroy", snapshotName)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("删除 ZFS 快照失败: %v", err)
+		}
+	}
+
+	// 删除数据库记录
+	return s.db.Delete(&snapshot).Error
+}
+
+// RestoreSnapshot 恢复快照
+func (s *StorageService) RestoreSnapshot(snapshotID string) error {
+	// 获取快照信息
+	var snapshot models.Snapshot
+	if err := s.db.Where("id = ?", snapshotID).First(&snapshot).Error; err != nil {
+		return fmt.Errorf("快照不存在: %v", err)
+	}
+
+	// 获取存储池信息
+	var pool models.StoragePool
+	if err := s.db.Where("id = ?", snapshot.PoolID).First(&pool).Error; err != nil {
+		return fmt.Errorf("存储池不存在: %v", err)
+	}
+
+	// 根据存储池类型恢复快照
+	switch pool.Type {
+	case "btrfs":
+		snapshotPath := filepath.Join(pool.MountPoint, ".snapshots", snapshot.Name)
+		cmd := exec.Command("btrfs", "subvolume", "snapshot", snapshotPath, pool.MountPoint)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("恢复 Btrfs 快照失败: %v", err)
+		}
+	default:
+		return fmt.Errorf("不支持的快照恢复: %s", pool.Type)
+	}
+
+	return nil
+}
+
+// CreateBackupJob 创建备份任务
+func (s *StorageService) CreateBackupJob(job BackupJob) (*BackupJob, error) {
+	// 生成任务ID
+	if job.ID == "" {
+		job.ID = generateUUID()
+	}
+
+	// 设置默认值
+	if job.RetentionDays == 0 {
+		job.RetentionDays = 30 // 默认保留30天
+	}
+
+	// 计算下次运行时间
+	nextRun, err := calculateNextRun(job.Schedule)
+	if err != nil {
+		return nil, fmt.Errorf("无效的调度表达式: %v", err)
+	}
+	job.NextRun = nextRun
+
+	// 保存到数据库
+	backupRecord := models.BackupJob{
+		ID:            job.ID,
+		Name:          job.Name,
+		SourcePoolID:  job.SourcePoolID,
+		TargetPath:    job.TargetPath,
+		Schedule:      job.Schedule,
+		NextRun:       job.NextRun,
+		Status:        "pending",
+		Compression:   job.Compression,
+		Encryption:    job.Encryption,
+		RetentionDays: job.RetentionDays,
+	}
+
+	if err := s.db.Create(&backupRecord).Error; err != nil {
+		return nil, fmt.Errorf("创建备份任务失败: %v", err)
+	}
+
+	return &job, nil
+}
+
+// RunBackupJob 执行备份任务
+func (s *StorageService) RunBackupJob(jobID string) error {
+	// 获取备份任务
+	var job models.BackupJob
+	if err := s.db.Where("id = ?", jobID).First(&job).Error; err != nil {
+		return fmt.Errorf("备份任务不存在: %v", err)
+	}
+
+	// 更新任务状态
+	job.Status = "running"
+	job.LastRun = time.Now()
+	s.db.Save(&job)
+
+	// 执行备份
+	startTime := time.Now()
+	backupSize, err := s.executeBackup(&job)
+	duration := time.Since(startTime)
+
+	// 更新任务状态
+	if err != nil {
+		job.Status = "failed"
+		s.db.Save(&job)
+		return fmt.Errorf("备份执行失败: %v", err)
+	}
+
+	job.Status = "completed"
+	job.BackupSize = backupSize
+	job.Duration = duration
+	job.LastRun = startTime
+
+	// 计算下次运行时间
+	nextRun, _ := calculateNextRun(job.Schedule)
+	job.NextRun = nextRun
+
+	return s.db.Save(&job).Error
+}
+
+// executeBackup 执行备份
+func (s *StorageService) executeBackup(job *models.BackupJob) (uint64, error) {
+	// 获取源存储池信息
+	var pool models.StoragePool
+	if err := s.db.Where("id = ?", job.SourcePoolID).First(&pool).Error; err != nil {
+		return 0, fmt.Errorf("存储池不存在: %v", err)
+	}
+
+	// 创建备份文件名
+	backupFileName := fmt.Sprintf("%s_%s.tar.gz", pool.Name, time.Now().Format("20060102_150405"))
+	backupPath := filepath.Join(job.TargetPath, backupFileName)
+
+	// 执行备份命令
+	cmdArgs := []string{"-czf", backupPath, "-C", pool.MountPoint, "."}
+	if job.Compression {
+		// 已包含在 -z 参数中
+	}
+
+	cmd := exec.Command("tar", cmdArgs...)
+	if err := cmd.Run(); err != nil {
+		return 0, fmt.Errorf("备份命令执行失败: %v", err)
+	}
+
+	// 获取备份文件大小
+	info, _ := os.Stat(backupPath)
+	return info.Size(), nil
+}
+
+// ListBackupJobs 列出备份任务
+func (s *StorageService) ListBackupJobs() ([]BackupJob, error) {
+	var jobs []models.BackupJob
+	if err := s.db.Order("next_run ASC").Find(&jobs).Error; err != nil {
+		return nil, err
+	}
+
+	var result []BackupJob
+	for _, job := range jobs {
+		result = append(result, BackupJob{
+			ID:            job.ID,
+			Name:          job.Name,
+			SourcePoolID:  job.SourcePoolID,
+			TargetPath:    job.TargetPath,
+			Schedule:      job.Schedule,
+			LastRun:       job.LastRun,
+			NextRun:       job.NextRun,
+			Status:        job.Status,
+			BackupSize:    job.BackupSize,
+			Duration:      job.Duration,
+			Compression:   job.Compression,
+			Encryption:    job.Encryption,
+			RetentionDays: job.RetentionDays,
+		})
+	}
+
+	return result, nil
+}
+
+// calculateNextRun 计算下次运行时间
+func calculateNextRun(schedule string) (time.Time, error) {
+	// 这里需要实现 cron 表达式解析
+	// 可以使用 robfig/cron 库
+	// 简化实现：假设调度表达式为标准 cron 格式
+
+	// 临时实现：返回24小时后
+	return time.Now().Add(24 * time.Hour), nil
+}
+
+// generateUUID 生成UUID
+func generateUUID() string {
+	// 简单的 UUID 生成
+	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+// CleanOldBackups 清理旧备份
+func (s *StorageService) CleanOldBackups(jobID string) error {
+	var job models.BackupJob
+	if err := s.db.Where("id = ?", jobID).First(&job).Error; err != nil {
+		return fmt.Errorf("备份任务不存在: %v", err)
+	}
+
+	cutoffDate := time.Now().AddDate(0, 0, -job.RetentionDays)
+
+	// 删除超过保留期的备份记录
+	return s.db.Where("job_id = ? AND created_at < ?", jobID, cutoffDate).Delete(&models.BackupRecord{}).Error
+}

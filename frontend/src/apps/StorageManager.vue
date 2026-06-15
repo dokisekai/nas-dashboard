@@ -483,11 +483,9 @@ import {
   XMarkIcon,
   ArrowUturnLeftIcon,
   MagnifyingGlassIcon,
-  ClockIcon,
   PowerIcon,
   EyeIcon,
   FolderOpenIcon,
-  LockClosedIcon,
   CheckIcon,
   SparklesIcon,
   CircleStackIcon
@@ -556,7 +554,7 @@ const refreshDisks = async () => {
   loading.value = true
   try {
     const response = await storageApi.getDisks()
-    disks.value = response.disks || response  // axios拦截器已返回response.data
+    disks.value = (response as any).disks || response
   } catch (error: any) {
     console.error('Failed to fetch disks:', error)
     // Mock data for demo
@@ -628,7 +626,7 @@ const loadSMBShares = async () => {
   loadingSMB.value = true
   try {
     const response = await storageApi.getSMBShares()
-    smbShares.value = response.shares || response  // axios拦截器已返回response.data
+    smbShares.value = (response as any).shares || response
 
     // 检查SMB服务状态（模拟，应该从后端获取）
     smbServiceRunning.value = true
@@ -673,35 +671,33 @@ const deleteSMBShare = async (share: any) => {
 
 const saveSMBShare = async () => {
   try {
-    const shareData = {
-      name: smbForm.value.name,
-      path: smbForm.value.path,
-      description: smbForm.value.description,
-      readOnly: smbForm.value.readOnly,
-      guest: smbForm.value.guest,
-      isTimeMachine: smbForm.value.isTimeMachine,
-      browseable: smbForm.value.browseable,
-      validUsers: smbForm.value.validUsers,
-      invalidUsers: smbForm.value.invalidUsers,
-      createMask: smbForm.value.createMask,
-      directoryMask: smbForm.value.directoryMask
-    }
-
     if (editingSMBShare.value) {
+      const shareData = {
+        path: smbForm.value.path,
+        description: smbForm.value.description,
+        readOnly: smbForm.value.readOnly,
+        guest: smbForm.value.guest,
+        isTimeMachine: smbForm.value.isTimeMachine,
+        browseable: smbForm.value.browseable,
+        validUsers: smbForm.value.validUsers,
+        invalidUsers: smbForm.value.invalidUsers,
+        createMask: smbForm.value.createMask,
+        directoryMask: smbForm.value.directoryMask
+      }
       await storageApi.updateSMBShare(
         smbForm.value.name,
         shareData
       )
       showSuccess('共享更新成功')
     } else {
-      await storageApi.createSMBShare(
-        smbForm.value.name,
-        smbForm.value.path,
-        smbForm.value.description,
-        smbForm.value.readOnly,
-        smbForm.value.guest,
-        smbForm.value.isTimeMachine
-      )
+      await storageApi.createSMBShare({
+        name: smbForm.value.name,
+        path: smbForm.value.path,
+        description: smbForm.value.description,
+        readOnly: smbForm.value.readOnly,
+        guest: smbForm.value.guest,
+        isTimeMachine: smbForm.value.isTimeMachine
+      })
       showSuccess('共享创建成功')
     }
     closeSMBModal()
@@ -764,20 +760,6 @@ const browsePath = async () => {
 const viewSMBShare = (share: any) => {
   // 显示共享详细信息
   alert(`共享详情:\n名称: ${share.name}\n路径: ${share.path}\n描述: ${share.description || '无'}\n只读: ${share.readOnly ? '是' : '否'}\n访客: ${share.guest ? '是' : '否'}`)
-}
-
-const toggleSMBShareStatus = async (share: any) => {
-  try {
-    // 暂时简化此功能，只显示提示信息
-    const enabled = share.enabled !== undefined ? share.enabled : true
-    const newStatus = !enabled
-    showSuccess(`共享 "${share.name}" 状态切换功能暂未启用`)
-    // TODO: 实现后端API后启用此功能
-    // await storageApi.toggleSMBShare(share.name, newStatus)
-  } catch (error: any) {
-    console.error('Failed to toggle SMB share status:', error)
-    showError('操作失败: ' + error.message)
-  }
 }
 
 const refreshSMBShares = async () => {

@@ -12,7 +12,7 @@ export const manifest = {
   description: 'Enhanced notification system with custom sounds and filters',
   author: 'Dashboard Team',
   main: 'notification-plugin.ts',
-  permissions: ['notifications', 'storage', 'ui'] as const,
+  permissions: ['notifications', 'storage', 'ui'] as any,
   category: 'productivity',
   keywords: ['notifications', 'alerts', 'sounds']
 };

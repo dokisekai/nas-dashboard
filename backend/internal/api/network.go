@@ -266,8 +266,16 @@ func SetDNSConfig(c *gin.Context) {
 		return
 	}
 
-	// TODO: 实际环境中需要调用NetworkManager或systemd-resolved来设置DNS
-	// 这里简化处理，直接返回成功
+	// 调用系统DNS配置工具
+	if err := system.ConfigureDNS(system.DNSConfig{
+		Method:     req.Method,
+		Primary:    req.Primary,
+		Secondary:  req.Secondary,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("DNS配置失败: %s", err.Error())})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "DNS配置已更新"})
 }
 

@@ -361,13 +361,13 @@
               <div class="form-group">
                 <label>通知类型</label>
                 <div class="checkbox-group">
-                  <label v-for="type in notificationTypes" :key="type.value" class="checkbox-label">
+                  <label v-for="notifType in notificationTypes" :key="notifType.value" class="checkbox-label">
                     <input
                       v-model="notifications.types"
                       type="checkbox"
-                      :value="type.value"
+                      :value="notifType.value"
                     />
-                    {{ type.label }}
+                    {{ notifType.label }}
                   </label>
                 </div>
               </div>
@@ -634,7 +634,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 import { syncApi, backupApi } from '@/api'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 
 const activeTab = ref('repos')
 const tabs = [
@@ -644,23 +644,92 @@ const tabs = [
   { id: 'settings', label: '设置', icon: ServerIcon }
 ]
 
+// Repositories
+const repositories = ref<any[]>([])
+const showAddRepoModal = ref(false)
+const newRepo = ref({
+  name: '',
+  type: 'local',
+  url: '',
+  username: '',
+  password: '',
+  region: '',
+  endpoint: '',
+  description: ''
+})
+
+// Backup Jobs
+const backupJobs = ref<any[]>([])
+const showAddJobModal = ref(false)
+const newJob = ref({
+  name: '',
+  sourcePath: '',
+  repoId: '',
+  enabled: true,
+  scheduleType: 'interval',
+  intervalValue: 24,
+  intervalUnit: 'hours',
+  cronExpression: '0 2 * * *',
+  excludes: '',
+  description: ''
+})
+
+// Snapshots
+const snapshots = ref<any[]>([])
+const selectedRepoId = ref('')
+
+// Settings
+const globalSettings = ref({
+  keepVerifications: true,
+  useCache: true,
+  cacheDir: '/tmp/restic-cache',
+  compression: 'auto'
+})
+
+const retention = ref({
+  keepLast: 7,
+  keepHourly: 24,
+  keepDaily: 7,
+  keepWeekly: 4,
+  keepMonthly: 12,
+  keepYearly: 10
+})
+
+const notifications = ref({
+  enabled: true,
+  types: ['success', 'error'],
+  email: '',
+  webhook: ''
+})
+
+const notificationTypes = [
+  { value: 'success', label: '成功通知' },
+  { value: 'error', label: '错误通知' },
+  { value: 'warning', label: '警告通知' }
+]
+
+// Computed
+const filteredSnapshots = computed(() => {
+  if (!selectedRepoId.value) return snapshots.value
+  return snapshots.value.filter(s => s.repoId === selectedRepoId.value)
+})
+
+// Repository operations
+const loadRepos = async () => {
+  try {
+    const data = await backupApi.getRepos()
+    repositories.value = data || []
+  } catch (error) {
+    console.error('Failed to load repos:', error)
+  }
+}
+
 const addRepository = async () => {
   try {
     await backupApi.createRepo(newRepo.value)
     ElMessage.success('仓库添加成功')
     showAddRepoModal.value = false
     loadRepos()
-    // Reset form
-    newRepo.value = {
-      name: '',
-      type: 'local',
-      url: '',
-      username: '',
-      password: '',
-      region: '',
-      endpoint: '',
-      description: ''
-    }
   } catch (error: any) {
     ElMessage.error('添加仓库失败')
   }
@@ -685,6 +754,83 @@ const addBackupJob = async () => {
     ElMessage.error('创建任务失败')
   }
 }
+
+const getRepoIcon = (type: string) => {
+  const icons: Record<string, any> = {
+    local: ServerIcon,
+    s3: CloudIcon,
+    webdav: GlobeAltIcon,
+    sftp: ServerIcon,
+    rest: GlobeAltIcon
+  }
+  return icons[type] || ServerIcon
+}
+
+const getRepoTypeName = (type: string) => {
+  const names: Record<string, string> = {
+    local: '本地',
+    s3: 'S3',
+    webdav: 'WebDAV',
+    sftp: 'SFTP',
+    rest: 'REST'
+  }
+  return names[type] || type
+}
+
+const getStatusName = (status: string) => {
+  const names: Record<string, string> = {
+    active: '正常',
+    error: '错误'
+  }
+  return names[status] || status
+}
+
+const formatDateTime = (date: any) => {
+  if (!date) return '从未'
+  return new Date(date).toLocaleString()
+}
+
+const formatBytes = (bytes: number) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i]
+}
+
+const formatSchedule = (schedule: any) => {
+  return schedule || '未设置'
+}
+
+const getRepoName = (id: any) => {
+  const repo = repositories.value.find(r => r.id === id)
+  return repo ? repo.name : '未知'
+}
+
+const getPlaceholderForType = (type: string) => {
+  return type === 'local' ? '/path/to/repo' : 'https://...'
+}
+
+const requiresAuth = (type: string) => type !== 'local'
+
+const backupRepo = (repo: any) => { console.log('backup', repo) }
+const checkRepo = (repo: any) => { console.log('check', repo) }
+const forgetRepo = (repo: any) => { console.log('forget', repo) }
+const deleteRepo = (repo: any) => { console.log('delete', repo) }
+const runJob = (job: any) => { 
+  console.log('run', job); 
+  if (job.id) syncApi.runJob(job.id); 
+}
+const stopJob = (job: any) => { console.log('stop', job) }
+const editJob = (job: any) => { console.log('edit', job) }
+const deleteJob = (job: any) => { console.log('delete', job) }
+const browseSnapshot = (s: any) => { console.log('browse', s) }
+const restoreSnapshot = (s: any) => { console.log('restore', s) }
+const deleteSnapshot = (s: any) => { console.log('delete', s) }
+const loadSnapshots = () => {}
+const saveGlobalSettings = () => {}
+const saveRetentionPolicy = () => {}
+const saveNotificationSettings = () => {}
 
 onMounted(() => {
   loadRepos()

@@ -40,7 +40,7 @@
               <div class="power-label">CPU Package</div>
               <div class="power-value">{{ currentPower.cpuPackage.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.cpuPackage / 150) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.cpuPackage / 150) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.cpuPackage, 150)"
               />
             </div>
@@ -49,7 +49,7 @@
               <div class="power-label">CPU Core</div>
               <div class="power-value">{{ currentPower.cpuCore.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.cpuCore / 100) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.cpuCore / 100) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.cpuCore, 100)"
               />
             </div>
@@ -58,7 +58,7 @@
               <div class="power-label">CPU Uncore</div>
               <div class="power-value">{{ currentPower.cpuUncore.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.cpuUncore / 50) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.cpuUncore / 50) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.cpuUncore, 50)"
               />
             </div>
@@ -67,7 +67,7 @@
               <div class="power-label">Intel 核显</div>
               <div class="power-value">{{ currentPower.igpu.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.igpu / 30) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.igpu / 30) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.igpu, 30)"
               />
             </div>
@@ -76,7 +76,7 @@
               <div class="power-label">AMD 独显</div>
               <div class="power-value">{{ currentPower.dgpu.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.dgpu / 300) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.dgpu / 300) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.dgpu, 300)"
               />
             </div>
@@ -85,7 +85,7 @@
               <div class="power-label">HDD 机械硬盘</div>
               <div class="power-value">{{ currentPower.hdd.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.hdd / 30) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.hdd / 30) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.hdd, 30)"
               />
             </div>
@@ -94,7 +94,7 @@
               <div class="power-label">SSD 固态硬盘</div>
               <div class="power-value">{{ currentPower.ssd.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.ssd / 20) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.ssd / 20) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.ssd, 20)"
               />
             </div>
@@ -103,7 +103,7 @@
               <div class="power-label">主板和内存</div>
               <div class="power-value">{{ currentPower.mbram.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.mbram / 50) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.mbram / 50) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.mbram, 50)"
               />
             </div>
@@ -112,7 +112,7 @@
               <div class="power-label">散热系统</div>
               <div class="power-value">{{ currentPower.cooling.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.cooling / 30) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.cooling / 30) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.cooling, 30)"
               />
             </div>
@@ -121,7 +121,7 @@
               <div class="power-label">USB 外设</div>
               <div class="power-value">{{ currentPower.usb.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.usb / 10) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.usb / 10) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.usb, 10)"
               />
             </div>
@@ -130,7 +130,7 @@
               <div class="power-label">电源损耗</div>
               <div class="power-value">{{ currentPower.powerLoss.toFixed(1) }} W</div>
               <el-progress
-                :percentage="((currentPower.powerLoss / 50) * 100).toFixed(1)"
+                :percentage="parseFloat(((currentPower.powerLoss / 50) * 100).toFixed(1))"
                 :color="getProgressColor(currentPower.powerLoss, 50)"
               />
             </div>

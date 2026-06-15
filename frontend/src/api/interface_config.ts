@@ -192,7 +192,7 @@ export const networkConfigUtils = {
 
     const ipParts = ip.split('.').map(Number)
     const maskParts = netmask.split('.').map(Number)
-    const gatewayParts = []
+    const gatewayParts: number[] = []
 
     for (let i = 0; i < 4; i++) {
       gatewayParts.push((ipParts[i] & maskParts[i]))

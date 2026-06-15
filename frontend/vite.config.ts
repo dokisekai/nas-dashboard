@@ -15,14 +15,15 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://192.168.50.10:8888',
+        target: 'https://192.168.50.10:8888',
         changeOrigin: true,
         secure: false,
       },
       '/ws': {
-        target: 'ws://192.168.50.10:8888',
+        target: 'wss://192.168.50.10:8888',
         changeOrigin: true,
         ws: true,
+        secure: false,
       }
     }
   },

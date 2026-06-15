@@ -492,9 +492,10 @@ import {
   LockClosedIcon,
   CogIcon
 } from '@heroicons/vue/24/outline'
-import { networkApi, wifiApi, dnsApi, networkUtils, interfaceConfigApi, pppoeConfigApi, proxyConfigApi, networkConfigUtils } from '../api'
+import { networkApi, wifiApi, dnsApi, networkUtils, interfaceConfigApi, proxyConfigApi, networkConfigUtils } from '../api'
 import type { NetworkInterface, WiFiNetwork, DNSConfig } from '../api/network'
 import type { InterfaceConfig, InterfaceConfigRequest, ProxyConfig } from '../api/interface_config'
+import { logger } from '../utils/logger'
 
 // Props
 interface Props {
@@ -519,7 +520,7 @@ const error = ref('')
 const buttonClicks = ref(0)
 
 // 网络接口数据
-const interfaces = ref<NetworkInterface[]>([])
+const interfaces = ref<any[]>([])
 
 // WiFi网络数据
 const wifiNetworks = ref<WiFiNetwork[]>([])
@@ -596,9 +597,9 @@ const loadInterfaces = async () => {
     loading.value = true
     error.value = ''
 
-    console.log('[NetworkManager] Fetching network interfaces...')
+    logger.debug('[NetworkManager Fetching network interfaces...')
     const response = await networkApi.getInterfaces() as any
-    console.log('[NetworkManager] API response:', response)
+    logger.debug('[NetworkManager API response:', response)
 
     if (response && response.interfaces) {
       interfaces.value = response.interfaces.map((iface: any) => ({
@@ -615,7 +616,7 @@ const loadInterfaces = async () => {
         rx_bytes: iface.rx_bytes || 0
       }))
 
-      console.log('[NetworkManager] Processed interfaces:', interfaces.value.length, 'interfaces')
+      logger.debug('[NetworkManager Processed interfaces:', interfaces.value.length, 'interfaces')
 
       // 计算总速度
       const totalTx = interfaces.value.reduce((sum, iface) => sum + (iface.tx_bytes || 0), 0)
@@ -624,7 +625,7 @@ const loadInterfaces = async () => {
       if (totalTx > 0) uploadSpeed.value = totalTx
       if (totalRx > 0) downloadSpeed.value = totalRx
 
-      console.log('[NetworkManager] Upload speed:', uploadSpeed.value, 'Download speed:', downloadSpeed.value)
+      logger.debug('[NetworkManager Upload speed:', uploadSpeed.value, 'Download speed:', downloadSpeed.value)
     } else if (Array.isArray(response)) {
       interfaces.value = response.map((iface: any) => ({
         name: iface.name,
@@ -637,7 +638,7 @@ const loadInterfaces = async () => {
         dns: iface.dns || '',
         speed: iface.speed || ''
       }))
-      console.log('[NetworkManager] Array format response processed')
+      logger.debug('[NetworkManager Array format response processed')
     } else {
       console.warn('[NetworkManager] Unexpected response format:', response)
     }
@@ -646,7 +647,7 @@ const loadInterfaces = async () => {
     error.value = '加载网络接口失败: ' + (err.response?.data?.error || err.message)
   } finally {
     loading.value = false
-    console.log('[NetworkManager] Loading complete, error state:', !!error.value)
+    logger.debug('[NetworkManager Loading complete, error state:', !!error.value)
   }
 }
 
@@ -658,22 +659,12 @@ const scanWifiNetworks = async () => {
 
     const response = await wifiApi.scanNetworks()
 
-    if (response && response.networks) {
-      wifiNetworks.value = response.networks.map((network: any) => ({
-        ssid: network.ssid,
-        bssid: network.bssid || '',
-        security: network.security || network.encryption || '未知',
-        signalStrength: network.signal_strength || 50,
-        channel: network.channel || 1,
-        connected: network.connected || false,
-        connecting: network.connecting || false
-      }))
-    } else if (Array.isArray(response)) {
+    if (Array.isArray(response)) {
       wifiNetworks.value = response.map((network: any) => ({
         ssid: network.ssid,
         bssid: network.bssid || '',
         security: network.security || network.encryption || '未知',
-        signalStrength: network.signal_strength || 50,
+        signalStrength: network.signalStrength || network.signal_strength || 50,
         channel: network.channel || 1,
         connected: network.connected || false,
         connecting: network.connecting || false
@@ -788,16 +779,16 @@ const runNetworkDiagnostics = () => {
 // 接口配置相关功能
 const openInterfaceConfig = async (interfaceName: string) => {
   try {
-    console.log('[NetworkManager] openInterfaceConfig called for:', interfaceName)
+    logger.debug('[NetworkManager openInterfaceConfig called for:', interfaceName)
     buttonClicks.value++
     selectedInterface.value = interfaceName
     loading.value = true
     error.value = ''
 
     // 获取接口当前配置
-    console.log('[NetworkManager] Fetching interface config from API...')
+    logger.debug('[NetworkManager Fetching interface config from API...')
     const response = await interfaceConfigApi.getConfig(interfaceName) as any
-    console.log('[NetworkManager] Interface config response:', response)
+    logger.debug('[NetworkManager Interface config response:', response)
 
     interfaceConfig.value = response
 
@@ -810,9 +801,9 @@ const openInterfaceConfig = async (interfaceName: string) => {
       mtu: response.mtu || 1500
     }
 
-    console.log('[NetworkManager] Opening interface config modal, showInterfaceConfig:', true)
+    logger.debug('[NetworkManager Opening interface config modal, showInterfaceConfig:', true)
     showInterfaceConfig.value = true
-    console.log('[NetworkManager] Modal should be visible now')
+    logger.debug('[NetworkManager Modal should be visible now')
   } catch (err: any) {
     console.error('[NetworkManager] Failed to load interface config:', err)
     error.value = '加载接口配置失败: ' + (err.response?.data?.error || err.message)
@@ -851,11 +842,11 @@ const saveInterfaceConfig = async () => {
 // 重启网络接口
 const restartInterface = async (interfaceName: string) => {
   try {
-    console.log('[NetworkManager] restartInterface called for:', interfaceName)
+    logger.debug('[NetworkManager restartInterface called for:', interfaceName)
     buttonClicks.value++
 
     if (!confirm(`确定要重启网络接口 ${interfaceName} 吗？这可能会暂时中断网络连接。`)) {
-      console.log('[NetworkManager] Restart cancelled by user')
+      logger.debug('[NetworkManager Restart cancelled by user')
       return
     }
 
@@ -864,10 +855,10 @@ const restartInterface = async (interfaceName: string) => {
 
     await interfaceConfigApi.restart(interfaceName)
 
-    console.log('[NetworkManager] Interface restart command sent, waiting 3 seconds...')
+    logger.debug('[NetworkManager Interface restart command sent, waiting 3 seconds...')
     // 等待几秒钟后刷新
     setTimeout(() => {
-      console.log('[NetworkManager] Refreshing interfaces after restart...')
+      logger.debug('[NetworkManager Refreshing interfaces after restart...')
       loadInterfaces()
     }, 3000)
   } catch (err: any) {
@@ -915,32 +906,32 @@ const saveProxyConfig = async () => {
 
 // 组件挂载时加载数据
 onMounted(async () => {
-  console.log('[NetworkManager] Component mounted, embedded mode:', props.embeddedMode)
-  console.log('[NetworkManager] Loading interfaces...')
+  logger.debug('[NetworkManager Component mounted, embedded mode:', props.embeddedMode)
+  logger.debug('[NetworkManager Loading interfaces...')
 
   await loadInterfaces()
 
-  console.log('[NetworkManager] Interfaces loaded:', interfaces.value.length)
+  logger.debug('[NetworkManager Interfaces loaded:', interfaces.value.length)
 
   // 如果有WiFi接口，自动扫描WiFi网络
   const hasWifi = interfaces.value.some(i => i.type === '无线' || i.type === 'wireless')
   if (hasWifi) {
-    console.log('[NetworkManager] WiFi interface found, scanning networks...')
+    logger.debug('[NetworkManager WiFi interface found, scanning networks...')
     await scanWifiNetworks()
   }
 
   // 设置自动刷新
   refreshInterval = setInterval(() => {
-    console.log('[NetworkManager] Auto-refreshing interfaces...')
+    logger.debug('[NetworkManager Auto-refreshing interfaces...')
     loadInterfaces()
   }, 30000) // 每30秒刷新一次
 
-  console.log('[NetworkManager] Setup complete')
+  logger.debug('[NetworkManager Setup complete')
 })
 
 // 组件卸载时清除定时器
 onUnmounted(() => {
-  console.log('[NetworkManager] Component unmounted')
+  logger.debug('[NetworkManager Component unmounted')
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }

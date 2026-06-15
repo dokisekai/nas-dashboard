@@ -228,7 +228,7 @@ export const applicationApi = {
 // 获取安装进度的SSE连接
 export function getInstallProgress(id: number, onProgress: (progress: AppInstallProgress) => void, onComplete?: () => void) {
   const token = localStorage.getItem('token')
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.50.10:8888'
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
   const eventSource = new EventSource(`${baseUrl}/api/apps/${id}/progress?token=${token}`)
 
   eventSource.onmessage = (event) => {

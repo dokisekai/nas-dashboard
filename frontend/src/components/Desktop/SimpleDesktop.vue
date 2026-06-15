@@ -243,6 +243,17 @@
         </div>
       </div>
 
+      <div
+        class="dock-item"
+        :class="{ active: isWindowActive('docker-manager') }"
+        @click="openWindow('docker-manager', 'Docker 管理')"
+        title="Docker 管理"
+      >
+        <div class="dock-icon">
+          <CubeIcon class="w-6 h-6" />
+        </div>
+      </div>
+
       <!-- 窗口管理分隔符 -->
       <div class="dock-separator"></div>
 
@@ -303,7 +314,8 @@ import NotificationToast from '../NotificationSystem/NotificationToast.vue'
 import NotificationCenter from '../NotificationSystem/NotificationCenter.vue'
 import { useNotificationStore } from '../../stores/notification'
 import { useAuthStore } from '../../stores/auth'
-import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon, CloudArrowUpIcon } from '@heroicons/vue/24/outline'
+import { BellIcon, UserIcon, CogIcon, ChevronDownIcon, PowerIcon, ArrowLeftOnRectangleIcon, CloudArrowUpIcon, CubeIcon } from '@heroicons/vue/24/outline'
+import { systemApi } from '../../api'
 
 interface Window {
   id: string
@@ -413,22 +425,44 @@ const handleClickOutsidePower = (event: MouseEvent) => {
 }
 
 // 处理重启系统
-const handleReboot = () => {
+const handleReboot = async () => {
   if (confirm('确定要重启系统吗？所有未保存的工作将丢失！')) {
-    // 调用后端API重启系统
-    console.log('系统重启中...')
-    powerMenuVisible.value = false
-    // TODO: 实现重启API调用
+    try {
+      powerMenuVisible.value = false
+      notificationStore.add({
+        type: 'warning',
+        title: '系统重启',
+        message: '系统正在准备重启，请稍候...'
+      })
+      await systemApi.restart()
+    } catch (error) {
+      notificationStore.add({
+        type: 'error',
+        title: '重启失败',
+        message: '无法触发系统重启：' + (error as any).message
+      })
+    }
   }
 }
 
 // 处理关机
-const handleShutdown = () => {
+const handleShutdown = async () => {
   if (confirm('确定要关机吗？')) {
-    // 调用后端API关机
-    console.log('系统关机中...')
-    powerMenuVisible.value = false
-    // TODO: 实现关机API调用
+    try {
+      powerMenuVisible.value = false
+      notificationStore.add({
+        type: 'warning',
+        title: '系统关机',
+        message: '系统正在准备关机，请稍候...'
+      })
+      await systemApi.shutdown()
+    } catch (error) {
+      notificationStore.add({
+        type: 'error',
+        title: '关机失败',
+        message: '无法触发系统关机：' + (error as any).message
+      })
+    }
   }
 }
 
@@ -439,7 +473,8 @@ const appConfigs: Record<string, { title: string; width: number; height: number 
   'user-manager': { title: '用户管理', width: 800, height: 500 },
   'backup-manager': { title: '备份管理', width: 900, height: 600 },
   'sync-manager': { title: '同步备份', width: 1000, height: 700 },
-  'control-panel': { title: '控制面板', width: 1200, height: 800 }
+  'control-panel': { title: '控制面板', width: 1200, height: 800 },
+  'docker-manager': { title: 'Docker 管理', width: 1000, height: 700 }
 }
 
 const openWindow = (appId: string, title: string) => {
@@ -669,6 +704,8 @@ onMounted(() => {
     updateTime()
     // 每秒更新时间
     timeUpdateInterval = window.setInterval(updateTime, 1000)
+    // 获取通知
+    notificationStore.fetchNotifications()
     console.log('SimpleDesktop initialization completed')
   } catch (error) {
     console.error('Error in SimpleDesktop onMounted:', error)

@@ -63,7 +63,7 @@ let updateInterval: number
 const updateWeather = () => {
   // 注意：这是演示数据，实际部署时需要集成真实的天气API（如OpenWeatherMap）
   // 可以考虑使用位置API获取用户位置，然后调用天气服务
-  const conditions = ['sunny', 'cloudy', 'rainy', 'snowy'] as const
+  const conditions = ['sunny', 'cloudy', 'rainy', 'snowy'] as any
   const randomCondition = conditions[Math.floor(Math.random() * conditions.length)]
 
   weatherData.value = {

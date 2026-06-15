@@ -4,7 +4,7 @@
       <div class="dialog-header">
         <h3>应用安装进度</h3>
         <button class="btn-close" @click="$emit('close')">
-          <XIcon />
+          <XMarkIcon />
         </button>
       </div>
 
@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  XIcon,
+  XMarkIcon,
   CheckIcon,
   ClockIcon,
   CheckCircleIcon
@@ -102,19 +102,20 @@ const hasInstallingApps = computed(() => {
 })
 
 const getStatusText = (app: AppInstance) => {
-  const statusMap = {
+  const statusMap: Record<string, string> = {
     installing: '安装中...',
     installed: '安装成功',
+    running: '运行中',
     error: '安装失败',
     stopped: '已停止'
   }
-  return statusMap[app.status] || '未知状态'
+  return statusMap[app.status as string] || '未知状态'
 }
 
 const getStatusColor = (app: AppInstance) => {
   if (app.status === 'error') {
     return 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)'
-  } else if (app.status === 'installed') {
+  } else if ((app.status as string) === 'installed' || app.status === 'running') {
     return 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
   }
   return 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
@@ -123,7 +124,7 @@ const getStatusColor = (app: AppInstance) => {
 const getProgress = (app: AppInstance) => {
   // 这里应该从实际的进度数据获取
   // 简化实现：基于状态估算
-  if (app.status === 'installed') return 100
+  if ((app.status as string) === 'installed' || app.status === 'running') return 100
   if (app.status === 'error') return 0
   if (app.status === 'installing') return 65
   return 0

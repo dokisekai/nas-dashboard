@@ -76,6 +76,21 @@
           <sparkline :data="powerHistory" :color="powerColor" />
         </div>
       </div>
+
+      <!-- UPS Card -->
+      <div v-if="upsStatus" class="stat-card ups">
+        <div class="stat-icon" :class="{ 'on-battery': upsStatus.status !== 'OL' }">
+          <Battery50Icon class="w-8 h-8" />
+        </div>
+        <div class="stat-content">
+          <h3>UPS</h3>
+          <p class="stat-value">{{ upsStatus.charge }}%</p>
+          <p class="stat-detail">{{ upsStatus.status === 'OL' ? '市电供电' : '电池供电' }} ({{ upsStatus.load }}% 负载)</p>
+        </div>
+        <div class="stat-chart">
+          <sparkline :data="upsHistory" :color="upsColor" />
+        </div>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -346,8 +361,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Line } from 'vue-chartjs'
 import Sparkline from '../components/Sparkline.vue'
-import { monitorApi } from '../api'
-import { powerAPI } from '../api/power'
+import { monitorApi, systemApi } from '../api'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -364,7 +378,8 @@ import {
   ServerIcon,
   CircleStackIcon,
   GlobeAltIcon,
-  BoltIcon
+  BoltIcon,
+  Battery50Icon
 } from '@heroicons/vue/24/outline'
 
 ChartJS.register(
@@ -438,6 +453,11 @@ const storagePower = ref(0)
 const otherComponentsPower = ref(0)
 const powerHistory = ref<number[]>([])
 const powerColor = '#ef4444'
+
+// UPS stats
+const upsStatus = ref<any>(null)
+const upsHistory = ref<number[]>([])
+const upsColor = '#14b8a6'
 
 const loadAverage = ref<number[]>([0, 0, 0])
 
@@ -522,7 +542,7 @@ const diskChartOptions = {
   plugins: {
     legend: {
       display: true,
-      position: 'top' as const
+      position: 'top' as any
     }
   },
   scales: {
@@ -581,7 +601,7 @@ const powerChartOptions = {
   plugins: {
     legend: {
       display: true,
-      position: 'top' as const
+      position: 'top' as any
     }
   },
   scales: {
@@ -723,6 +743,20 @@ const updateStats = async () => {
       powerHistory.value = [...powerHistory.value.slice(-59), powerUsage.value]
     }
 
+    // Fetch UPS stats
+    try {
+      const upsData = await systemApi.getUPSStatus()
+      if (upsData && upsData.status !== 'Unknown') {
+        upsStatus.value = upsData
+        upsHistory.value = [...upsHistory.value.slice(-59), upsData.charge]
+      } else {
+        upsStatus.value = null
+      }
+    } catch (upsError) {
+      console.warn('UPS monitoring not available:', upsError)
+      upsStatus.value = null
+    }
+
   } catch (error) {
     console.error('Failed to update stats:', error)
   }
@@ -823,6 +857,21 @@ onUnmounted(() => {
 
 .stat-card.power .stat-icon {
   background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+.stat-card.ups .stat-icon {
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+}
+
+.stat-icon.on-battery {
+  background: #ef4444 !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 .stat-content h3 {

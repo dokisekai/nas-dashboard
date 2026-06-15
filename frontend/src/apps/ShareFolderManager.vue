@@ -513,7 +513,7 @@ const shareForm = reactive({
   browseable: true,
   readOnly: false,
   guestOK: false,
-  permissions: []
+  permissions: [] as any[]
 })
 
 const editForm = reactive({

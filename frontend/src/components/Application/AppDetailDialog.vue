@@ -12,7 +12,7 @@
           </div>
         </div>
         <button class="btn-close" @click="$emit('close')">
-          <XIcon />
+          <XMarkIcon />
         </button>
       </div>
 
@@ -32,7 +32,7 @@
               <span class="info-label">官网</span>
               <a v-if="app.website" :href="app.website" target="_blank" class="info-value link">
                 {{ app.website }}
-                <ExternalLinkIcon class="link-icon" />
+                <ArrowTopRightOnSquareIcon class="link-icon" />
               </a>
               <span v-else class="info-value">-</span>
             </div>
@@ -55,14 +55,14 @@
           <h4 class="section-title">系统要求</h4>
           <div class="requirements-grid">
             <div class="requirement-item">
-              <MemoryIcon class="requirement-icon" />
+              <CpuChipIcon class="requirement-icon" />
               <div class="requirement-info">
                 <span class="requirement-label">内存</span>
                 <span class="requirement-value">{{ app.minRAM || 0 }} MB</span>
               </div>
             </div>
             <div class="requirement-item">
-              <DiskIcon class="requirement-icon" />
+              <CircleStackIcon class="requirement-icon" />
               <div class="requirement-info">
                 <span class="requirement-label">磁盘空间</span>
                 <span class="requirement-value">{{ app.minDiskSpace || 0 }} GB</span>
@@ -82,7 +82,7 @@
           <h4 class="section-title">安装统计</h4>
           <div class="stats-grid">
             <div class="stat-item">
-              <DownloadIcon class="stat-icon" />
+              <ArrowDownTrayIcon class="stat-icon" />
               <div class="stat-info">
                 <span class="stat-value">{{ app.downloadCount || 0 }}</span>
                 <span class="stat-label">下载次数</span>
@@ -137,7 +137,7 @@
       <div class="dialog-footer">
         <button class="btn-cancel" @click="$emit('close')">关闭</button>
         <button v-if="!isInstalled" class="btn-install" @click="$emit('install', app)">
-          <DownloadIcon />
+          <ArrowDownTrayIcon />
           <span>安装应用</span>
         </button>
         <div v-else class="installed-actions">
@@ -161,7 +161,7 @@
             :class="['btn-action', 'btn-restart']"
             @click="$emit('restart', app)"
           >
-            <RefreshIcon />
+            <ArrowPathIcon />
             <span>重启</span>
           </button>
         </div>
@@ -173,22 +173,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
-  XIcon,
+  XMarkIcon,
   CubeIcon,
-  ExternalLinkIcon,
-  MemoryIcon,
-  DiskIcon,
+  ArrowTopRightOnSquareIcon,
+  CpuChipIcon,
+  CircleStackIcon,
   CodeBracketIcon,
-  DownloadIcon,
+  ArrowDownTrayIcon,
   StarIcon,
   PlayIcon,
   StopIcon,
-  RefreshIcon
+  ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import type { AppInstance, AppPackage } from '../../api/application'
 
 interface Props {
-  app: AppInstance | AppPackage
+  app: any
 }
 
 interface Emits {
@@ -209,7 +209,7 @@ const dependencies = computed(() => {
 })
 
 const categoryName = computed(() => {
-  const categoryMap = {
+  const categoryMap: Record<string, string> = {
     media: '媒体',
     productivity: '办公',
     utilities: '工具',
@@ -221,7 +221,7 @@ const categoryName = computed(() => {
 })
 
 const appColor = computed(() => {
-  const colors = {
+  const colors: Record<string, string> = {
     media: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
     productivity: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
     utilities: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',

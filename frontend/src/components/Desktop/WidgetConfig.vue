@@ -97,6 +97,27 @@ interface Emits {
   (e: 'save', config: Widget): void
 }
 
+// 定义选项接口
+interface DisplayOption {
+  key: string
+  label: string
+}
+
+interface WidgetOption {
+  key: string
+  label: string
+  type: string
+  placeholder?: string
+  min?: number
+  max?: number
+  choices?: Array<{ value: string; label: string }>
+}
+
+interface SizeOption {
+  value: string
+  label: string
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
@@ -106,14 +127,14 @@ const localConfig = ref({
   config: { ...props.widget.config }
 })
 
-const sizes = [
+const sizes: SizeOption[] = [
   { value: 'small', label: '小' },
   { value: 'medium', label: '中' },
   { value: 'large', label: '大' }
 ]
 
 const displayOptions = computed(() => {
-  const options = []
+  const options: DisplayOption[] = []
 
   if (props.widget.type === 'clock') {
     options.push(
@@ -142,7 +163,7 @@ const displayOptions = computed(() => {
 })
 
 const widgetSpecificOptions = computed(() => {
-  const options = []
+  const options: WidgetOption[] = []
 
   if (props.widget.type === 'weather') {
     options.push({

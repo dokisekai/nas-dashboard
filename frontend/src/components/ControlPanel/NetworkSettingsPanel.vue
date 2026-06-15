@@ -351,7 +351,7 @@ import type { NetworkInterface, DNSConfig } from '../../api/network'
 import type { ProxyConfig } from '../../api/interface_config'
 
 // 状态管理
-const interfaces = ref<NetworkInterface[]>([])
+const interfaces = ref<any[]>([])
 const loading = ref(false)
 const error = ref('')
 
@@ -399,6 +399,7 @@ const loadInterfaces = async () => {
         type: iface.type === 'ethernet' ? 'ethernet' : iface.type === 'wireless' ? 'wireless' : iface.type,
         active: iface.up || false,
         ip: iface.addresses && iface.addresses.length > 0 ? iface.addresses[0] : '',
+        netmask: '',
         mac: iface.hardwareAddr || '',
         gateway: '',
         dns: '',
@@ -426,6 +427,7 @@ const loadInterfaces = async () => {
         type: iface.type === 'ethernet' ? 'ethernet' : iface.type === 'wireless' ? 'wireless' : iface.type,
         active: iface.up || false,
         ip: iface.addresses && iface.addresses.length > 0 ? iface.addresses[0] : '',
+        netmask: '',
         mac: iface.hardwareAddr || '',
         gateway: '',
         dns: '',

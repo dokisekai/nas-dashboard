@@ -370,7 +370,7 @@ const showDnsSettings = ref(false)
 const showQosSettings = ref(false)
 
 // 网络接口数据
-const interfaces = ref<NetworkInterface[]>([
+const interfaces = ref<any[]>([
   {
     name: 'LAN 1',
     type: '以太网',

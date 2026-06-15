@@ -715,13 +715,13 @@ const handleCreateShare = async () => {
   }
 
   try {
-    await storageApi.createSMBShare(
-      shareForm.name,
-      shareForm.path,
-      shareForm.description,
-      shareForm.readOnly,
-      shareForm.guest
-    )
+    await storageApi.createSMBShare({
+      name: shareForm.name,
+      path: shareForm.path,
+      description: shareForm.description,
+      readOnly: shareForm.readOnly,
+      guest: shareForm.guest
+    })
     shares.value.push({
       name: shareForm.name,
       path: shareForm.path,
@@ -759,10 +759,12 @@ const handleEditShare = async () => {
   try {
     await storageApi.updateSMBShare(
       selectedShare.value.name,
-      shareForm.path,
-      shareForm.description,
-      shareForm.readOnly,
-      shareForm.guest
+      {
+        path: shareForm.path,
+        description: shareForm.description,
+        readOnly: shareForm.readOnly,
+        guest: shareForm.guest
+      }
     )
     // 更新本地状态
     const index = shares.value.findIndex(s => s.name === selectedShare.value?.name)

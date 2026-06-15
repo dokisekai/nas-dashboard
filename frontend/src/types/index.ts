@@ -60,7 +60,7 @@ export interface VolumeInfo {
   size: number
   used: number
   status: 'healthy' | 'warning' | 'error'
-  disks: DiskInfo[]
+  disks: any[]
 }
 
 // 服务信息类型
@@ -99,7 +99,7 @@ export interface NetworkInterface {
 }
 
 export interface NetworkStats {
-  interfaces: NetworkInterface[]
+  interfaces: any[]
   totalRx: number
   totalTx: number
   bandwidth: {

@@ -1,9 +1,11 @@
 package api
 
 import (
+	"fmt"
 	"nas-dashboard/internal/database"
 	"nas-dashboard/internal/models"
 	"net/http"
+	"os/exec"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -77,8 +79,41 @@ func DeleteFirewallRule(c *gin.Context) {
 }
 
 func ApplyFirewallRules(c *gin.Context) {
-	// TODO: Implement actual system call to ufw/iptables
-	c.JSON(http.StatusOK, gin.H{"message": "Firewall rules applied successfully"})
+	var rules []models.FirewallRule
+	if err := firewallAPI.db.Where("enabled = ?", true).Order("`order` asc").Find(&rules).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rules: " + err.Error()})
+		return
+	}
+
+	// 异步执行防火墙应用，避免API超时
+	go func() {
+		// 确保 SSH 端口始终开启，防止锁定自己
+		exec.Command("ufw", "allow", "22/tcp").Run()
+		// 确保面板端口开启
+		exec.Command("ufw", "allow", "8888/tcp").Run()
+		exec.Command("ufw", "allow", "5173/tcp").Run()
+
+		// 应用规则
+		for _, rule := range rules {
+			args := []string{rule.Action}
+			if rule.SourceIP != "" && rule.SourceIP != "any" {
+				args = append(args, "from", rule.SourceIP)
+			}
+			if rule.Port != "" {
+				portProto := rule.Port
+				if rule.Protocol != "both" && rule.Protocol != "" {
+					portProto += "/" + rule.Protocol
+				}
+				args = append(args, "to", "any", "port", portProto)
+			}
+			exec.Command("ufw", args...).Run()
+		}
+
+		// 启用防火墙
+		exec.Command("ufw", "--force", "enable").Run()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"message": "防火墙规则已提交并在后台应用"})
 }
 
 // FirewallConfig 防火墙配置类型
@@ -108,9 +143,31 @@ func SetFirewallConfig(c *gin.Context) {
 		return
 	}
 
-	// TODO: Apply firewall configuration to system
+	// 应用配置到系统
+	go func() {
+		if config.Enabled {
+			// 确保 SSH 端口始终开启
+			exec.Command("ufw", "allow", "22/tcp").Run()
+			exec.Command("ufw", "--force", "enable").Run()
+		} else {
+			exec.Command("ufw", "disable").Run()
+		}
+
+		if config.DefaultPolicy == "drop" || config.DefaultPolicy == "deny" {
+			exec.Command("ufw", "default", "deny", "incoming").Run()
+		} else if config.DefaultPolicy == "accept" || config.DefaultPolicy == "allow" {
+			exec.Command("ufw", "default", "allow", "incoming").Run()
+		}
+
+		if config.Logging {
+			exec.Command("ufw", "logging", "on").Run()
+		} else {
+			exec.Command("ufw", "logging", "off").Run()
+		}
+	}()
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Firewall configuration updated successfully",
+		"message": "防火墙配置已更新",
 		"config":  config,
 	})
 }

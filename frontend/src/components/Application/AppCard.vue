@@ -21,60 +21,57 @@
     </div>
 
     <div class="app-actions">
-      <button
-        v-if="installed"
-        :class="['action-btn', 'btn-start']"
-        :disabled="app.status === 'running'"
-        @click="$emit('start', app)"
-      >
-        <PlayIcon />
-        <span>启动</span>
-      </button>
+      <template v-if="installed">
+        <button
+          :class="['action-btn', 'btn-start']"
+          :disabled="(app as AppInstance).status === 'running'"
+          @click="$emit('start', app as AppInstance)"
+        >
+          <PlayIcon />
+          <span>启动</span>
+        </button>
 
-      <button
-        v-if="installed"
-        :class="['action-btn', 'btn-stop']"
-        :disabled="app.status === 'stopped'"
-        @click="$emit('stop', app)"
-      >
-        <StopIcon />
-        <span>停止</span>
-      </button>
+        <button
+          :class="['action-btn', 'btn-stop']"
+          :disabled="(app as AppInstance).status === 'stopped'"
+          @click="$emit('stop', app as AppInstance)"
+        >
+          <StopIcon />
+          <span>停止</span>
+        </button>
 
-      <button
-        v-if="installed"
-        :class="['action-btn', 'btn-restart']"
-        :disabled="app.status === 'stopped'"
-        @click="$emit('restart', app)"
-      >
-        <RefreshIcon />
-        <span>重启</span>
-      </button>
+        <button
+          :class="['action-btn', 'btn-restart']"
+          :disabled="(app as AppInstance).status === 'stopped'"
+          @click="$emit('restart', app as AppInstance)"
+        >
+          <ArrowPathIcon />
+          <span>重启</span>
+        </button>
 
-      <button
-        v-if="installed"
-        :class="['action-btn', 'btn-settings']"
-        @click="$emit('settings', app)"
-      >
-        <CogIcon />
-        <span>设置</span>
-      </button>
+        <button
+          :class="['action-btn', 'btn-settings']"
+          @click="$emit('settings', app as AppInstance)"
+        >
+          <CogIcon />
+          <span>设置</span>
+        </button>
 
-      <button
-        v-if="installed"
-        :class="['action-btn', 'btn-uninstall']"
-        @click="$emit('uninstall', app)"
-      >
-        <TrashIcon />
-        <span>卸载</span>
-      </button>
+        <button
+          :class="['action-btn', 'btn-uninstall']"
+          @click="$emit('uninstall', app as AppInstance)"
+        >
+          <TrashIcon />
+          <span>卸载</span>
+        </button>
+      </template>
 
       <button
         v-if="!installed"
         :class="['action-btn', 'btn-install']"
-        @click="$emit('install', app)"
+        @click="$emit('install', app as AppPackage)"
       >
-        <DownloadIcon />
+        <ArrowDownTrayIcon />
         <span>安装</span>
       </button>
 
@@ -82,7 +79,7 @@
         :class="['action-btn', 'btn-info']"
         @click="$emit('info', app)"
       >
-        <InformationIcon />
+        <InformationCircleIcon />
         <span>详情</span>
       </button>
     </div>
@@ -102,38 +99,37 @@ import { computed } from 'vue'
 import {
   PlayIcon,
   StopIcon,
-  RefreshIcon,
+  ArrowPathIcon,
   CogIcon,
   TrashIcon,
-  DownloadIcon,
-  InformationIcon,
+  ArrowDownTrayIcon,
+  InformationCircleIcon,
   CubeIcon
 } from '@heroicons/vue/24/outline'
 import type { AppInstance, AppPackage } from '../../api/application'
 
 interface Props {
-  app: AppInstance | AppPackage
+  app: any
   installed: boolean
   progress?: number
   progressText?: string
 }
 
-interface Emits {
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
   (e: 'start', app: AppInstance): void
   (e: 'stop', app: AppInstance): void
   (e: 'restart', app: AppInstance): void
   (e: 'settings', app: AppInstance): void
   (e: 'uninstall', app: AppInstance): void
   (e: 'install', app: AppPackage): void
-  (e: 'info', app: AppInstance | AppPackage): void
-}
-
-const props = defineProps<Props>()
-defineEmits<Emits>()
+  (e: 'info', app: any): void
+}>()
 
 // 应用颜色和图标
 const appColor = computed(() => {
-  const colors = {
+  const colors: Record<string, string> = {
     media: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
     productivity: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
     utilities: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
@@ -163,7 +159,7 @@ const statusText = computed(() => {
   if (!props.installed) return '可安装'
 
   const status = (props.app as AppInstance).status
-  const statusMap = {
+  const statusMap: Record<string, string> = {
     running: '运行中',
     stopped: '已停止',
     error: '错误',
@@ -175,7 +171,7 @@ const statusText = computed(() => {
 
 // 分类名称
 const categoryName = computed(() => {
-  const categoryMap = {
+  const categoryMap: Record<string, string> = {
     media: '媒体',
     productivity: '办公',
     utilities: '工具',
@@ -190,7 +186,8 @@ const categoryName = computed(() => {
 // 进度显示
 const showProgress = computed(() => {
   return props.installed &&
-         (props.app as AppInstance).status === 'installing' &&
+         'status' in props.app &&
+         props.app.status === 'installing' &&
          props.progress !== undefined
 })
 </script>

@@ -171,7 +171,7 @@ import { Plus, Refresh } from '@element-plus/icons-vue'
 
 interface Props {
   visible: boolean
-  disk: DiskInfo | null
+  disk: any | null
 }
 
 interface Emits {
@@ -220,7 +220,13 @@ const partitionRules = {
 }
 
 const partitionMap = computed(() => {
-  const map = []
+  const map: Array<{
+    name: string
+    size: number
+    used: boolean
+    percent: number
+    partition: any
+  }> = []
   let currentPosition = 0
 
   // Add partitions

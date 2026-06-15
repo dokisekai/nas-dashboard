@@ -105,7 +105,7 @@
               :class="{ active: currentLocation === 'external' }"
               @click="navigateToExternal"
             >
-              <ExternalLinkIcon class="w-4 h-4" />
+              <ArrowTopRightOnSquareIcon class="w-4 h-4" />
               <span>外接设备</span>
             </div>
           </div>

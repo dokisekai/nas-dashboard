@@ -184,7 +184,7 @@ interface NetworkInterface {
 
 const loading = ref(false)
 const error = ref('')
-const interfaces = ref<NetworkInterface[]>([])
+const interfaces = ref<any[]>([])
 const selectedInterface = ref<string | null>(null)
 
 // 计算属性

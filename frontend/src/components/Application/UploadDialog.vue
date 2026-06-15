@@ -4,7 +4,7 @@
       <div class="dialog-header">
         <h3>上传应用包</h3>
         <button class="btn-close" @click="$emit('cancel')">
-          <XIcon />
+          <XMarkIcon />
         </button>
       </div>
 
@@ -17,13 +17,13 @@
           @dragleave.prevent="isDragOver = false"
           @click="selectFile"
         >
-          <UploadIcon class="upload-icon" />
+          <ArrowUpTrayIcon class="upload-icon" />
           <p class="upload-text">拖拽文件到此处或点击选择</p>
           <p class="upload-hint">支持 .nap 格式的应用包</p>
         </div>
 
         <div v-if="selectedFile" class="file-info">
-          <FileIcon class="file-icon" />
+          <DocumentIcon class="file-icon" />
           <div class="file-details">
             <p class="file-name">{{ selectedFile.name }}</p>
             <p class="file-size">{{ formatSize(selectedFile.size) }}</p>
@@ -41,7 +41,7 @@
         </div>
 
         <div v-if="uploadError" class="upload-error">
-          <ExclamationIcon class="error-icon" />
+          <ExclamationTriangleIcon class="error-icon" />
           <p>{{ uploadError }}</p>
         </div>
       </div>
@@ -53,7 +53,7 @@
           :disabled="!selectedFile || uploadProgress.show"
           @click="handleUpload"
         >
-          <UploadIcon />
+          <ArrowUpTrayIcon />
           <span>上传</span>
         </button>
       </div>
@@ -64,11 +64,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {
-  XIcon,
-  UploadIcon,
-  FileIcon,
+  XMarkIcon,
+  ArrowUpTrayIcon,
+  DocumentIcon,
   TrashIcon,
-  ExclamationIcon
+  ExclamationTriangleIcon
 } from '@heroicons/vue/24/outline'
 
 interface Emits {

@@ -337,14 +337,14 @@ const raidLevels = [
 ]
 
 // Mock disk data - in real implementation, fetch from API
-const availableDisks = ref<DiskInfo[]>([
+const availableDisks = ref<any[]>([
   { device: '/dev/sdb', model: 'Samsung SSD', size: 1024 * 1024 * 1024 * 512, health: 'good', temperature: 35, partitions: [] },
   { device: '/dev/sdc', model: 'Western Digital', size: 1024 * 1024 * 1024 * 1024, health: 'good', temperature: 40, partitions: [] },
   { device: '/dev/sdd', model: 'Seagate HDD', size: 1024 * 1024 * 1024 * 2048, health: 'warning', temperature: 45, partitions: [] },
   { device: '/dev/sde', model: 'Toshiba HDD', size: 1024 * 1024 * 1024 * 1024, health: 'good', temperature: 38, partitions: [] }
 ])
 
-const selectedDisks = ref<DiskInfo[]>([])
+const selectedDisks = ref<any[]>([])
 
 const minDisks = computed(() => {
   const level = raidLevels.find(l => l.value === form.value.level)
@@ -416,15 +416,15 @@ const selectRAIDLevel = (level: string) => {
   form.value.level = level
 }
 
-const isDiskSelectable = (row: DiskInfo): boolean => {
+const isDiskSelectable = (row: any): boolean => {
   return row.health === 'good'
 }
 
-const handleDiskSelection = (selection: DiskInfo[]) => {
+const handleDiskSelection = (selection: any[]) => {
   selectedDisks.value = selection.filter(d => d.health === 'good')
 }
 
-const removeDisk = (disk: DiskInfo) => {
+const removeDisk = (disk: any) => {
   selectedDisks.value = selectedDisks.value.filter(d => d.device !== disk.device)
 }
 

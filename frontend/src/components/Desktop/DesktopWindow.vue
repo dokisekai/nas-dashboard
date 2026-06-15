@@ -62,7 +62,8 @@ import {
   CloudArrowUpIcon,
   UserGroupIcon,
   FolderIcon,
-  ShoppingBagIcon
+  ShoppingBagIcon,
+  CubeIcon
 } from '@heroicons/vue/24/outline'
 
 interface Props {
@@ -112,7 +113,8 @@ const windowIcon = computed(() => {
     'user-manager': UserGroupIcon,
     'file-manager': FolderIcon,
     'app-center': ShoppingBagIcon,
-    'control-panel': CloudArrowUpIcon
+    'control-panel': CloudArrowUpIcon,
+    'docker-manager': CubeIcon
   }
   return icons[props.window.appId] || ServerIcon
 })
@@ -127,7 +129,8 @@ const appComponent = computed(() => {
     'backup-manager': defineAsyncComponent(() => import('../../apps/BackupManager.vue')),
     'file-manager': defineAsyncComponent(() => import('../../views/Storage/Disks.vue')),
     'app-center': defineAsyncComponent(() => import('../../apps/AppCenter.vue')),
-    'control-panel': defineAsyncComponent(() => import('../../apps/ControlPanel.vue'))
+    'control-panel': defineAsyncComponent(() => import('../../apps/ControlPanel.vue')),
+    'docker-manager': defineAsyncComponent(() => import('../../apps/DockerManager.vue'))
   }
 
   const component = components[props.window.appId]

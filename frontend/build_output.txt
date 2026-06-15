@@ -1,0 +1,265 @@
+
+> frontend@0.0.0 build
+> vue-tsc -b && vite build
+
+src/apps/AppCenter.vue(263,3): error TS6133: 'EyeIcon' is declared but its value is never read.
+src/apps/FileManager.vue(304,3): error TS6133: 'ArrowTopRightOnSquareIcon' is declared but its value is never read.
+src/apps/LogViewer.vue(222,3): error TS6133: 'BeakerIcon' is declared but its value is never read.
+src/apps/MonitorConsole.vue(366,23): error TS6133: 'alertId' is declared but its value is never read.
+src/apps/NetworkManager.vue(495,73): error TS6133: 'pppoeConfigApi' is declared but its value is never read.
+src/apps/NetworkManager.vue(661,30): error TS2339: Property 'networks' does not exist on type 'WiFiNetwork[]'.
+src/apps/NetworkManager.vue(662,37): error TS2339: Property 'networks' does not exist on type 'WiFiNetwork[]'.
+src/apps/NetworkManager_old.vue(326,15): error TS6133: 'computed' is declared but its value is never read.
+src/apps/QuotaManager.vue(344,1): error TS6133: 'quotaAPI' is declared but its value is never read.
+src/apps/QuotaManager.vue(346,38): error TS6196: 'QuotaReport' is declared but never used.
+src/apps/QuotaManager.vue(352,3): error TS6133: 'Search' is declared but its value is never read.
+src/apps/StorageManager.vue(486,3): error TS6133: 'ClockIcon' is declared but its value is never read.
+src/apps/StorageManager.vue(490,3): error TS6133: 'LockClosedIcon' is declared but its value is never read.
+src/apps/StorageManager.vue(693,9): error TS2345: Argument of type '{ name: string; path: string; description: string; readOnly: boolean; guest: boolean; isTimeMachine: boolean; browseable: boolean; validUsers: string; invalidUsers: string; createMask: string; directoryMask: string; }' is not assignable to parameter of type 'string'.
+src/apps/StorageManager.vue(769,7): error TS6133: 'toggleSMBShareStatus' is declared but its value is never read.
+src/apps/StorageManager.vue(773,11): error TS6133: 'newStatus' is declared but its value is never read.
+src/apps/StoragePoolManager.vue(225,7): error TS6133: 'contextMenu' is declared but its value is never read.
+src/apps/StoragePoolManager.vue(316,42): error TS6133: 'event' is declared but its value is never read.
+src/apps/SyncManager.vue(636,10): error TS6133: 'syncApi' is declared but its value is never read.
+src/apps/SystemMonitor.vue(350,1): error TS6133: 'powerAPI' is declared but its value is never read.
+src/apps/TaskScheduler.vue(615,5): error TS2322: Type '"system" | "custom" | "snapshot" | "backup" | "cleanup"' is not assignable to type '"backup"'.
+  Type '"system"' is not assignable to type '"backup"'.
+src/components/Application/AppCard.vue(27,24): error TS2339: Property 'status' does not exist on type 'AppPackage | AppInstance'.
+  Property 'status' does not exist on type 'AppPackage'.
+src/components/Application/AppCard.vue(28,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"start"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(37,24): error TS2339: Property 'status' does not exist on type 'AppPackage | AppInstance'.
+  Property 'status' does not exist on type 'AppPackage'.
+src/components/Application/AppCard.vue(38,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"stop"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(47,24): error TS2339: Property 'status' does not exist on type 'AppPackage | AppInstance'.
+  Property 'status' does not exist on type 'AppPackage'.
+src/components/Application/AppCard.vue(48,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"restart"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(57,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"settings"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(66,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"uninstall"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(75,23): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"install"' is not assignable to parameter of type '"info"'.
+src/components/Application/AppCard.vue(105,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'RefreshIcon'.
+src/components/Application/AppCard.vue(108,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'DownloadIcon'.
+src/components/Application/AppCard.vue(109,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'InformationIcon'.
+src/components/Application/AppCard.vue(146,10): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ media: string; productivity: string; utilities: string; security: string; network: string; default: string; }'.
+src/components/Application/AppCard.vue(187,10): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ media: string; productivity: string; utilities: string; security: string; network: string; }'.
+src/components/Application/AppDetailDialog.vue(45,47): error TS2339: Property 'license' does not exist on type 'AppPackage | AppInstance'.
+  Property 'license' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(49,47): error TS2339: Property 'architecture' does not exist on type 'AppPackage | AppInstance'.
+  Property 'architecture' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(61,56): error TS2339: Property 'minRAM' does not exist on type 'AppPackage | AppInstance'.
+  Property 'minRAM' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(68,56): error TS2339: Property 'minDiskSpace' does not exist on type 'AppPackage | AppInstance'.
+  Property 'minDiskSpace' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(87,49): error TS2339: Property 'downloadCount' does not exist on type 'AppPackage | AppInstance'.
+  Property 'downloadCount' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(94,49): error TS2339: Property 'installCount' does not exist on type 'AppPackage | AppInstance'.
+  Property 'installCount' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(101,50): error TS2339: Property 'rating' does not exist on type 'AppPackage | AppInstance'.
+  Property 'rating' does not exist on type 'AppInstance'.
+src/components/Application/AppDetailDialog.vue(118,51): error TS2339: Property 'installPath' does not exist on type 'AppPackage | AppInstance'.
+  Property 'installPath' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(122,51): error TS2339: Property 'dataPath' does not exist on type 'AppPackage | AppInstance'.
+  Property 'dataPath' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(126,51): error TS2339: Property 'containerId' does not exist on type 'AppPackage | AppInstance'.
+  Property 'containerId' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(130,51): error TS2339: Property 'pid' does not exist on type 'AppPackage | AppInstance'.
+  Property 'pid' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(139,71): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"install"' is not assignable to parameter of type '"restart"'.
+src/components/Application/AppDetailDialog.vue(146,28): error TS2339: Property 'status' does not exist on type 'AppPackage | AppInstance'.
+  Property 'status' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(147,27): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"start"' is not assignable to parameter of type '"restart"'.
+src/components/Application/AppDetailDialog.vue(154,28): error TS2339: Property 'status' does not exist on type 'AppPackage | AppInstance'.
+  Property 'status' does not exist on type 'AppPackage'.
+src/components/Application/AppDetailDialog.vue(155,27): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type '"stop"' is not assignable to parameter of type '"restart"'.
+src/components/Application/AppDetailDialog.vue(162,38): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'AppPackage | AppInstance' is not assignable to parameter of type 'AppInstance'.
+      Type 'AppPackage' is missing the following properties from type 'AppInstance': packageName, status, containerId, pid, and 10 more.
+src/components/Application/AppDetailDialog.vue(176,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'XIcon'.
+src/components/Application/AppDetailDialog.vue(178,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'ExternalLinkIcon'.
+src/components/Application/AppDetailDialog.vue(179,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'MemoryIcon'.
+src/components/Application/AppDetailDialog.vue(180,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'DiskIcon'.
+src/components/Application/AppDetailDialog.vue(182,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'DownloadIcon'.
+src/components/Application/AppDetailDialog.vue(186,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'RefreshIcon'.
+src/components/Application/AppDetailDialog.vue(220,10): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ media: string; productivity: string; utilities: string; security: string; network: string; }'.
+src/components/Application/AppDetailDialog.vue(234,10): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ media: string; productivity: string; utilities: string; security: string; network: string; default: string; }'.
+src/components/Application/InstallProgressDialog.vue(70,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'XIcon'.
+src/components/Application/InstallProgressDialog.vue(111,10): error TS7053: Element implicitly has an 'any' type because expression of type '"running" | "stopped" | "error" | "installing" | "uninstalling"' can't be used to index type '{ installing: string; installed: string; error: string; stopped: string; }'.
+  Property 'running' does not exist on type '{ installing: string; installed: string; error: string; stopped: string; }'.
+src/components/Application/InstallProgressDialog.vue(117,14): error TS2367: This comparison appears to be unintentional because the types '"running" | "stopped" | "installing" | "uninstalling"' and '"installed"' have no overlap.
+src/components/Application/InstallProgressDialog.vue(126,7): error TS2367: This comparison appears to be unintentional because the types '"running" | "stopped" | "error" | "installing" | "uninstalling"' and '"installed"' have no overlap.
+src/components/Application/UploadDialog.vue(67,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'XIcon'.
+src/components/Application/UploadDialog.vue(68,3): error TS2724: '"@heroicons/vue/24/outline"' has no exported member named 'UploadIcon'. Did you mean 'PlayIcon'?
+src/components/Application/UploadDialog.vue(69,3): error TS2724: '"@heroicons/vue/24/outline"' has no exported member named 'FileIcon'. Did you mean 'FilmIcon'?
+src/components/Application/UploadDialog.vue(71,3): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'ExclamationIcon'.
+src/components/Chart.vue(74,9): error TS2322: Type '{ chart: any; colors?: string[]; fill?: any; dataLabels?: { enabled?: boolean; }; stroke?: { show?: boolean; curve?: string | string[]; width?: number | number[]; colors?: string[]; dashArray?: number | number[]; }; ... 7 more ...; legend?: any; }' is not assignable to type 'ApexOptions'.
+  Types of property 'stroke' are incompatible.
+    Type '{ show?: boolean | undefined; curve?: string | string[] | undefined; width?: number | number[] | undefined; colors?: string[] | undefined; dashArray?: number | number[] | undefined; } | undefined' is not assignable to type 'ApexStroke | undefined'.
+      Type '{ show?: boolean | undefined; curve?: string | string[] | undefined; width?: number | number[] | undefined; colors?: string[] | undefined; dashArray?: number | number[] | undefined; }' is not assignable to type 'ApexStroke'.
+        Types of property 'curve' are incompatible.
+          Type 'string | string[] | undefined' is not assignable to type '"smooth" | "straight" | "stepline" | "linestep" | "monotoneCubic" | ("smooth" | "straight" | "stepline" | "linestep" | "monotoneCubic")[] | undefined'.
+            Type 'string' is not assignable to type '"smooth" | "straight" | "stepline" | "linestep" | "monotoneCubic" | ("smooth" | "straight" | "stepline" | "linestep" | "monotoneCubic")[] | undefined'.
+src/components/ControlPanel/ControlPanel.vue(271,26): error TS6133: 'computed' is declared but its value is never read.
+src/components/ControlPanel/ControlPanel.vue(275,1): error TS6133: 'SMBManager' is declared but its value is never read.
+src/components/ControlPanel/ControlPanel.vue(355,7): error TS6133: 'getCategory' is declared but its value is never read.
+src/components/ControlPanel/ControlPanelSettingComponent.vue(124,29): error TS2339: Property 'min' does not exist on type 'ControlPanelSetting'.
+src/components/ControlPanel/ControlPanelSettingComponent.vue(124,57): error TS2339: Property 'min' does not exist on type 'ControlPanelSetting'.
+src/components/ControlPanel/ControlPanelSettingComponent.vue(125,29): error TS2339: Property 'max' does not exist on type 'ControlPanelSetting'.
+src/components/ControlPanel/ControlPanelSettingComponent.vue(125,57): error TS2339: Property 'max' does not exist on type 'ControlPanelSetting'.
+src/components/ControlPanel/NetworkInterfacesComponent.vue(334,29): error TS6133: 'iface' is declared but its value is never read.
+src/components/ControlPanel/NetworkSettingsPanel.vue(424,7): error TS2322: Type '{ name: any; type: any; active: any; ip: any; mac: any; gateway: string; dns: string; speed: string; mtu: any; }[]' is not assignable to type 'NetworkInterface[] | { name: string; type: string; active: boolean; ip: string; netmask: string; mac: string; gateway: string; dns: string; speed: string; mtu?: number | undefined; ... 7 more ...; rx_dropped?: number | undefined; }[]'.
+  Type '{ name: any; type: any; active: any; ip: any; mac: any; gateway: string; dns: string; speed: string; mtu: any; }[]' is not assignable to type 'NetworkInterface[]'.
+    Property 'netmask' is missing in type '{ name: any; type: any; active: any; ip: any; mac: any; gateway: string; dns: string; speed: string; mtu: any; }' but required in type 'NetworkInterface'.
+src/components/ControlPanel/ShareFolderManager.vue(463,8): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(464,5): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(466,3): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(480,8): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(481,5): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(483,3): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+  No index signature with a parameter of type 'string' was found on type '{ smb: { enabled: boolean; shareName: string; recycleBin: boolean; }; ftp: { enabled: boolean; port: number; passiveMode: boolean; }; sftp: { enabled: boolean; port: number; allowShell: boolean; }; nfs: { ...; }; webdav: { ...; }; } | { ...; }'.
+src/components/ControlPanel/ShareFolderManager.vue(586,9): error TS2322: Type '{ enabled: false; }' is not assignable to type '{ enabled: boolean; shareName: string; recycleBin: boolean; } | { enabled: boolean; shareName: string; recycleBin: boolean; }'.
+  Type '{ enabled: false; }' is missing the following properties from type '{ enabled: boolean; shareName: string; recycleBin: boolean; }': shareName, recycleBin
+src/components/ControlPanel/ShareFolderManager.vue(588,9): error TS2322: Type '{ enabled: false; }' is not assignable to type '{ enabled: boolean; port: number; allowShell: boolean; } | { enabled: boolean; port: number; allowShell: boolean; }'.
+  Type '{ enabled: false; }' is missing the following properties from type '{ enabled: boolean; port: number; allowShell: boolean; }': port, allowShell
+src/components/ControlPanel/SystemInfoPanel.vue(266,7): error TS6133: 'hardwareList' is declared but its value is never read.
+src/components/ControlPanel/SystemInfoPanel.vue(425,9): error TS6133: 'totalUsedGB' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(187,9): error TS6133: '_startWidth' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(188,9): error TS6133: '_startHeight' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(191,11): error TS6133: '_deltaX' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(192,11): error TS6133: '_deltaY' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(206,7): error TS6133: 'handleMouseEnter' is declared but its value is never read.
+src/components/Desktop/DesktopWidget.vue(210,7): error TS6133: 'handleMouseLeave' is declared but its value is never read.
+src/components/Desktop/EnhancedDock.vue(114,28): error TS2339: Property 'class' does not exist on type '{ id: string; label: string; icon: null; action: () => void; }'.
+src/components/Desktop/EnhancedDock.vue(127,30): error TS2305: Module '"@heroicons/vue/24/outline"' has no exported member 'PinIcon'.
+src/components/Desktop/EnhancedDock.vue(127,39): error TS6133: 'PencilIcon' is declared but its value is never read.
+src/components/Desktop/EnhancedDock.vue(188,5): error TS2322: Type 'FunctionalComponent<HTMLAttributes & VNodeProps, {}, any, {}>' is not assignable to type 'null'.
+src/components/Desktop/EnhancedDock.vue(237,43): error TS6133: 'item' is declared but its value is never read.
+src/components/Desktop/SimpleDesktop.vue(306,93): error TS6133: 'CloudArrowUpIcon' is declared but its value is never read.
+src/components/Desktop/SimpleDesktop.vue(330,7): error TS6133: 'handleGlobalKeydown' is declared but its value is never read.
+src/components/Desktop/ThemeManager.vue(252,3): error TS6133: 'SunIcon' is declared but its value is never read.
+src/components/Desktop/ThemeManager.vue(253,3): error TS6133: 'MoonIcon' is declared but its value is never read.
+src/components/Desktop/ThemeManager.vue(254,3): error TS6133: 'ComputerDesktopIcon' is declared but its value is never read.
+src/components/Desktop/WidgetConfig.vue(63,26): error TS2339: Property 'min' does not exist on type '{ key: string; label: string; type: string; placeholder: string; choices?: undefined; } | { key: string; label: string; type: string; choices: { value: string; label: string; }[]; placeholder?: undefined; }'.
+  Property 'min' does not exist on type '{ key: string; label: string; type: string; placeholder: string; choices?: undefined; }'.
+src/components/Desktop/WidgetConfig.vue(64,26): error TS2339: Property 'max' does not exist on type '{ key: string; label: string; type: string; placeholder: string; choices?: undefined; } | { key: string; label: string; type: string; choices: { value: string; label: string; }[]; placeholder?: undefined; }'.
+  Property 'max' does not exist on type '{ key: string; label: string; type: string; placeholder: string; choices?: undefined; }'.
+src/components/Desktop/WidgetConfig.vue(87,15): error TS6133: 'watch' is declared but its value is never read.
+src/components/Desktop/WidgetLibrary.vue(145,24): error TS6133: 'type' is declared but its value is never read.
+src/components/Desktop/WidgetLibrary.vue(150,23): error TS6133: 'widget' is declared but its value is never read.
+src/components/Desktop/WindowManager.vue(6,24): error TS6133: 'index' is declared but its value is never read.
+src/components/Desktop/WindowManager.vue(128,23): error TS6133: 'group' is declared but its value is never read.
+src/components/Desktop/widgets/CalendarWidget.vue(21,10): error TS2322: Type 'Date' is not assignable to type 'PropertyKey | undefined'.
+src/components/Desktop/widgets/ClockWidget.vue(12,15): error TS6133: 'computed' is declared but its value is never read.
+src/components/Desktop/widgets/NetworkMonitorWidget.vue(70,7): error TS6133: 'chartCanvas' is declared but its value is never read.
+src/components/Desktop/widgets/QuickShortcutsWidget.vue(219,23): error TS6133: 'shortcut' is declared but its value is never read.
+src/components/Disk/BenchmarkTool.vue(213,1): error TS6133: 'diskAPI' is declared but its value is never read.
+src/components/Disk/DiskDetailsDialog.vue(47,10): error TS2440: Import declaration conflicts with local declaration of 'defineProps'.
+src/components/Disk/DiskDetailsDialog.vue(47,23): error TS2440: Import declaration conflicts with local declaration of 'defineEmits'.
+src/components/Disk/DiskFormatDialog.vue(215,19): error TS6133: 'rule' is declared but its value is never read.
+src/components/Disk/DiskFormatDialog.vue(278,19): error TS2339: Property 'formatDisk' does not exist on type '{ getDisks(): Promise<DiskInfo[]>; getDisk(device: string): Promise<DiskInfo>; mountDisk(device: string, mountPoint: string, type?: string | undefined): Promise<...>; ... 21 more ...; getDiskHealth(device: string): Promise<...>; }'.
+src/components/Disk/DiskFormatDialog.vue(288,7): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(e: "update:visible", value: boolean): void', gave the following error.
+    Argument of type '"formatted"' is not assignable to parameter of type '"update:visible"'.
+  Overload 2 of 2, '(e: "formatted", disk: DiskInfo): void', gave the following error.
+    Argument of type 'DiskInfo | null' is not assignable to parameter of type 'DiskInfo'.
+      Type 'null' is not assignable to type 'DiskInfo'.
+src/components/Disk/PartitionEditor.vue(299,5): error TS2322: Type 'string[]' is not assignable to type 'never[]'.
+  Type 'string' is not assignable to type 'never'.
+src/components/Disk/PartitionEditor.vue(326,13): error TS6133: 'sizeBytes' is declared but its value is never read.
+src/components/Disk/RAIDWizard.vue(248,29): error TS6133: 'RAID_LEVEL_DESCRIPTIONS' is declared but its value is never read.
+src/components/Disk/RAIDWizard.vue(271,7): error TS6133: 'formRef' is declared but its value is never read.
+src/components/Disk/RAIDWizard.vue(341,3): error TS2740: Type '{ device: string; model: string; size: number; health: "good"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Disk/RAIDWizard.vue(342,3): error TS2740: Type '{ device: string; model: string; size: number; health: "good"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Disk/RAIDWizard.vue(343,3): error TS2740: Type '{ device: string; model: string; size: number; health: "warning"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Disk/RAIDWizard.vue(344,3): error TS2740: Type '{ device: string; model: string; size: number; health: "good"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Disk/SMARTMonitor.vue(136,3): error TS2740: Type '{ device: string; model: string; size: number; health: "good"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Disk/SMARTMonitor.vue(137,3): error TS2740: Type '{ device: string; model: string; size: number; health: "good"; temperature: number; partitions: never[]; }' is missing the following properties from type 'DiskInfo': serial, type, filesystem, mountPoint, and 2 more.
+src/components/Monitor/AlertManager.vue(358,38): error TS2345: Argument of type '{ name: string; type: "disk" | "cpu" | "memory" | "network" | "temperature"; condition: ">" | "<" | "!=" | ">=" | "<=" | "=="; threshold: number; duration: number; severity: "warning" | "info" | "critical"; enabled: boolean; }' is not assignable to parameter of type 'Omit<AlertRule, "id" | "createdAt" | "updatedAt" | "lastTriggered">'.
+  Property 'actions' is missing in type '{ name: string; type: "disk" | "cpu" | "memory" | "network" | "temperature"; condition: ">" | "<" | "!=" | ">=" | "<=" | "=="; threshold: number; duration: number; severity: "warning" | "info" | "critical"; enabled: boolean; }' but required in type 'Omit<AlertRule, "id" | "createdAt" | "updatedAt" | "lastTriggered">'.
+src/components/Monitor/ProcessManager.vue(194,3): error TS6133: 'Search' is declared but its value is never read.
+src/components/Monitor/ServiceManager.vue(126,39): error TS7006: Parameter 'cmd' implicitly has an 'any' type.
+src/components/Monitor/ServiceManager.vue(257,3): error TS6133: 'Search' is declared but its value is never read.
+src/components/Monitor/ServiceManager.vue(427,9): error TS6133: 'action' is declared but its value is never read.
+src/components/Monitor/SystemLog.vue(209,3): error TS6133: 'Search' is declared but its value is never read.
+src/components/Monitor/TemperaturePanel.vue(59,47): error TS2339: Property 'min' does not exist on type '{ name: string; current: number; max: number; critical: number; unit: string; }'.
+src/components/Monitor/TemperaturePanel.vue(134,7): error TS6133: 'tempChart' is declared but its value is never read.
+src/components/PowerMonitor.vue(183,26): error TS2307: Cannot find module 'echarts' or its corresponding type declarations.
+src/components/Quota/AlertSettings.vue(54,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/Quota/AlertSettings.vue(205,52): error TS6133: 'CircleClose' is declared but its value is never read.
+src/components/Quota/AlertSettings.vue(208,7): error TS6133: 'quotaStore' is declared but its value is never read.
+src/components/Quota/AlertSettings.vue(211,3): error TS2740: Type '{ id: number; name: string; type: "user_quota"; condition: string; threshold: number; duration: number; severity: "warning"; enabled: true; actions: string; }' is missing the following properties from type 'QuotaAlert': userId, groupId, path, alertType, and 4 more.
+src/components/Quota/AlertSettings.vue(225,3): error TS2740: Type '{ id: number; name: string; type: "disk_space"; condition: string; threshold: number; duration: number; severity: "critical"; enabled: true; actions: string; }' is missing the following properties from type 'QuotaAlert': userId, groupId, path, alertType, and 4 more.
+src/components/Quota/AlertSettings.vue(334,21): error TS2538: Type 'undefined' cannot be used as an index type.
+src/components/Quota/AlertSettings.vue(373,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/Quota/AlertSettings.vue(375,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/Quota/AlertSettings.vue(376,5): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/components/Quota/AlertSettings.vue(377,5): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
+src/components/Quota/AlertSettings.vue(379,5): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+  Type 'undefined' is not assignable to type 'boolean'.
+src/components/Quota/AlertSettings.vue(381,32): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/Quota/AlertSettings.vue(397,11): error TS2740: Type '{ actions: string; name: string; type: string; condition: string; threshold: number; duration: number; severity: string; enabled: boolean; id: number; }' is missing the following properties from type 'QuotaAlert': userId, groupId, path, alertType, and 4 more.
+src/components/Quota/GroupQuotaEditor.vue(185,7): error TS2451: Cannot redeclare block-scoped variable 'convertToBytes'.
+src/components/Quota/GroupQuotaEditor.vue(246,7): error TS2451: Cannot redeclare block-scoped variable 'convertToBytes'.
+src/components/Quota/UsageChart.vue(137,7): error TS6133: 'distributionCanvas' is declared but its value is never read.
+src/components/Quota/UsageChart.vue(138,7): error TS6133: 'trendCanvas' is declared but its value is never read.
+src/components/Quota/UserQuotaEditor.vue(207,7): error TS2451: Cannot redeclare block-scoped variable 'convertToBytes'.
+src/components/Quota/UserQuotaEditor.vue(268,7): error TS2451: Cannot redeclare block-scoped variable 'convertToBytes'.
+src/components/Search/GlobalSearch.vue(61,32): error TS6133: 'onMounted' is declared but its value is never read.
+src/components/Search/GlobalSearch.vue(69,3): error TS6133: 'ClockIcon' is declared but its value is never read.
+src/components/StoragePool/PoolWizard.vue(443,41): error TS6196: 'BranchConfig' is declared but never used.
+src/components/StoragePool/PoolWizard.vue(443,55): error TS6196: 'MergerFSCategory' is declared but never used.
+src/components/SystemInfoPanel.vue(447,45): error TS7006: Parameter 'iface' implicitly has an 'any' type.
+src/components/User/GroupManager.vue(347,9): error TS2353: Object literal may only specify known properties, and 'members' does not exist in type '{ name: string; description?: string | undefined; gid?: number | undefined; }'.
+src/components/User/GroupManager.vue(417,46): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/composables/useDesktop.ts(37,16): error TS2339: Property 'saveState' does not exist on type 'Store<"app", Pick<{ darkMode: Ref<boolean, boolean>; widgets: Ref<{ id: string; type: string; position: { x: number; y: number; }; size: "small" | "large" | "medium"; config: Record<string, any>; }[], Widget[] | { ...; }[]>; ... 17 more ...; toggleDarkMode: () => void; }, "plugins" | ... 4 more ... | "activeWindowId...'.
+src/composables/useDesktop.ts(46,16): error TS2339: Property 'saveState' does not exist on type 'Store<"app", Pick<{ darkMode: Ref<boolean, boolean>; widgets: Ref<{ id: string; type: string; position: { x: number; y: number; }; size: "small" | "large" | "medium"; config: Record<string, any>; }[], Widget[] | { ...; }[]>; ... 17 more ...; toggleDarkMode: () => void; }, "plugins" | ... 4 more ... | "activeWindowId...'.
+src/plugin-system/core/PluginLoader.ts(7,3): error TS6196: 'PluginContext' is declared but never used.
+src/plugin-system/core/PluginLoader.ts(17,11): error TS6133: 'loadQueue' is declared but its value is never read.
+src/plugin-system/core/PluginLoader.ts(18,11): error TS6133: 'isProcessingQueue' is declared but its value is never read.
+src/plugin-system/core/PluginLoader.ts(313,25): error TS6133: 'manifest' is declared but its value is never read.
+src/plugin-system/manager/PluginManager.ts(7,3): error TS6196: 'PluginState' is declared but never used.
+src/plugin-system/manager/PluginManager.ts(8,3): error TS6196: 'PluginMarketplaceInfo' is declared but never used.
+src/plugin-system/manager/PluginManager.ts(266,88): error TS2304: Cannot find name 'PluginPermission'.
+src/plugin-system/manager/PluginManager.ts(285,82): error TS2304: Cannot find name 'PluginPermission'.
+src/plugin-system/marketplace/PluginMarketplace.ts(5,38): error TS6196: 'PluginManifest' is declared but never used.
+src/plugin-system/types/plugin.ts(131,17): error TS2304: Cannot find name 'class'.
+src/router/index.ts(3,1): error TS6133: 'useSystemStore' is declared but its value is never read.
+src/router/index.ts(89,30): error TS6133: 'from' is declared but its value is never read.
+src/services/websocket.ts(5,15): error TS6133: 'reactive' is declared but its value is never read.
+src/stores/app.ts(115,30): error TS6133: 'widgetDef' is declared but its value is never read.
+src/stores/controlPanel.ts(4,3): error TS6196: 'ControlPanelStore' is declared but never used.
+src/views/Initialization.vue(295,20): error TS2367: This comparison appears to be unintentional because the types '3' and '4' have no overlap.
+src/views/Initialization.vue(355,20): error TS2367: This comparison appears to be unintentional because the types '3' and '5' have no overlap.
+src/views/Initialization.vue(542,7): error TS6133: 'goToDesktop' is declared but its value is never read.
+src/views/Monitor/Memory.vue(29,57): error TS2339: Property 'cores' does not exist on type '{ total: number; used: number; available: number; percent: number; free: number; cached: number; buffers: number; shared: number; }'.
+src/views/Monitor/Power.vue(231,26): error TS6196: 'PowerStatistics' is declared but never used.
+src/views/Services/System.vue(454,48): error TS6133: 'enabled' is declared but its value is never read.
+src/views/Services/System.vue(472,47): error TS6133: 'enabled' is declared but its value is never read.

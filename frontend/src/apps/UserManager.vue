@@ -182,6 +182,50 @@
           </div>
         </div>
       </div>
+
+    <!-- 应用权限管理 -->
+    <div v-if="activeTab === 'apps'" class="uma-content">
+      <div class="uma-toolbar">
+        <div class="uma-title">应用权限</div>
+      </div>
+
+      <!-- 应用列表 -->
+      <div class="uma-apps">
+        <div class="app-item" v-for="app in applications" :key="app.id">
+          <div class="app-header" @click="toggleApp(app.id)">
+            <div class="app-info">
+              <ChevronRightIcon class="expand-icon" :class="{ expanded: expandedApps.includes(app.id) }" />
+              <component :is="getAppIcon(app.icon)" class="app-icon" />
+              <div class="app-details">
+                <div class="app-name">{{ app.name }}</div>
+                <div class="app-description">{{ app.description }}</div>
+              </div>
+            </div>
+            <div class="app-status">
+              <span :class="['status-indicator', app.enabled ? 'enabled' : 'disabled']">
+                {{ app.enabled ? '已启用' : '未启用' }}
+              </span>
+            </div>
+          </div>
+
+          <div v-if="expandedApps.includes(app.id)" class="app-details-panel">
+            <!-- Immich 用户管理 -->
+            <div v-if="app.id === 'immich'" class="app-user-management">
+              <ImmichUserManager />
+            </div>
+
+            <!-- 其他应用的用户管理占位 -->
+            <div v-else class="app-placeholder">
+              <div class="placeholder-content">
+                <component :is="getAppIcon(app.icon)" class="placeholder-icon" />
+                <h4>{{ app.name }} 用户管理</h4>
+                <p>{{ app.name }} 的用户管理功能即将推出</p>
+                <button class="uma-btn secondary" @click="navigateToApp(app)">前往管理</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 添加用户对话框 -->
@@ -350,15 +394,21 @@ import {
   ChevronRightIcon,
   XMarkIcon,
   FolderIcon,
-  UserIcon
+  UserIcon,
+  CubeIcon,
+  PhotoIcon,
+  FolderOpenIcon,
+  ChartIcon
 } from '@heroicons/vue/24/outline'
+import ImmichUserManager from '../components/ImmichUserManager.vue'
 
 const activeTab = ref('users')
 
 const tabs = [
   { id: 'users', label: '用户' },
   { id: 'groups', label: '用户组' },
-  { id: 'permissions', label: '权限' }
+  { id: 'permissions', label: '权限' },
+  { id: 'apps', label: '应用权限' }
 ]
 
 // 用户数据
@@ -414,6 +464,43 @@ const folders = ref([
 
 const expandedGroups = ref<string[]>([])
 const expandedFolders = ref<string[]>([])
+const expandedApps = ref<string[]>(['immich']) // 默认展开Immich
+
+// 应用列表
+const applications = ref([
+  {
+    id: 'immich',
+    name: 'Immich',
+    description: '照片管理应用',
+    icon: 'PhotoIcon',
+    enabled: true,
+    url: 'http://localhost:2283'
+  },
+  {
+    id: 'filemanager',
+    name: '文件管理器',
+    description: '文件浏览和管理',
+    icon: 'FolderOpenIcon',
+    enabled: true,
+    url: '/filemanager'
+  },
+  {
+    id: 'docker',
+    name: 'Docker管理',
+    description: '容器管理',
+    icon: 'CubeIcon',
+    enabled: true,
+    url: '/docker'
+  },
+  {
+    id: 'monitor',
+    name: '系统监控',
+    description: '系统性能监控',
+    icon: 'ChartIcon',
+    enabled: true,
+    url: '/monitor'
+  }
+])
 
 const showAddUser = ref(false)
 const showAddGroup = ref(false)
@@ -625,6 +712,34 @@ const closeGroupModal = () => {
   groupForm.value = {
     name: '',
     description: ''
+  }
+}
+
+// 应用相关方法
+const toggleApp = (appId: string) => {
+  const index = expandedApps.value.indexOf(appId)
+  if (index > -1) {
+    expandedApps.value.splice(index, 1)
+  } else {
+    expandedApps.value.push(appId)
+  }
+}
+
+const getAppIcon = (iconName: string) => {
+  const iconMap: Record<string, any> = {
+    PhotoIcon,
+    FolderOpenIcon,
+    CubeIcon,
+    ChartIcon
+  }
+  return iconMap[iconName] || CubeIcon
+}
+
+const navigateToApp = (app: any) => {
+  if (app.url.startsWith('http')) {
+    window.open(app.url, '_blank')
+  } else {
+    window.location.href = app.url
   }
 }
 
@@ -1147,5 +1262,123 @@ const deleteFolder = (folderId: string) => {
   gap: 8px;
   padding: 16px 24px;
   border-top: 1px solid #e8e8e8;
+}
+
+/* 应用权限样式 */
+.uma-apps {
+  padding: 16px;
+}
+
+.app-item {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.app-header:hover {
+  background: #fafafa;
+}
+
+.app-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-icon {
+  width: 24px;
+  height: 24px;
+  color: #1890ff;
+}
+
+.app-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.app-description {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.app-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-indicator.enabled {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.status-indicator.disabled {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.app-details-panel {
+  border-top: 1px solid #e8e8e8;
+  background: #fafafa;
+}
+
+.app-user-management {
+  padding: 16px;
+}
+
+.app-placeholder {
+  padding: 40px 16px;
+}
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.placeholder-icon {
+  width: 48px;
+  height: 48px;
+  color: #d9d9d9;
+  margin-bottom: 16px;
+}
+
+.placeholder-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.placeholder-content p {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: #999;
+}
 }
 </style>

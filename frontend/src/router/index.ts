@@ -82,6 +82,13 @@ const router = createRouter({
       component: () => import('../views/Users/Users.vue'),
       meta: { requiresAuth: true },
     },
+    // Docker管理路由
+    {
+      path: '/docker',
+      name: 'Docker',
+      component: () => import('../apps/DockerManager.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

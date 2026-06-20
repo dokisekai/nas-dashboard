@@ -41,6 +41,9 @@
         <h3 class="app-name">{{ app.name }}</h3>
         <p class="app-description">{{ app.description }}</p>
         <div class="app-meta">
+          <span class="app-type-badge" :class="app.appType">
+            {{ app.appType === 'docker' ? 'Docker' : '系统' }}
+          </span>
           <span class="app-category">{{ getCategoryName(app.category) }}</span>
           <span class="app-version">v{{ app.version }}</span>
           <span class="app-rating" v-if="app.rating">
@@ -285,6 +288,7 @@ const uninstallingApp = ref<string | null>(null)
 
 const categories = [
   { id: 'all', label: '全部' },
+  { id: 'docker', label: 'Docker应用' },
   { id: 'system', label: '系统工具' },
   { id: 'storage', label: '存储管理' },
   { id: 'media', label: '媒体服务' },
@@ -300,6 +304,7 @@ const apps = ref([
     icon: 'ServerIcon',
     color: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
     category: 'storage',
+    appType: 'system',
     version: '2.1.0',
     installed: true,
     launching: true,
@@ -317,6 +322,7 @@ const apps = ref([
     icon: 'ChartBarIcon',
     color: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
     category: 'system',
+    appType: 'system',
     version: '1.8.2',
     installed: true,
     launching: true,
@@ -328,12 +334,49 @@ const apps = ref([
     license: 'Apache 2.0'
   },
   {
+    id: 'immich',
+    name: 'Immich',
+    description: '高性能自托管照片和视频备份方案',
+    icon: 'CloudIcon',
+    color: 'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
+    category: 'media',
+    appType: 'docker',
+    version: '1.105.1',
+    installed: false,
+    launching: false,
+    appId: '',
+    rating: 4.9,
+    ratingCount: 1250,
+    downloads: 45000,
+    developer: 'Immich Team',
+    license: 'MIT'
+  },
+  {
+    id: 'uptime-kuma',
+    name: 'Uptime Kuma',
+    description: '一个花哨的自托管监控工具',
+    icon: 'ChartBarIcon',
+    color: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+    category: 'network',
+    appType: 'docker',
+    version: '1.23.11',
+    installed: false,
+    launching: false,
+    appId: '',
+    rating: 4.8,
+    ratingCount: 850,
+    downloads: 32000,
+    developer: 'louislam',
+    license: 'MIT'
+  },
+  {
     id: 'file-manager',
     name: '文件管理器',
     description: '文件浏览和管理',
     icon: 'FolderIcon',
     color: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
     category: 'system',
+    appType: 'system',
     version: '3.0.1',
     installed: true,
     launching: true,
@@ -351,6 +394,7 @@ const apps = ref([
     icon: 'UserGroupIcon',
     color: 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)',
     category: 'system',
+    appType: 'system',
     version: '1.5.0',
     installed: true,
     launching: true,
@@ -365,9 +409,10 @@ const apps = ref([
     id: 'cloud-sync',
     name: '云同步',
     description: '文件云同步服务',
-    icon: CloudIcon,
+    icon: 'CloudIcon',
     color: 'linear-gradient(135deg, #06b6d4 0%, #38bdf8 100%)',
     category: 'network',
+    appType: 'system',
     version: '2.0.3',
     installed: false,
     launching: false,
@@ -385,6 +430,7 @@ const apps = ref([
     icon: 'CogIcon',
     color: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
     category: 'security',
+    appType: 'system',
     version: '1.2.0',
     installed: false,
     launching: false,
@@ -401,7 +447,10 @@ const filteredApps = computed(() => {
   return apps.value.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
                          app.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = selectedCategory.value === 'all' || app.category === selectedCategory.value
+    const matchesCategory = selectedCategory.value === 'all' || 
+                           app.category === selectedCategory.value ||
+                           (selectedCategory.value === 'docker' && app.appType === 'docker') ||
+                           (selectedCategory.value === 'system' && app.appType === 'system')
     return matchesSearch && matchesCategory
   })
 })
@@ -681,6 +730,25 @@ const formatDate = (dateStr: string) => {
   border-radius: 4px;
   font-size: 12px;
   color: #6b7280;
+}
+
+.app-type-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-type-badge.docker {
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #bfdbfe;
+}
+
+.app-type-badge.system {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
 }
 
 .app-version {

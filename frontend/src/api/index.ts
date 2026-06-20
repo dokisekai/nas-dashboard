@@ -60,6 +60,8 @@ export const serviceApi = {
   getImages: () => api.get('/api/docker/images'),
   removeImage: (id: string) => api.delete(`/api/docker/images/${id}`),
   pullImage: (image: string) => api.post('/api/docker/images/pull', { image }),
+  getNetworks: () => api.get('/api/docker/networks'),
+  getVolumes: () => api.get('/api/docker/volumes'),
 }
 
 // ==================== 用户管理 API ====================

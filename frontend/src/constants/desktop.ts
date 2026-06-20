@@ -16,13 +16,6 @@ export const defaultDockItems: DockItem[] = [
     badge: null
   },
   {
-    id: 'storage-manager',
-    label: '存储管理',
-    icon: 'ServerIcon',
-    appId: 'storage-manager',
-    badge: null
-  },
-  {
     id: 'system-monitor',
     label: '系统监控',
     icon: 'ChartBarIcon',
@@ -48,6 +41,13 @@ export const defaultDockItems: DockItem[] = [
     label: '同步备份',
     icon: 'CloudArrowUpIcon',
     appId: 'sync-manager',
+    badge: null
+  },
+  {
+    id: 'docker-manager',
+    label: 'Docker管理',
+    icon: 'CubeIcon',
+    appId: 'docker-manager',
     badge: null
   },
   {
@@ -218,23 +218,6 @@ export const availableApps: AppDefinition[] = [
       maximizable: true
     },
     permissions: ['app.read', 'app.install']
-  },
-  {
-    id: 'storage-manager',
-    name: '存储管理',
-    component: 'StorageManager',
-    icon: 'ServerIcon',
-    description: '管理磁盘和存储卷',
-    category: 'storage',
-    windowConfig: {
-      width: 1024,
-      height: 700,
-      minWidth: 800,
-      minHeight: 500,
-      resizable: true,
-      maximizable: true
-    },
-    permissions: ['storage.read', 'storage.write']
   },
   {
     id: 'system-monitor',

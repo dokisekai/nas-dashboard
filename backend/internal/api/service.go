@@ -26,14 +26,31 @@ type Service struct {
 
 // Container Docker 容器
 type Container struct {
-	ID         string `json:"id"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Image   string `json:"image"`
+	State   string `json:"state"`   // running, exited, paused, etc.
+	Status  string `json:"status"`  // 详细状态信息
+	Ports   string `json:"ports"`   // 端口映射
+	Created string `json:"created"` // 创建时间
+	Command string `json:"command"` // 运行命令
+}
+
+// DockerNetwork Docker 网络
+type DockerNetwork struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Driver  string `json:"driver"`
+	Scope   string `json:"scope"`
+	Created string `json:"created"`
+}
+
+// DockerVolume Docker 卷
+type DockerVolume struct {
 	Name       string `json:"name"`
-	Image      string `json:"image"`
-	State      string `json:"state"`      // running, exited, paused, etc.
-	Status     string `json:"status"`     // 详细状态信息
-	Ports      string `json:"ports"`      // 端口映射
-	Created    string `json:"created"`    // 创建时间
-	Command    string `json:"command"`    // 运行命令
+	Driver     string `json:"driver"`
+	Mountpoint string `json:"mountpoint"`
+	Created    string `json:"created"`
 }
 
 // ServiceActionResponse 服务操作响应
@@ -319,8 +336,14 @@ func parseDockerPS(output []byte) ([]Container, error) {
 
 		if ports, ok := data["Ports"].(string); ok {
 			container.Ports = ports
-		} else {
-			container.Ports = ""
+		}
+
+		if created, ok := data["CreatedAt"].(string); ok {
+			container.Created = created
+		}
+
+		if command, ok := data["Command"].(string); ok {
+			container.Command = command
 		}
 
 		containers = append(containers, container)
@@ -664,16 +687,123 @@ func ExecInContainer(c *gin.Context) {
 	c.JSON(200, gin.H{"id": id, "command": req.Command, "output": string(output)})
 }
 
+// GetDockerNetworks 获取 Docker 网络列表
+func GetDockerNetworks(c *gin.Context) {
+	networks, err := getDockerNetworks()
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get networks: %v", err)})
+		return
+	}
+	c.JSON(200, gin.H{"networks": networks})
+}
+
+// getDockerNetworks 获取 Docker 网络列表
+func getDockerNetworks() ([]DockerNetwork, error) {
+	cmd := exec.Command("docker", "network", "ls", "--format", "{{json .}}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("docker network ls command failed: %w", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	var networks []DockerNetwork
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &data); err != nil {
+			continue
+		}
+
+		network := DockerNetwork{
+			ID:     data["ID"].(string),
+			Name:   data["Name"].(string),
+			Driver: data["Driver"].(string),
+			Scope:  data["Scope"].(string),
+		}
+
+		if created, ok := data["CreatedAt"].(string); ok {
+			network.Created = created
+		}
+
+		networks = append(networks, network)
+	}
+
+	return networks, nil
+}
+
+// GetDockerVolumes 获取 Docker 卷列表
+func GetDockerVolumes(c *gin.Context) {
+	volumes, err := getDockerVolumes()
+	if err != nil {
+		c.JSON(500, gin.H{"error": fmt.Sprintf("Failed to get volumes: %v", err)})
+		return
+	}
+	c.JSON(200, gin.H{"volumes": volumes})
+}
+
+// getDockerVolumes 获取 Docker 卷列表
+func getDockerVolumes() ([]DockerVolume, error) {
+	cmd := exec.Command("docker", "volume", "ls", "--format", "{{json .}}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("docker volume ls command failed: %w", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	var volumes []DockerVolume
+
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &data); err != nil {
+			continue
+		}
+
+		volume := DockerVolume{
+			Name:       data["Name"].(string),
+			Driver:     data["Driver"].(string),
+			Mountpoint: data["Mountpoint"].(string),
+		}
+
+		// volumes ls doesn't always have CreatedAt in older versions, but we'll try
+		if created, ok := data["CreatedAt"].(string); ok {
+			volume.Created = created
+		}
+
+		volumes = append(volumes, volume)
+	}
+
+	return volumes, nil
+}
+
 // PullImage 拉取 Docker 镜像
 func PullImage(c *gin.Context) {
 	image := c.Query("image")
+
+	// 如果 query 为空，尝试从 body 中获取
+	if image == "" {
+		var req struct {
+			Image string `json:"image"`
+		}
+		if err := c.ShouldBindJSON(&req); err == nil {
+			image = req.Image
+		}
+	}
+
 	if image == "" {
 		c.JSON(400, gin.H{"error": "Image name is required"})
 		return
 	}
 
 	// 创建上下文用于超时控制
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "docker", "pull", image)

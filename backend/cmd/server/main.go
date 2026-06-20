@@ -240,9 +240,24 @@ func main() {
 			docker.GET("/images", api.GetDockerImages)
 			docker.DELETE("/images/:id", api.RemoveImage)
 			docker.POST("/images/pull", api.PullImage)
+			docker.GET("/networks", api.GetDockerNetworks)
+			docker.GET("/volumes", api.GetDockerVolumes)
 		}
 
 		// 用户管理路由
+
+			// Immich 路由
+			immich := apiGroup.Group("/immich")
+			immich.Use(middleware.Auth())
+			{
+				immich.GET("/users", api.GetImmichUsers)
+				immich.GET("/users/:id", api.GetImmichUser)
+				immich.POST("/users", api.CreateImmichUser)
+				immich.PUT("/users/:id", api.UpdateImmichUser)
+				immich.DELETE("/users/:id", api.DeleteImmichUser)
+				immich.POST("/users/batch", api.BatchUpdateImmichUsers)
+				immich.POST("/users/sync", api.SyncImmichUsersWithSystemUsers)
+			}
 		users := apiGroup.Group("/users")
 		users.Use(middleware.Auth())
 		{

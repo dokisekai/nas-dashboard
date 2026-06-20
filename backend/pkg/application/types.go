@@ -23,6 +23,7 @@ type NapInfo struct {
 	Category        string `json:"category" binding:"required"`
 	License         string `json:"license"`
 	Icon            string `json:"icon"`
+	AppType         string `json:"appType"` // docker, system
 
 	// 系统要求
 	Architecture    string   `json:"architecture"`
@@ -117,6 +118,7 @@ type AppInstance struct {
 	Category       string    `json:"category"`
 	Author         string    `json:"author"`
 	Website        string    `json:"website"`
+	AppType        string    `json:"appType"` // docker, system
 
 	// 状态管理
 	Status         string    `json:"status"`      // running, stopped, error, installing, uninstalling
@@ -187,6 +189,7 @@ type AppPackage struct {
 	Website      string    `json:"website"`
 	Category     string    `json:"category"`
 	License      string    `json:"license"`
+	AppType      string    `json:"appType"` // docker, system
 
 	// 包文件信息
 	FilePath     string    `json:"filePath"`
@@ -268,4 +271,10 @@ const (
 	ActionReload = "reload"
 	ActionEnable = "enable"
 	ActionDisable = "disable"
+)
+
+// 应用类型常量
+const (
+	AppTypeDocker = "docker"
+	AppTypeSystem = "system"
 )

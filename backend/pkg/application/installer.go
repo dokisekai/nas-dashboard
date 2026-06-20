@@ -205,6 +205,7 @@ func (ai *AppInstaller) createInstance(installPath, dataPath, configPath string,
 		Category:    ai.pkg.Info.Category,
 		Author:      ai.pkg.Info.Author,
 		Website:     ai.pkg.Info.Website,
+		AppType:     ai.pkg.Info.AppType,
 		Status:      "stopped",
 		InstallPath: installPath,
 		DataPath:     dataPath,
@@ -232,6 +233,15 @@ func (ai *AppInstaller) createInstance(installPath, dataPath, configPath string,
 
 // startApp 启动应用
 func (ai *AppInstaller) startApp(instance *AppInstance) error {
+	// 如果是Docker应用，优先检查容器
+	if instance.AppType == AppTypeDocker || instance.ContainerID != "" {
+		if err := ai.startContainer(instance); err != nil {
+			return err
+		}
+		instance.Status = "running"
+		return nil
+	}
+
 	// 如果有启动脚本，使用脚本启动
 	if ai.pkg.Scripts.Start != "" {
 		scriptPath := filepath.Join(ai.tempDir, ai.pkg.Scripts.Start)
@@ -244,29 +254,19 @@ func (ai *AppInstaller) startApp(instance *AppInstance) error {
 		}
 	}
 
-	// 如果是Docker应用，启动容器
-	if instance.ContainerID != "" {
-		if err := ai.startContainer(instance); err != nil {
-			return err
+	// 直接启动二进制
+	binaryPath := filepath.Join(instance.InstallPath, "bin", ai.pkg.Info.Name)
+	if _, err := os.Stat(binaryPath); err == nil {
+		cmd := exec.Command(binaryPath)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("启动应用失败: %w", err)
 		}
+		instance.PID = cmd.Process.Pid
 		instance.Status = "running"
 		return nil
 	}
 
-	// 直接启动二进制
-	if ai.pkg.Scripts.Start == "" {
-		binaryPath := filepath.Join(instance.InstallPath, "bin", ai.pkg.Info.Name)
-		cmd := exec.Command(binaryPath)
-
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("启动应用失败: %w", err)
-		}
-
-		instance.PID = cmd.Process.Pid
-		instance.Status = "running"
-	}
-
-	return nil
+	return fmt.Errorf("找不到启动应用的方法")
 }
 
 // startContainer 启动Docker容器
@@ -321,6 +321,15 @@ func (ai *AppInstaller) runScript(scriptPath, workDir string, config map[string]
 
 // StopApp 停止应用
 func (ai *AppInstaller) StopApp(instance *AppInstance) error {
+	// 如果是Docker容器
+	if instance.AppType == AppTypeDocker || instance.ContainerID != "" {
+		if err := ai.stopContainer(instance); err != nil {
+			return err
+		}
+		instance.Status = "stopped"
+		return nil
+	}
+
 	// 如果有停止脚本，使用脚本停止
 	if ai.pkg.Scripts.Stop != "" {
 		scriptPath := filepath.Join(instance.InstallPath, "scripts", "stop.sh")
@@ -331,15 +340,6 @@ func (ai *AppInstaller) StopApp(instance *AppInstance) error {
 			instance.Status = "stopped"
 			return nil
 		}
-	}
-
-	// 如果是Docker容器
-	if instance.ContainerID != "" {
-		if err := ai.stopContainer(instance); err != nil {
-			return err
-		}
-		instance.Status = "stopped"
-		return nil
 	}
 
 	// 如果有进程ID，杀死进程
@@ -368,6 +368,14 @@ func (ai *AppInstaller) stopContainer(instance *AppInstance) error {
 
 // GetAppStatus 获取应用状态
 func (ai *AppInstaller) GetAppStatus(instance *AppInstance) (string, error) {
+	// 如果是Docker容器
+	if instance.AppType == AppTypeDocker || instance.ContainerID != "" {
+		if instance.ContainerID == "" {
+			return "stopped", nil
+		}
+		return ai.getContainerStatus(instance.ContainerID)
+	}
+
 	// 如果有状态检查脚本
 	if ai.pkg.Scripts.Status != "" {
 		scriptPath := filepath.Join(instance.InstallPath, "scripts", "status.sh")
@@ -388,11 +396,6 @@ func (ai *AppInstaller) GetAppStatus(instance *AppInstance) (string, error) {
 				return "unknown", nil
 			}
 		}
-	}
-
-	// 如果是Docker容器
-	if instance.ContainerID != "" {
-		return ai.getContainerStatus(instance.ContainerID)
 	}
 
 	// 检查进程是否存在

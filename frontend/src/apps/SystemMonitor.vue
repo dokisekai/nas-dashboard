@@ -422,6 +422,7 @@ const memoryUsage = ref(0)
 const memoryTotal = ref(0)
 const memoryUsed = ref(0)
 const memoryCached = ref(0)
+const memoryBuffers = ref(0)
 const memoryAvailable = ref(0)
 const memoryHistory = ref<number[]>([])
 const memoryColor = '#10b981'
@@ -434,6 +435,8 @@ const diskWriteRate = ref(0)
 const diskIOPS = ref(0)
 const diskLatency = ref(0)
 const diskHistory = ref<number[]>([])
+const diskReadHistory = ref<number[]>([])
+const diskWriteHistory = ref<number[]>([])
 const diskColor = '#f59e0b'
 
 const networkSpeed = ref(0)
@@ -442,6 +445,8 @@ const networkDownload = ref(0)
 const networkUploadRate = ref(0)
 const networkDownloadRate = ref(0)
 const networkHistory = ref<number[]>([])
+const networkSentHistory = ref<number[]>([])
+const networkRecvHistory = ref<number[]>([])
 const networkColor = '#8b5cf6'
 
 // Power stats
@@ -461,9 +466,9 @@ const upsColor = '#14b8a6'
 
 const loadAverage = ref<number[]>([0, 0, 0])
 
-const cachedPercent = computed(() => Math.round((memoryCached.value / memoryTotal.value) * 100))
-const buffersPercent = computed(() => 5) // Mock
-const freePercent = computed(() => 100 - memoryUsage.value - cachedPercent.value - buffersPercent.value)
+const cachedPercent = computed(() => memoryTotal.value > 0 ? Math.round((memoryCached.value / memoryTotal.value) * 100) : 0)
+const buffersPercent = computed(() => memoryTotal.value > 0 ? Math.round((memoryBuffers.value / memoryTotal.value) * 100) : 0)
+const freePercent = computed(() => Math.max(0, 100 - memoryUsage.value - cachedPercent.value - buffersPercent.value))
 
 const diskList = ref<any[]>([])
 const networkInterfaces = ref<any[]>([])
@@ -560,13 +565,13 @@ const diskChartData = computed(() => ({
   datasets: [
     {
       label: '读取',
-      data: Array(60).fill(0).map(() => Math.random() * 100000000),
+      data: diskReadHistory.value,
       borderColor: '#f59e0b',
       backgroundColor: 'transparent'
     },
     {
       label: '写入',
-      data: Array(60).fill(0).map(() => Math.random() * 100000000),
+      data: diskWriteHistory.value,
       borderColor: '#ef4444',
       backgroundColor: 'transparent'
     }
@@ -582,13 +587,13 @@ const networkChartData = computed(() => ({
   datasets: [
     {
       label: '上传',
-      data: Array(60).fill(0).map(() => Math.random() * 10000000),
+      data: networkSentHistory.value,
       borderColor: '#8b5cf6',
       backgroundColor: 'transparent'
     },
     {
       label: '下载',
-      data: Array(60).fill(0).map(() => Math.random() * 10000000),
+      data: networkRecvHistory.value,
       borderColor: '#3b82f6',
       backgroundColor: 'transparent'
     }
@@ -626,7 +631,7 @@ const powerChartData = computed(() => ({
 }))
 
 function generateLabels() {
-  const labels = []
+  const labels: string[] = []
   for (let i = 59; i >= 0; i--) {
     labels.push(`${i}s ago`)
   }
@@ -648,73 +653,121 @@ function formatBytes(bytes: number) {
 // Data fetching
 let updateInterval: number
 
+// CPU 温度传感器选择（优先 CPU/Package/Core，否则取第一个）
+function pickCpuTemperature(sensors: any[]): number {
+  if (!sensors || sensors.length === 0) return 0
+  const prefer = sensors.find(s => /cpu|package|core|k10|coretemp|temp1/i.test(s.name || ''))
+  return Math.round(prefer?.current ?? sensors[0].current ?? 0)
+}
+
 const updateStats = async () => {
   try {
-    // Fetch CPU stats
-    const cpuResponse = await monitorApi.getCPU()
-    const cpuData = cpuResponse  // axios拦截器已返回response.data
-    cpuUsage.value = Math.round(cpuData.usage * 100)
-    cpuCores.value = cpuData.cores
-    cpuTemperature.value = Math.round(cpuData.usage * 100) // Using usage as temp proxy
+    // 并发拉取所有基础指标 + 温度
+    const [cpuResp, memoryResp, diskResp, networkResp, tempResp] = await Promise.all([
+      monitorApi.getCPU(),
+      monitorApi.getMemory(),
+      monitorApi.getDisk(),
+      monitorApi.getNetwork(),
+      monitorApi.getTemperature().catch(() => null),
+    ])
+
+    // ===== CPU =====
+    const cpuData = cpuResp
+    cpuUsage.value = Math.round((cpuData.usage || 0) * 100)
+    cpuCores.value = cpuData.cores || 0
     cpuHistory.value = [...cpuHistory.value.slice(-59), cpuUsage.value]
-
-    // Fetch memory stats
-    const memoryResponse = await monitorApi.getMemory()
-    const memoryData = memoryResponse  // axios拦截器已返回response.data
-    memoryUsage.value = Math.round(memoryData.percent)
-    memoryTotal.value = memoryData.total
-    memoryUsed.value = memoryData.used
-    memoryCached.value = memoryData.cached
-    memoryAvailable.value = memoryData.available
-    memoryHistory.value = [...memoryHistory.value.slice(-59), memoryUsage.value]
-
-    // Fetch disk stats
-    const diskResponse = await monitorApi.getDisk()
-    const diskData = diskResponse  // axios拦截器已返回response.data
-    if (diskData.usage && diskData.usage.length > 0) {
-      const mainDisk = diskData.usage[0]
-      diskUsage.value = Math.round(mainDisk.percent)
-      diskTotal.value = mainDisk.total
-      diskUsed.value = mainDisk.used
-      diskHistory.value = [...diskHistory.value.slice(-59), diskUsage.value]
-
-      diskList.value = diskData.usage.map((disk: any) => ({
-        name: disk.device,
-        usage: Math.round(disk.percent)
-      }))
-    }
-
-    // Fetch network stats
-    const networkResponse = await monitorApi.getNetwork()
-    const networkData = networkResponse  // axios拦截器已返回response.data
-    if (networkData.interfaces && networkData.interfaces.length > 0) {
-      const mainInterface = networkData.interfaces[0]
-      networkSpeed.value = Math.round((mainInterface.rx_bytes + mainInterface.tx_bytes) / 1024)
-      networkUpload.value += mainInterface.tx_bytes
-      networkDownload.value += mainInterface.rx_bytes
-      networkUploadRate.value = Math.round(mainInterface.tx_bytes / 1024)
-      networkDownloadRate.value = Math.round(mainInterface.rx_bytes / 1024)
-      networkHistory.value = [...networkHistory.value.slice(-59), networkSpeed.value]
-
-      networkInterfaces.value = networkData.interfaces.map((iface: any) => ({
-        name: iface.name,
-        ip: iface.address || 'N/A',
-        status: iface.operstate === 'up' ? 'up' : 'down',
-        upload: iface.tx_bytes || 0,
-        download: iface.rx_bytes || 0
-      }))
-    }
-
-    // Calculate load averages from CPU data
-    if (cpuData.load1) {
+    if (typeof cpuData.load1 === 'number') {
       loadAverage.value = [
-        parseFloat(cpuData.load1.toFixed(2)),
-        parseFloat(cpuData.load5.toFixed(2)),
-        parseFloat(cpuData.load15.toFixed(2))
+        Number((cpuData.load1 ?? 0).toFixed(2)),
+        Number((cpuData.load5 ?? 0).toFixed(2)),
+        Number((cpuData.load15 ?? 0).toFixed(2)),
       ]
     }
 
-    // Fetch power stats
+    // ===== CPU 温度 =====
+    if (tempResp && Array.isArray(tempResp.sensors)) {
+      cpuTemperature.value = pickCpuTemperature(tempResp.sensors)
+    }
+
+    // ===== 内存 =====
+    const memoryData = memoryResp
+    memoryUsage.value = Math.round(memoryData.percent || 0)
+    memoryTotal.value = memoryData.total || 0
+    memoryUsed.value = memoryData.used || 0
+    memoryCached.value = memoryData.cached || 0
+    memoryBuffers.value = memoryData.buffers || 0
+    memoryAvailable.value = memoryData.available || 0
+    memoryHistory.value = [...memoryHistory.value.slice(-59), memoryUsage.value]
+
+    // ===== 磁盘 =====
+    // 后端结构: { disks: [{ device, mountpoint, total, used, usedPercent, readSpeed, writeSpeed, iops, latency }] }
+    const diskData = diskResp
+    const disks = Array.isArray(diskData.disks) ? diskData.disks : []
+
+    // 聚合容量：按挂载点去重，避免同一物理盘多分区被重复计算
+    const seenMount = new Set<string>()
+    let dTotal = 0, dUsed = 0, dRead = 0, dWrite = 0
+    let dIops = 0, dIoTimeWeighted = 0, dIopsSum = 0
+    for (const d of disks) {
+      if (!d || seenMount.has(d.mountpoint)) continue
+      seenMount.add(d.mountpoint)
+      dTotal += d.total || 0
+      dUsed += d.used || 0
+      dRead += d.readSpeed || 0
+      dWrite += d.writeSpeed || 0
+      dIops += d.iops || 0
+      // 加权平均延迟：以 IOPS 为权重
+      if ((d.iops || 0) > 0) {
+        dIoTimeWeighted += (d.latency || 0) * d.iops
+        dIopsSum += d.iops
+      }
+    }
+    diskTotal.value = dTotal
+    diskUsed.value = dUsed
+    diskUsage.value = dTotal > 0 ? Math.round((dUsed / dTotal) * 100) : 0
+    diskReadRate.value = dRead
+    diskWriteRate.value = dWrite
+    diskIOPS.value = Math.round(dIops)
+    diskLatency.value = dIopsSum > 0 ? Math.round((dIoTimeWeighted / dIopsSum) * 10) / 10 : 0
+    diskHistory.value = [...diskHistory.value.slice(-59), diskUsage.value]
+    diskReadHistory.value = [...diskReadHistory.value.slice(-59), Math.round(dRead)]
+    diskWriteHistory.value = [...diskWriteHistory.value.slice(-59), Math.round(dWrite)]
+
+    diskList.value = disks.map((d: any) => ({
+      name: d.mountpoint || d.device || 'unknown',
+      usage: Math.round(d.usedPercent || 0),
+    }))
+
+    // ===== 网络 =====
+    // 后端结构: { interfaces: [{ name, addresses, up, bytesSent, bytesRecv, sentSpeed, recvSpeed }] }
+    const networkData = networkResp
+    const ifaces = Array.isArray(networkData.interfaces) ? networkData.interfaces : []
+    let nSentTotal = 0, nRecvTotal = 0, nSentRate = 0, nRecvRate = 0
+    for (const i of ifaces) {
+      if (!i) continue
+      nSentTotal += i.bytesSent || 0
+      nRecvTotal += i.bytesRecv || 0
+      nSentRate += i.sentSpeed || 0
+      nRecvRate += i.recvSpeed || 0
+    }
+    networkUpload.value = nSentTotal
+    networkDownload.value = nRecvTotal
+    networkUploadRate.value = Math.round(nSentRate)
+    networkDownloadRate.value = Math.round(nRecvRate)
+    networkSpeed.value = Math.round(nSentRate + nRecvRate)
+    networkHistory.value = [...networkHistory.value.slice(-59), networkSpeed.value]
+    networkSentHistory.value = [...networkSentHistory.value.slice(-59), Math.round(nSentRate)]
+    networkRecvHistory.value = [...networkRecvHistory.value.slice(-59), Math.round(nRecvRate)]
+
+    networkInterfaces.value = ifaces.map((iface: any) => ({
+      name: iface.name,
+      ip: (Array.isArray(iface.addresses) && iface.addresses.length > 0) ? iface.addresses[0] : 'N/A',
+      status: iface.up ? 'up' : 'down',
+      upload: iface.bytesSent || 0,
+      download: iface.bytesRecv || 0,
+    }))
+
+    // ===== 功耗 =====
     try {
       const powerResponse = await fetch('/api/power/current', {
         headers: {
@@ -733,17 +786,9 @@ const updateStats = async () => {
       }
     } catch (powerError) {
       console.error('Failed to fetch power data:', powerError)
-      // Use default values if API call fails
-      powerUsage.value = 60
-      cpuPackagePower.value = 3
-      igpuPower.value = 0.5
-      dgpuPower.value = 8
-      storagePower.value = 6
-      otherComponentsPower.value = 42.5
-      powerHistory.value = [...powerHistory.value.slice(-59), powerUsage.value]
     }
 
-    // Fetch UPS stats
+    // ===== UPS =====
     try {
       const upsData = await systemApi.getUPSStatus()
       if (upsData && upsData.status !== 'Unknown') {
@@ -753,7 +798,6 @@ const updateStats = async () => {
         upsStatus.value = null
       }
     } catch (upsError) {
-      console.warn('UPS monitoring not available:', upsError)
       upsStatus.value = null
     }
 
@@ -764,7 +808,7 @@ const updateStats = async () => {
 
 onMounted(() => {
   updateStats()
-  updateInterval = setInterval(updateStats, 1000) as unknown as number
+  updateInterval = setInterval(updateStats, 2000) as unknown as number
 })
 
 onUnmounted(() => {

@@ -1,0 +1,1 @@
+import{R as e,b as t,d as n}from"./runtime-core.esm-bundler-CXNwLPz7.js";import{t as r}from"./BackupManager-CiwpRkAD.js";var i=t({__name:`SyncManager`,setup(t){return(t,i)=>(e(),n(r))}});export{i as default};

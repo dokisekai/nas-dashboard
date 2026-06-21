@@ -9,7 +9,6 @@
     :style="windowStyle"
     @mousedown.capture="handleFocus"
   >
-    <!-- 窗口标题栏 -->
     <div class="window-header" @mousedown="startDrag">
       <div class="window-title-group" @dblclick="handleMaximize">
         <div class="window-icon">
@@ -40,12 +39,13 @@
       </div>
     </div>
 
-    <!-- 窗口内容 -->
     <div class="window-content">
-      <component :is="appComponent" v-if="!props.window.minimized" />
+      <component :is="appComponent" v-if="!props.window.minimized && appComponent" />
+      <div v-else-if="!props.window.minimized && !appComponent" class="window-empty">
+        该应用暂未提供界面
+      </div>
     </div>
 
-    <!-- 调整大小边框 -->
     <div
       v-if="!props.window.minimized && !props.window.maximized"
       class="resize-border"
@@ -56,30 +56,12 @@
 
 <script setup lang="ts">
 import { computed, ref, onUnmounted, defineAsyncComponent } from 'vue'
-import {
-  ServerIcon,
-  ChartBarIcon,
-  CloudArrowUpIcon,
-  UserGroupIcon,
-  FolderIcon,
-  ShoppingBagIcon,
-  CubeIcon,
-  ShieldCheckIcon,
-  PhotoIcon
-} from '@heroicons/vue/24/outline'
+import { ServerIcon } from '@heroicons/vue/24/outline'
+import { getApp } from '../../config/apps'
+import type { DesktopWindow } from '../../stores/windowManager'
 
 interface Props {
-  window: {
-    id: string
-    appId: string
-    title: string
-    position: { x: number; y: number }
-    size: { width: number; height: number }
-    minimized: boolean
-    maximized: boolean
-    focused: boolean
-    zIndex?: number
-  }
+  window: DesktopWindow
 }
 
 interface Emits {
@@ -87,13 +69,17 @@ interface Emits {
   (e: 'close', windowId: string): void
   (e: 'minimize', windowId: string): void
   (e: 'maximize', windowId: string): void
-  (e: 'drag-start', windowId: string, position: { x: number; y: number }): void
   (e: 'drag-move', windowId: string, position: { x: number; y: number }): void
   (e: 'resize', windowId: string, size: { width: number; height: number }): void
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const SNAP_THRESHOLD = 20
+const DOCK_HEIGHT = 80
+const MIN_WIDTH = 400
+const MIN_HEIGHT = 300
 
 const isDragging = ref(false)
 const isResizing = ref(false)
@@ -104,148 +90,74 @@ const windowStyle = computed(() => ({
   top: `${props.window.position.y}px`,
   width: props.window.maximized ? '100%' : `${props.window.size.width}px`,
   height: props.window.maximized ? 'calc(100% - 48px)' : `${props.window.size.height}px`,
-  zIndex: props.window.zIndex || 100
+  zIndex: props.window.zIndex || 100,
 }))
 
-const windowIcon = computed(() => {
-  const icons: Record<string, any> = {
-    'storage-manager': ServerIcon,
-    'system-monitor': ChartBarIcon,
-    'sync-manager': CloudArrowUpIcon,
-    'user-manager': UserGroupIcon,
-    'file-manager': FolderIcon,
-    'app-center': ShoppingBagIcon,
-    'control-panel': CloudArrowUpIcon,
-    'docker-manager': CubeIcon,
-    'managed-apps': CloudArrowUpIcon,
-    'sso-manager': ShieldCheckIcon,
-    'immich-photo': PhotoIcon
-  }
-  return icons[props.window.appId] || ServerIcon
-})
+const appDefinition = computed(() => getApp(props.window.appId))
+
+const windowIcon = computed(() => appDefinition.value?.icon ?? ServerIcon)
 
 const appComponent = computed(() => {
-  // 动态加载应用组件
-  const components: Record<string, any> = {
-    'storage-manager': defineAsyncComponent(() => import('../../apps/StorageManager.vue')),
-    'system-monitor': defineAsyncComponent(() => import('../../apps/SystemMonitor.vue')),
-    'sync-manager': defineAsyncComponent(() => import('../../apps/SyncManager.vue')),
-    'user-manager': defineAsyncComponent(() => import('../../apps/UserManager.vue')),
-    'backup-manager': defineAsyncComponent(() => import('../../apps/BackupManager.vue')),
-    'file-manager': defineAsyncComponent(() => import('../../views/Storage/Disks.vue')),
-    'app-center': defineAsyncComponent(() => import('../../apps/AppCenter.vue')),
-    'control-panel': defineAsyncComponent(() => import('../../apps/ControlPanel.vue')),
-    'docker-manager': defineAsyncComponent(() => import('../../apps/DockerManager.vue')),
-    'sso-manager': defineAsyncComponent(() => import('../../apps/SSOManager.vue'))
-  }
-
-  const component = components[props.window.appId]
-  console.log('Loading app component for:', props.window.appId, 'component found:', !!component)
-
-  if (!component) {
-    console.error('No component found for app:', props.window.appId)
-    return null
-  }
-
-  return component
+  const loader = appDefinition.value?.component
+  if (!loader) return null
+  return defineAsyncComponent(loader as any)
 })
 
-const handleFocus = () => {
-  console.log('Window focus clicked:', props.window.id)
-  emit('focus', props.window.id)
-}
+const handleFocus = () => emit('focus', props.window.id)
+const handleClose = () => emit('close', props.window.id)
+const handleMinimize = () => emit('minimize', props.window.id)
+const handleMaximize = () => emit('maximize', props.window.id)
 
-const handleClose = () => {
-  console.log('Window close clicked:', props.window.id)
-  emit('close', props.window.id)
-}
+const computeSnappedPosition = (raw: { x: number; y: number }) => {
+  const position = { ...raw }
+  const { width, height } = props.window.size
 
-const handleMinimize = () => {
-  console.log('Window minimize clicked:', props.window.id)
-  emit('minimize', props.window.id)
-}
-
-const handleMaximize = () => {
-  console.log('Window maximize clicked:', props.window.id, 'current state:', props.window.maximized)
-  emit('maximize', props.window.id)
-}
-
-// 清理函数
-onUnmounted(() => {
-  document.removeEventListener('mousemove', handleDragMove)
-  document.removeEventListener('mouseup', stopDrag)
-})
-
-const startDrag = (event: MouseEvent) => {
-  if (props.window.maximized) return
-
-  console.log('Drag started for window:', props.window.id, 'at position:', props.window.position)
-
-  isDragging.value = true
-  dragOffset.value = {
-    x: event.clientX - props.window.position.x,
-    y: event.clientY - props.window.position.y
+  if (Math.abs(position.x) < SNAP_THRESHOLD) position.x = 0
+  if (Math.abs(position.x + width - window.innerWidth) < SNAP_THRESHOLD) {
+    position.x = window.innerWidth - width
+  }
+  if (Math.abs(position.y) < SNAP_THRESHOLD) position.y = 0
+  if (Math.abs(position.y + height + DOCK_HEIGHT - window.innerHeight) < SNAP_THRESHOLD) {
+    position.y = window.innerHeight - height - DOCK_HEIGHT
   }
 
-  document.addEventListener('mousemove', handleDragMove)
-  document.addEventListener('mouseup', stopDrag)
+  const centerX = (window.innerWidth - width) / 2
+  const centerY = (window.innerHeight - height - DOCK_HEIGHT) / 2
+  if (Math.abs(position.x - centerX) < SNAP_THRESHOLD && Math.abs(position.y - centerY) < SNAP_THRESHOLD) {
+    position.x = centerX
+    position.y = centerY
+  }
+  return position
 }
 
 const handleDragMove = (event: MouseEvent) => {
   if (!isDragging.value) return
-
-  let newPosition = {
+  const raw = {
     x: event.clientX - dragOffset.value.x,
-    y: event.clientY - dragOffset.value.y
+    y: event.clientY - dragOffset.value.y,
   }
-
-  // 窗口吸附功能 - 吸附到屏幕边缘
-  const SNAP_THRESHOLD = 20 // 吸附阈值（像素）
-
-  // 吸附到左边缘
-  if (Math.abs(newPosition.x) < SNAP_THRESHOLD) {
-    newPosition.x = 0
-  }
-
-  // 吸附到右边缘
-  if (Math.abs(newPosition.x + props.window.size.width - window.innerWidth) < SNAP_THRESHOLD) {
-    newPosition.x = window.innerWidth - props.window.size.width
-  }
-
-  // 吸附到顶部边缘
-  if (Math.abs(newPosition.y) < SNAP_THRESHOLD) {
-    newPosition.y = 0
-  }
-
-  // 吸附到底部边缘（保留dock空间）
-  const DOCK_HEIGHT = 80
-  if (Math.abs(newPosition.y + props.window.size.height + DOCK_HEIGHT - window.innerHeight) < SNAP_THRESHOLD) {
-    newPosition.y = window.innerHeight - props.window.size.height - DOCK_HEIGHT
-  }
-
-  // 吸附到屏幕中心
-  const centerX = (window.innerWidth - props.window.size.width) / 2
-  const centerY = (window.innerHeight - props.window.size.height - DOCK_HEIGHT) / 2
-  if (Math.abs(newPosition.x - centerX) < SNAP_THRESHOLD && Math.abs(newPosition.y - centerY) < SNAP_THRESHOLD) {
-    newPosition.x = centerX
-    newPosition.y = centerY
-  }
-
-  emit('drag-move', props.window.id, newPosition)
+  emit('drag-move', props.window.id, computeSnappedPosition(raw))
 }
 
 const stopDrag = () => {
-  if (isDragging.value) {
-    console.log('Drag stopped for window:', props.window.id)
-  }
   isDragging.value = false
   document.removeEventListener('mousemove', handleDragMove)
   document.removeEventListener('mouseup', stopDrag)
 }
 
+const startDrag = (event: MouseEvent) => {
+  if (props.window.maximized) return
+  isDragging.value = true
+  dragOffset.value = {
+    x: event.clientX - props.window.position.x,
+    y: event.clientY - props.window.position.y,
+  }
+  document.addEventListener('mousemove', handleDragMove)
+  document.addEventListener('mouseup', stopDrag)
+}
+
 const startResize = (event: MouseEvent) => {
   isResizing.value = true
-
   const startX = event.clientX
   const startY = event.clientY
   const startWidth = props.window.size.width
@@ -253,16 +165,10 @@ const startResize = (event: MouseEvent) => {
 
   const handleMouseMove = (e: MouseEvent) => {
     if (!isResizing.value) return
-
-    const deltaX = e.clientX - startX
-    const deltaY = e.clientY - startY
-
-    const newSize = {
-      width: Math.max(400, startWidth + deltaX),
-      height: Math.max(300, startHeight + deltaY)
-    }
-
-    emit('resize', props.window.id, newSize)
+    emit('resize', props.window.id, {
+      width: Math.max(MIN_WIDTH, startWidth + (e.clientX - startX)),
+      height: Math.max(MIN_HEIGHT, startHeight + (e.clientY - startY)),
+    })
   }
 
   const handleMouseUp = () => {
@@ -274,6 +180,11 @@ const startResize = (event: MouseEvent) => {
   document.addEventListener('mousemove', handleMouseMove)
   document.addEventListener('mouseup', handleMouseUp)
 }
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleDragMove)
+  document.removeEventListener('mouseup', stopDrag)
+})
 </script>
 
 <style scoped>
@@ -294,14 +205,8 @@ const startResize = (event: MouseEvent) => {
 }
 
 @keyframes windowOpen {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+  from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .desktop-window.is-focused {
@@ -398,6 +303,13 @@ const startResize = (event: MouseEvent) => {
   background: white;
 }
 
+.window-empty {
+  padding: 32px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
 .resize-border {
   position: absolute;
   bottom: 0;
@@ -425,17 +337,14 @@ const startResize = (event: MouseEvent) => {
   border-color: transparent transparent #6b7280 transparent;
 }
 
-/* 深色模式 */
 @media (prefers-color-scheme: dark) {
   .desktop-window {
     background: rgba(31, 41, 55, 0.95);
     border-color: rgba(255, 255, 255, 0.1);
   }
-
   .window-content {
     background: #1f2937;
   }
-
   .resize-border::after {
     border-color: transparent transparent #9ca3af transparent;
   }

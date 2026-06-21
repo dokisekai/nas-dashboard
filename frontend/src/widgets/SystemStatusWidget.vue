@@ -61,49 +61,37 @@ const diskUsage = ref(0)
 
 let updateInterval: number
 
+const FALLBACK = { cpu: 35, memory: 68, disk: 45 }
+
 const updateStats = async () => {
+  if (!localStorage.getItem('token')) {
+    cpuUsage.value = FALLBACK.cpu
+    memoryUsage.value = FALLBACK.memory
+    diskUsage.value = FALLBACK.disk
+    return
+  }
+
   try {
-    // 检查是否有有效token，如果没有就跳过更新
-    const token = localStorage.getItem('token')
-    if (!token) {
-      console.log('SystemStatusWidget: No token, skipping update')
-      cpuUsage.value = 35
-      memoryUsage.value = 68
-      diskUsage.value = 45
-      return
-    }
+    const [cpuResponse, memResponse, diskResponse] = await Promise.all([
+      monitorApi.getCPU(),
+      monitorApi.getMemory(),
+      monitorApi.getDisk(),
+    ]) as any[]
 
-    console.log('SystemStatusWidget: Using real API with JWT token')
-    console.log('SystemStatusWidget: Token exists:', !!token, 'Token length:', token.length)
-
-    // 添加短暂延迟确保token完全写入
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // 获取CPU信息
-    const cpuResponse = await monitorApi.getCPU() as any
-    if (cpuResponse.usage !== undefined) {
+    if (cpuResponse?.usage !== undefined) {
       cpuUsage.value = Math.round(cpuResponse.usage * 100)
     }
-
-    // 获取内存信息
-    const memResponse = await monitorApi.getMemory() as any
-    if (memResponse.percent !== undefined) {
+    if (memResponse?.percent !== undefined) {
       memoryUsage.value = Math.round(memResponse.percent)
     }
-
-    // 获取磁盘信息
-    const diskResponse = await monitorApi.getDisk() as any
-    if (diskResponse.disks && diskResponse.disks.length > 0) {
-      const mainDisk = diskResponse.disks[0]
-      if (mainDisk.usedPercent !== undefined) {
-        diskUsage.value = Math.round(mainDisk.usedPercent)
-      }
+    const mainDisk = diskResponse?.disks?.[0]
+    if (mainDisk?.usedPercent !== undefined) {
+      diskUsage.value = Math.round(mainDisk.usedPercent)
     }
-  } catch (error: any) {
-    console.warn('SystemStatusWidget: API call failed, using fallback values')
-    cpuUsage.value = 35
-    memoryUsage.value = 68
-    diskUsage.value = 45
+  } catch {
+    cpuUsage.value = FALLBACK.cpu
+    memoryUsage.value = FALLBACK.memory
+    diskUsage.value = FALLBACK.disk
   }
 }
 

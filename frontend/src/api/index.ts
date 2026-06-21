@@ -13,6 +13,9 @@ export const monitorApi = {
   getMemory: () => api.get('/api/monitor/memory'),
   getDisk: () => api.get('/api/monitor/disk'),
   getNetwork: () => api.get('/api/monitor/network'),
+  getTemperature: () => api.get('/api/monitor/temperature'),
+  getProcesses: () => api.get('/api/monitor/processes'),
+  getServices: () => api.get('/api/monitor/services'),
 }
 
 // ==================== 网络管理 API ====================
@@ -165,5 +168,10 @@ export const configApi = {
 // ==================== 应用管理 API ====================
 export { applicationApi } from './application'
 
+// ==================== 应用管理 API ====================
+export { appsApi } from './apps'
+export type { AppContainer, ComposeProject, ServiceCatalogEntry, ServiceStatus, ContainerStats, PortBinding, AppMount } from './apps'
+
 // ==================== 同步与备份 API ====================
-export { syncApi, backupApi } from './sync_backup'
+export { syncApi, backupApi, resticApi } from './sync_backup'
+export type { BackupRepo, ResticSnapshot, BackupTask, BackupSyncJob, RepoStats, LSNode, PingInfo, BackupSettings, WebDAVProfile } from './sync_backup'

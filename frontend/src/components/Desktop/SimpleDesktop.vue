@@ -254,6 +254,33 @@
         </div>
       </div>
 
+      <!-- Immich照片管理 -->
+      <div
+        class="dock-item"
+        :class="{ active: isWindowActive('immich-photo') }"
+        @click="openImmichWindow"
+        title="Immich照片管理"
+      >
+        <div class="dock-icon">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- SSO统一身份认证 -->
+      <div
+        class="dock-item"
+        :class="{ active: isWindowActive('sso-manager') }"
+        @click="openWindow('sso-manager', 'SSO 统一身份认证')"
+        title="SSO 统一身份认证"
+      >
+        <div class="dock-icon">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        </div>
+      </div>
       <!-- 窗口管理分隔符 -->
       <div class="dock-separator"></div>
 
@@ -469,12 +496,14 @@ const handleShutdown = async () => {
 const appConfigs: Record<string, { title: string; width: number; height: number }> = {
   'storage-manager': { title: '存储管理', width: 900, height: 600 },
   'system-monitor': { title: '系统监控', width: 1000, height: 700 },
-  'app-center': { title: '应用中心', width: 900, height: 600 },
+  'app-center': { title: '应用管理中心', width: 1400, height: 900 },
   'user-manager': { title: '用户管理', width: 800, height: 500 },
   'backup-manager': { title: '备份管理', width: 900, height: 600 },
   'sync-manager': { title: '同步备份', width: 1000, height: 700 },
   'control-panel': { title: '控制面板', width: 1200, height: 800 },
-  'docker-manager': { title: 'Docker 管理', width: 1000, height: 700 }
+  'docker-manager': { title: 'Docker 管理', width: 1000, height: 700 },
+  'immich-photo': { title: 'Immich照片管理', width: 1200, height: 800 },
+  'sso-manager': { title: 'SSO 统一身份认证', width: 1200, height: 800 }
 }
 
 const openWindow = (appId: string, title: string) => {
@@ -718,6 +747,31 @@ onUnmounted(() => {
     clearInterval(timeUpdateInterval)
   }
 })
+
+// 打开Immich照片管理窗口
+//
+// 走 OAuth 授权码流程实现"免登录"：
+// 浏览器请求 /authorize 时会自动带上同源的 session_token cookie，
+// SSO 的 AuthorizeHandler 检测到已登录就直接颁发 code 并 302 回 Immich，
+// Immich 拿到 code 换 token、RS256 验签 id_token、按 oauthId 匹配用户，
+// 全程无需用户在中间页停留。
+const openImmichWindow = () => {
+  const params = new URLSearchParams({
+    client_id: 'client-2YbDXsPyx7b8NqmZ',
+    redirect_uri: 'http://192.168.50.10:2283/auth/login',
+    response_type: 'code',
+    scope: 'openid email profile',
+    state: crypto.randomUUID(),
+  })
+  window.open(`/authorize?${params.toString()}`, '_blank')
+}
+
+
+	// 打开SSO登录窗口
+	const openSSOLoginWindow = () => {
+	  // 在新窗口中打开SSO登录页面
+	  window.open('/sso/login', '_blank', 'width=500,height=700')
+	}
 </script>
 
 <style scoped>

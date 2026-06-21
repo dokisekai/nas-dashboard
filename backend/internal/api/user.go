@@ -1,6 +1,8 @@
 package api
 
 import (
+	"nas-dashboard/internal/database"
+	"nas-dashboard/internal/models"
 	"bufio"
 	"bytes"
 	"crypto/md5"
@@ -146,6 +148,40 @@ func getGroupName(gid string) string {
 	}
 
 	return ""
+}
+
+// getUserGroupNames 获取用户所属的所有组名称
+func getUserGroupNames(systemUser *user.User) []string {
+	var groups []string
+
+	// 读取 /etc/group
+	data, err := os.ReadFile("/etc/group")
+	if err != nil {
+		return groups
+	}
+
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		line := scanner.Text()
+		fields := strings.Split(line, ":")
+		if len(fields) >= 4 {
+			// 检查组成员列表
+			members := strings.Split(fields[3], ",")
+			for _, member := range members {
+				if member == systemUser.Username {
+					groups = append(groups, fields[0])
+					break
+				}
+			}
+		}
+	}
+
+	// 添加主组
+	if mainGroup := getGroupName(systemUser.Gid); mainGroup != "" {
+		groups = append(groups, mainGroup)
+	}
+
+	return groups
 }
 
 // GetUser 获取单个用户信息
@@ -658,33 +694,44 @@ func DeleteKey(c *gin.Context) {
 
 // GetCurrentUser 获取当前登录用户信息
 func GetCurrentUser(c *gin.Context) {
-	// 从 JWT 获取用户名（假设中间件已设置）
-	username, exists := c.Get("username")
+	// 从 JWT 获取用户ID（中间件已设置）
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(401, gin.H{"error": "Not authenticated"})
 		return
 	}
 
-	// 获取用户详细信息
-	systemUser, err := user.Lookup(username.(string))
-	if err != nil {
-		c.JSON(404, gin.H{"error": "User not found"})
+	// 从数据库获取用户信息
+	db := database.GetDB()
+	var dbUser models.User
+	if err := db.First(&dbUser, userID).Error; err != nil {
+		c.JSON(404, gin.H{"error": "User not found in database"})
 		return
 	}
 
-	group := getGroupName(systemUser.Gid)
-
-	userInfo := User{
-		Username: systemUser.Username,
-		UID:      systemUser.Uid,
-		GID:      systemUser.Gid,
-		Group:    group,
-		Home:     systemUser.HomeDir,
-		Shell:    "",
+	// 同时获取系统用户信息（如果存在）
+	userInfo := gin.H{
+		"database": gin.H{
+			"id":          dbUser.ID,
+			"username":    dbUser.Username,
+			"email":       dbUser.Email,
+			"displayName": dbUser.DisplayName,
+			"role":        dbUser.Role,
+			"isActive":    dbUser.IsActive,
+			"lastLogin":   dbUser.LastLogin,
+			"createdAt":   dbUser.CreatedAt,
+			"updatedAt":   dbUser.UpdatedAt,
+		},
 	}
 
-	if shell := getUserShell(systemUser.Username); shell != "" {
-		userInfo.Shell = shell
+	// 尝试获取对应的系统用户信息
+	if systemUser, err := user.Lookup(dbUser.Username); err == nil {
+		userInfo["system"] = gin.H{
+			"uid":   systemUser.Uid,
+			"gid":   systemUser.Gid,
+			"home":  systemUser.HomeDir,
+			"groups": getUserGroupNames(systemUser),
+		}
 	}
 
 	c.JSON(200, gin.H{"user": userInfo})

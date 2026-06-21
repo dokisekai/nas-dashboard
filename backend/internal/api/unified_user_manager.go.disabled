@@ -1,0 +1,623 @@
+package api
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+// UnifiedUserManager 统一用户管理器
+type UnifiedUserManager struct {
+	services map[string]UserService
+	mu       sync.RWMutex
+	config   UnifiedUserConfig
+}
+
+// UnifiedUserConfig 统一用户配置
+type UnifiedUserConfig struct {
+	AutoSync      bool          `json:"autoSync"`
+	SyncInterval  time.Duration `json:"syncInterval"`
+	RetryAttempts int           `json:"retryAttempts"`
+	RetryDelay    time.Duration `json:"retryDelay"`
+}
+
+// UserService 用户服务接口
+type UserService interface {
+	CreateUser(user UnifiedUser) error
+	UpdateUser(username string, user UnifiedUser) error
+	DeleteUser(username string) error
+	GetUsers() ([]UnifiedUser, error)
+	ValidateUser(username, password string) bool
+}
+
+// UnifiedUser 统一用户信息
+type UnifiedUser struct {
+	Username  string                 `json:"username"`
+	Password  string                 `json:"password,omitempty"`
+	Email     string                 `json:"email"`
+	Name      string                 `json:"name"`
+	IsActive  bool                   `json:"isActive"`
+	Role      string                 `json:"role"`
+	Groups    []string               `json:"groups"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt string                 `json:"createdAt,omitempty"`
+	UpdatedAt string                 `json:"updatedAt,omitempty"`
+}
+
+// ServiceType 服务类型
+type ServiceType string
+
+const (
+	ServiceTypeSystem    ServiceType = "system"
+	ServiceTypeImmich    ServiceType = "immich"
+	ServiceTypeDocker    ServiceType = "docker"
+	ServiceTypeNextcloud ServiceType = "nextcloud"
+	ServiceTypeJellyfin  ServiceType = "jellyfin"
+	ServiceTypePlex      ServiceType = "plex"
+	ServiceTypeHomeAssistant ServiceType = "homeassistant"
+)
+
+// ServiceConfig 服务配置
+type ServiceConfig struct {
+	Type     ServiceType         `json:"type"`
+	Name     string              `json:"name"`
+	Enabled  bool               `json:"enabled"`
+	Config   map[string]string  `json:"config"`
+	Priority int                `json:"priority"` // 同步优先级
+}
+
+// 全局统一用户管理器实例
+var unifiedUserManager *UnifiedUserManager
+
+// InitUnifiedUserManager 初始化统一用户管理器
+func InitUnifiedUserManager(config UnifiedUserConfig) *UnifiedUserManager {
+	if unifiedUserManager == nil {
+		unifiedUserManager = &UnifiedUserManager{
+			services: make(map[string]UserService),
+			config:   config,
+		}
+
+		// 注册默认服务
+		unifiedUserManager.RegisterDefaultServices()
+
+		// 启动自动同步
+		if config.AutoSync {
+			go unifiedUserManager.autoSyncLoop()
+		}
+	}
+	return unifiedUserManager
+}
+
+// GetUnifiedUserManager 获取统一用户管理器实例
+func GetUnifiedUserManager() *UnifiedUserManager {
+	return unifiedUserManager
+}
+
+// RegisterDefaultServices 注册默认服务
+func (u *UnifiedUserManager) RegisterDefaultServices() {
+	// 系统用户服务
+	u.RegisterService("system", &SystemUserService{})
+
+	// Immich用户服务
+	immichConfig := getImmichConfig()
+	if immichConfig.Enabled {
+		u.RegisterService("immich", &ImmichUserService{
+			Config: immichConfig,
+		})
+	}
+
+	// Docker容器用户服务
+	u.RegisterService("docker", &DockerUserService{})
+}
+
+// RegisterService 注册用户服务
+func (u *UnifiedUserManager) RegisterService(name string, service UserService) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.services[name] = service
+}
+
+// UnregisterService 注销用户服务
+func (u *UnifiedUserManager) UnregisterService(name string) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	delete(u.services, name)
+}
+
+// GetServices 获取所有注册的服务
+func (u *UnifiedUserManager) GetServices() []string {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	var services []string
+	for name := range u.services {
+		services = append(services, name)
+	}
+	return services
+}
+
+// CreateUser 在所有服务中创建用户
+func (u *UnifiedUserManager) CreateUser(user UnifiedUser) (*SyncResult, error) {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	result := &SyncResult{
+		Username: user.Username,
+		Status:   "pending",
+		Details:  make(map[string]ServiceResult),
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for serviceName, service := range u.services {
+		wg.Add(1)
+		go func(name string, svc UserService) {
+			defer wg.Done()
+
+			serviceResult := ServiceResult{
+				ServiceName: name,
+				Status:      "pending",
+			}
+
+			// 重试机制
+			var lastError error
+			for attempt := 0; attempt < u.config.RetryAttempts; attempt++ {
+				if err := svc.CreateUser(user); err != nil {
+					lastError = err
+					if attempt < u.config.RetryAttempts-1 {
+						time.Sleep(u.config.RetryDelay)
+						continue
+					}
+					serviceResult.Status = "failed"
+					serviceResult.Error = err.Error()
+				} else {
+					serviceResult.Status = "success"
+					break
+				}
+			}
+
+			mu.Lock()
+			result.Details[name] = serviceResult
+			mu.Unlock()
+		}(serviceName, service)
+	}
+
+	wg.Wait()
+
+	// 计算总体状态
+	u.calculateResultStatus(result)
+
+	return result, nil
+}
+
+// UpdateUser 在所有服务中更新用户
+func (u *UnifiedUserManager) UpdateUser(username string, user UnifiedUser) (*SyncResult, error) {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	result := &SyncResult{
+		Username: username,
+		Status:   "pending",
+		Details:  make(map[string]ServiceResult),
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for serviceName, service := range u.services {
+		wg.Add(1)
+		go func(name string, svc UserService) {
+			defer wg.Done()
+
+			serviceResult := ServiceResult{
+				ServiceName: name,
+				Status:      "pending",
+			}
+
+			if err := svc.UpdateUser(username, user); err != nil {
+				serviceResult.Status = "failed"
+				serviceResult.Error = err.Error()
+			} else {
+				serviceResult.Status = "success"
+			}
+
+			mu.Lock()
+			result.Details[name] = serviceResult
+			mu.Unlock()
+		}(serviceName, service)
+	}
+
+	wg.Wait()
+	u.calculateResultStatus(result)
+
+	return result, nil
+}
+
+// DeleteUser 在所有服务中删除用户
+func (u *UnifiedUserManager) DeleteUser(username string) (*SyncResult, error) {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	result := &SyncResult{
+		Username: username,
+		Status:   "pending",
+		Details:  make(map[string]ServiceResult),
+	}
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for serviceName, service := range u.services {
+		wg.Add(1)
+		go func(name string, svc UserService) {
+			defer wg.Done()
+
+			serviceResult := ServiceResult{
+				ServiceName: name,
+				Status:      "pending",
+			}
+
+			if err := svc.DeleteUser(username); err != nil {
+				serviceResult.Status = "failed"
+				serviceResult.Error = err.Error()
+			} else {
+				serviceResult.Status = "success"
+			}
+
+			mu.Lock()
+			result.Details[name] = serviceResult
+			mu.Unlock()
+		}(serviceName, service)
+	}
+
+	wg.Wait()
+	u.calculateResultStatus(result)
+
+	return result, nil
+}
+
+// SyncUsers 同步所有用户到所有服务
+func (u *UnifiedUserManager) SyncUsers() (*SyncSummary, error) {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	// 从主服务（通常是系统用户）获取所有用户
+	users, err := u.getMasterUsers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get master users: %w", err)
+	}
+
+	summary := &SyncSummary{
+		TotalUsers:    len(users),
+		SyncedUsers:   0,
+		FailedUsers:   0,
+		UserResults:   make(map[string]*SyncResult),
+		SyncStartTime: time.Now(),
+	}
+
+	for _, user := range users {
+		result, err := u.UpdateUser(user.Username, user)
+		if err != nil {
+			summary.FailedUsers++
+			continue
+		}
+
+		summary.UserResults[user.Username] = result
+
+		if result.Status == "success" || result.Status == "partial" {
+			summary.SyncedUsers++
+		} else {
+			summary.FailedUsers++
+		}
+	}
+
+	summary.SyncEndTime = time.Now()
+	summary.Duration = summary.SyncEndTime.Sub(summary.SyncStartTime)
+
+	return summary, nil
+}
+
+// SyncUser 同步单个用户到所有服务
+func (u *UnifiedUserManager) SyncUser(username string) (*SyncResult, error) {
+	// 从主服务获取用户信息
+	user, err := u.getUserFromMaster(username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user %s: %w", username, err)
+	}
+
+	return u.UpdateUser(username, user)
+}
+
+// GetSyncStatus 获取同步状态
+func (u *UnifiedUserManager) GetSyncStatus() (*SyncStatus, error) {
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	status := &SyncStatus{
+		Services:       make([]ServiceStatus, 0),
+		LastSyncTime:   u.lastSyncTime,
+		AutoSyncEnabled: u.config.AutoSync,
+	}
+
+	for name, service := range u.services {
+		users, err := service.GetUsers()
+		if err != nil {
+			status.Services = append(status.Services, ServiceStatus{
+				Name:     name,
+				Status:   "error",
+				UserCount: 0,
+				Error:    err.Error(),
+			})
+			continue
+		}
+
+		status.Services = append(status.Services, ServiceStatus{
+			Name:      name,
+			Status:    "healthy",
+			UserCount: len(users),
+		})
+	}
+
+	return status, nil
+}
+
+// SyncResult 同步结果
+type SyncResult struct {
+	Username string                    `json:"username"`
+	Status   string                    `json:"status"` // success, partial, failed
+	Details  map[string]ServiceResult  `json:"details"`
+	SyncTime time.Time                 `json:"syncTime"`
+}
+
+// ServiceResult 服务结果
+type ServiceResult struct {
+	ServiceName string `json:"serviceName"`
+	Status      string `json:"status"`
+	Error       string `json:"error,omitempty"`
+	Message     string `json:"message,omitempty"`
+}
+
+// SyncSummary 同步摘要
+type SyncSummary struct {
+	TotalUsers    int                     `json:"totalUsers"`
+	SyncedUsers   int                     `json:"syncedUsers"`
+	FailedUsers   int                     `json:"failedUsers"`
+	UserResults   map[string]*SyncResult  `json:"userResults"`
+	SyncStartTime time.Time               `json:"syncStartTime"`
+	SyncEndTime   time.Time               `json:"syncEndTime"`
+	Duration      time.Duration           `json:"duration"`
+}
+
+// SyncStatus 同步状态
+type SyncStatus struct {
+	Services        []ServiceStatus `json:"services"`
+	LastSyncTime    time.Time       `json:"lastSyncTime"`
+	AutoSyncEnabled bool            `json:"autoSyncEnabled"`
+	LastError       string          `json:"lastError,omitempty"`
+}
+
+// ServiceStatus 服务状态
+type ServiceStatus struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	UserCount int    `json:"userCount"`
+	Error     string `json:"error,omitempty"`
+}
+
+// Helper methods
+
+func (u *UnifiedUserManager) calculateResultStatus(result *SyncResult) {
+	successCount := 0
+	failedCount := 0
+
+	for _, detail := range result.Details {
+		if detail.Status == "success" {
+			successCount++
+		} else {
+			failedCount++
+		}
+	}
+
+	if failedCount == 0 {
+		result.Status = "success"
+	} else if successCount > 0 {
+		result.Status = "partial"
+	} else {
+		result.Status = "failed"
+	}
+
+	result.SyncTime = time.Now()
+}
+
+func (u *UnifiedUserManager) getMasterUsers() ([]UnifiedUser, error) {
+	// 使用系统用户服务作为主服务
+	if systemService, ok := u.services["system"]; ok {
+		return systemService.GetUsers()
+	}
+	return nil, fmt.Errorf("no master service available")
+}
+
+func (u *UnifiedUserManager) getUserFromMaster(username string) (UnifiedUser, error) {
+	users, err := u.getMasterUsers()
+	if err != nil {
+		return UnifiedUser{}, err
+	}
+
+	for _, user := range users {
+		if user.Username == username {
+			return user, nil
+		}
+	}
+
+	return UnifiedUser{}, fmt.Errorf("user %s not found", username)
+}
+
+func (u *UnifiedUserManager) autoSyncLoop() {
+	ticker := time.NewTicker(u.config.SyncInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		u.SyncUsers()
+	}
+}
+
+var lastSyncTime time.Time
+
+// HTTP Handlers
+
+// UnifiedUserCreate 统一创建用户
+func UnifiedUserCreate(c *gin.Context) {
+	var user UnifiedUser
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	manager := GetUnifiedUserManager()
+	result, err := manager.CreateUser(user)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+// UnifiedUserUpdate 统一更新用户
+func UnifiedUserUpdate(c *gin.Context) {
+	username := c.Param("username")
+
+	var user UnifiedUser
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	manager := GetUnifiedUserManager()
+	result, err := manager.UpdateUser(username, user)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+// UnifiedUserDelete 统一删除用户
+func UnifiedUserDelete(c *gin.Context) {
+	username := c.Param("username")
+
+	manager := GetUnifiedUserManager()
+	result, err := manager.DeleteUser(username)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+// UnifiedUserSync 同步所有用户
+func UnifiedUserSync(c *gin.Context) {
+	manager := GetUnifiedUserManager()
+	summary, err := manager.SyncUsers()
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, summary)
+}
+
+// UnifiedUserSyncUser 同步单个用户
+func UnifiedUserSyncUser(c *gin.Context) {
+	username := c.Param("username")
+
+	manager := GetUnifiedUserManager()
+	result, err := manager.SyncUser(username)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+// UnifiedUserStatus 获取同步状态
+func UnifiedUserStatus(c *gin.Context) {
+	manager := GetUnifiedUserManager()
+	status, err := manager.GetSyncStatus()
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, status)
+}
+
+// RegisterServiceEndpoint 注册新的服务端点
+func RegisterServiceEndpoint(c *gin.Context) {
+	var config struct {
+		Name   string                 `json:"name" binding:"required"`
+		Type   ServiceType           `json:"type" binding:"required"`
+		Config map[string]string     `json:"config"`
+	}
+
+	if err := c.ShouldBindJSON(&config); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	manager := GetUnifiedUserManager()
+
+	// 根据服务类型创建相应的服务
+	var service UserService
+	switch config.Type {
+	case ServiceTypeImmich:
+		service = &ImmichUserService{
+			Config: ImmichConfig{
+				APIURL:  config.Config["apiUrl"],
+				APIKey:  config.Config["apiKey"],
+				Enabled: true,
+			},
+		}
+	case ServiceTypeDocker:
+		service = &DockerUserService{}
+	case ServiceTypeSystem:
+		service = &SystemUserService{}
+	default:
+		c.JSON(400, gin.H{"error": "unsupported service type"})
+		return
+	}
+
+	manager.RegisterService(config.Name, service)
+
+	c.JSON(200, gin.H{"message": "Service registered successfully"})
+}
+
+// UnregisterServiceEndpoint 注销服务端点
+func UnregisterServiceEndpoint(c *gin.Context) {
+	serviceName := c.Param("service")
+
+	manager := GetUnifiedUserManager()
+	manager.UnregisterService(serviceName)
+
+	c.JSON(200, gin.H{"message": "Service unregistered successfully"})
+}
+
+func getImmichConfig() ImmichConfig {
+	// 从环境变量或配置文件读取Immich配置
+	return ImmichConfig{
+		APIURL:  os.Getenv("IMMICH_API_URL"),
+		APIKey:  os.Getenv("IMMICH_API_KEY"),
+		Enabled: os.Getenv("IMMICH_ENABLED") == "true",
+	}
+}

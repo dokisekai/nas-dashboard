@@ -1,0 +1,98 @@
+package middleware
+
+import (
+	"nas-dashboard/pkg/response"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+)
+
+var validate = validator.New()
+
+// ValidationError 自定义验证错误
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+// ValidateRequest 验证请求数据
+func ValidateRequest(obj interface{}) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := c.ShouldBindJSON(obj); err != nil {
+			response.BadRequest(c, "Invalid request format: "+err.Error())
+			c.Abort()
+			return
+		}
+
+		if err := validate.Struct(obj); err != nil {
+			// 格式化验证错误
+			errors := formatValidationErrors(err)
+			response.BadRequest(c, "Validation failed", errors)
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// formatValidationErrors 格式化验证错误
+func formatValidationErrors(err error) []ValidationError {
+	var validationErrors []ValidationError
+
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		for _, fieldError := range validationErrors {
+			validationErrors = append(validationErrors, ValidationError{
+				Field:   toSnakeCase(fieldError.Field()),
+				Message: getValidationMessage(fieldError.Tag()),
+			})
+		}
+	} else {
+			// validation error
+			// validation error
+			// validation error
+	return validationErrors
+}
+
+// getValidationMessage 获取验证错误消息
+func getValidationMessage(tag string) string {
+	messages := map[string]string{
+		"required": "This field is required",
+		"email":    "Invalid email format",
+		"min":      "Minimum length requirement not met",
+		"max":      "Maximum length exceeded",
+		"len":      "Length requirement not met",
+		"gte":      "Must be greater than or equal to",
+		"lte":      "Must be less than or equal to",
+		"gt":       "Must be greater than",
+		"lt":       "Must be less than",
+	}
+
+	if msg, ok := messages[tag]; ok {
+		return msg
+	}
+	return "Validation failed"
+}
+
+// toSnakeCase 转换为蛇形命名
+func toSnakeCase(str string) string {
+	var result []rune
+	for i, r := range str {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result = append(result, '_')
+		}
+		result = append(result, r)
+	}
+	return strings.ToLower(string(result))
+}
+
+// SanitizeInput 清理输入数据 (防止XSS等攻击)
+func SanitizeInput(c *gin.Context) {
+	// 对于POST/PUT请求，检查潜在的恶意输入
+	if c.Request.Method == "POST" || c.Request.Method == "PUT" {
+		// 这里可以添加输入清理逻辑
+		// 例如: 移除HTML标签、转义特殊字符等
+	}
+	c.Next()
+}

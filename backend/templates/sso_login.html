@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSO登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .auto-auth {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .auto-auth .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .auto-auth h3 {
+            color: #065f46;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .auto-auth p {
+            color: #047857;
+            font-size: 14px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 16px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .nas-login {
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>NAS 系统登录</h1>
+            <p id="logoSubtitle">正在验证登录状态...</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <!-- 自动授权检查中 -->
+        <div class="auto-auth" id="autoAuthSection">
+            <div class="spinner"></div>
+            <h3>正在验证您的登录状态</h3>
+            <p>如果已登录 NAS 系统，将自动完成授权</p>
+        </div>
+
+        <!-- NAS 本地登录表单 -->
+        <form class="nas-login hidden" id="loginForm" onsubmit="return handleLogin(event)">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" autocomplete="username" placeholder="输入用户名">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" autocomplete="current-password" placeholder="输入密码">
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">登录并授权</button>
+        </form>
+
+        <div class="footer">
+            <p>登录即表示您同意我们的服务条款和隐私政策</p>
+        </div>
+    </div>
+
+    <script>
+        const clientId = '{{.client_id}}';
+        const redirectUri = '{{.redirect_uri}}';
+        const scope = '{{.scope}}';
+        const state = '{{.state}}';
+        const originalState = '{{.original_state}}';
+
+        // 尝试从父窗口或 opener 获取 token
+        function getTokenFromParentWindow() {
+            // 尝试从 opener 窗口获取（如果是弹窗）
+            try {
+                if (window.opener && !window.opener.closed) {
+                    const openerToken = window.opener.localStorage.getItem('token');
+                    if (openerToken) {
+                        console.log('Found token in opener window');
+                        return openerToken;
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access opener window:', e);
+            }
+
+            // 尝试从父 iframe 获取
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentToken = window.parent.localStorage.getItem('token');
+                    if (parentToken) {
+                        console.log('Found token in parent window');
+                        return parentToken;
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access parent window:', e);
+            }
+
+            return null;
+        }
+
+        // 使用 token 进行授权
+        async function authorizeWithToken(token) {
+            const params = new URLSearchParams({
+                client_id: clientId,
+                redirect_uri: redirectUri,
+                response_type: 'code',
+                scope: scope,
+                state: originalState || state
+            });
+
+            try {
+                // 使用XMLHttpRequest来更好地处理重定向
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/authorize?' + params.toString(), true);
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                xhr.responseType = 'document';
+
+                xhr.onload = function() {
+                    if (xhr.status === 302 || xhr.status === 301) {
+                        // 获取重定向URL
+                        const redirectUrl = xhr.getResponseHeader('Location');
+                        if (redirectUrl) {
+                            window.location.href = redirectUrl;
+                        } else {
+                            console.error('No Location header in redirect response');
+                            showLoginForm();
+                        }
+                    } else if (xhr.status === 200) {
+                        // 返回了HTML页面，可能是登录页面或错误页面
+                        console.log('Auth returned HTML, showing login form');
+                        showLoginForm();
+                    } else {
+                        console.log('Auth response status:', xhr.status);
+                        showLoginForm();
+                    }
+                };
+
+                xhr.onerror = function() {
+                    console.error('Auth XHR error');
+                    showLoginForm();
+                };
+
+                xhr.send();
+            } catch (error) {
+                console.error('Auth error:', error);
+                showLoginForm();
+            }
+        }
+
+        function showLoginForm() {
+            document.getElementById('autoAuthSection').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('logoSubtitle').textContent = '请使用您的 NAS 账号登录';
+        }
+
+        // 页面加载时尝试自动授权
+        window.addEventListener('DOMContentLoaded', async () => {
+            // 首先尝试从父窗口获取 token
+            const parentToken = getTokenFromParentWindow();
+
+            if (parentToken) {
+                console.log('Using token from parent window');
+                await authorizeWithToken(parentToken);
+                return;
+            }
+
+            // 尝试从 localStorage 获取（同源情况）
+            const localToken = localStorage.getItem('token');
+            if (localToken) {
+                console.log('Using token from localStorage');
+                await authorizeWithToken(localToken);
+                return;
+            }
+
+            // 没有找到 token，显示登录表单
+            console.log('No token found, showing login form');
+            showLoginForm();
+
+            // 自动填充用户名（如果有的话）
+            const savedUsername = localStorage.getItem('lastLoginUser');
+            if (savedUsername) {
+                document.getElementById('username').value = savedUsername;
+            }
+        });
+
+        // 处理登录表单提交
+        async function handleLogin(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            errorMessage.classList.remove('show');
+
+            try {
+                // 登录获取 token
+                const loginResponse = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const loginData = await loginResponse.json();
+
+                if (!loginResponse.ok || loginData.error) {
+                    throw new Error(loginData.error || '登录失败，请检查用户名和密码');
+                }
+
+                // 保存 token
+                localStorage.setItem('access_token', loginData.token);
+                localStorage.setItem('lastLoginUser', username);
+
+                // 使用获取的 token 进行授权
+                await authorizeWithToken(loginData.token);
+
+            } catch (error) {
+                console.error('Login error:', error);
+                errorMessage.textContent = error.message || '登录失败，请重试';
+                errorMessage.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登录并授权';
+            }
+        }
+    </script>
+</body>
+</html>

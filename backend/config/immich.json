@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "name": "Immich",
+  "url": "http://localhost:2283",
+  "apiKey": "t5nmlDaFlyz7guxpfmAwvOeiKp7zEC7loF2Ow15V8Q",
+  "autoLogin": true,
+  "icon": "photo",
+  "category": "media",
+  "description": "AI驱动的照片管理",
+  "version": "v2.7.5"
+}

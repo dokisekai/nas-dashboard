@@ -385,6 +385,7 @@
       </div>
     </div>
   </div>
+</div>
 </template>
 
 <script setup lang="ts">
@@ -398,7 +399,7 @@ import {
   CubeIcon,
   PhotoIcon,
   FolderOpenIcon,
-  ChartIcon
+  ChartBarIcon
 } from '@heroicons/vue/24/outline'
 import ImmichUserManager from '../components/ImmichUserManager.vue'
 
@@ -496,7 +497,7 @@ const applications = ref([
     id: 'monitor',
     name: '系统监控',
     description: '系统性能监控',
-    icon: 'ChartIcon',
+    icon: 'ChartBarIcon',
     enabled: true,
     url: '/monitor'
   }
@@ -730,7 +731,7 @@ const getAppIcon = (iconName: string) => {
     PhotoIcon,
     FolderOpenIcon,
     CubeIcon,
-    ChartIcon
+    ChartBarIcon
   }
   return iconMap[iconName] || CubeIcon
 }
@@ -1379,6 +1380,5 @@ const deleteFolder = (folderId: string) => {
   margin: 0 0 16px 0;
   font-size: 14px;
   color: #999;
-}
 }
 </style>

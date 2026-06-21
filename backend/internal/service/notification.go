@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"nas-dashboard/internal/database"
 	"nas-dashboard/internal/models"
+	"net/http"
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 )
@@ -372,12 +371,14 @@ func (s *NotificationService) getMatchingRules(event SystemEvent) []Notification
 
 	var matchedRules []NotificationRule
 	for _, rule := range rules {
-		if s.matchConditions(rule.Conditions, event.Data) {
+		var conditions map[string]interface{}
+		json.Unmarshal([]byte(rule.Conditions), &conditions)
+		if s.matchConditions(conditions, event.Data) {
 			matchedRules = append(matchedRules, NotificationRule{
 				ID:          rule.ID,
 				Name:        rule.Name,
 				EventType:   rule.EventType,
-				Conditions:  rule.Conditions,
+				Conditions:  conditions,
 				Actions:     s.parseActions(rule.Actions),
 				Enabled:     rule.Enabled,
 				Cooldown:    rule.Cooldown,

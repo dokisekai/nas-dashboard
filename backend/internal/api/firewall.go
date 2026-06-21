@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"nas-dashboard/internal/database"
 	"nas-dashboard/internal/models"
 	"net/http"

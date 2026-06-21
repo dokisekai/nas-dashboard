@@ -20,7 +20,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'Home',
-      component: () => import('../components/Desktop/SimpleDesktop.vue'),
+      component: () => import('../components/iPadOS/iPadOSHome.vue'),
       meta: { requiresAuth: true },
     },
     // 桌面界面路由
@@ -28,6 +28,13 @@ const router = createRouter({
       path: '/desktop',
       name: 'Desktop',
       component: () => import('../components/Desktop/SimpleDesktop.vue'),
+      meta: { requiresAuth: true },
+    },
+    // iPadOS路由
+    {
+      path: '/ipados',
+      name: 'iPadOS',
+      component: () => import('../components/iPadOS/iPadOSHome.vue'),
       meta: { requiresAuth: true },
     },
     // 监控路由
@@ -89,6 +96,20 @@ const router = createRouter({
       component: () => import('../apps/DockerManager.vue'),
       meta: { requiresAuth: true },
     },
+    // SSO统一登录路由
+    {
+      path: '/sso/login',
+      name: 'SSOLogin',
+      component: () => import('../apps/SSOLogin.vue'),
+      meta: { requiresAuth: false },
+    },
+    // SSO回调路由
+    {
+      path: '/sso/callback',
+      name: 'SSOCallback',
+      component: () => import('../apps/SSOCallback.vue'),
+      meta: { requiresAuth: false },
+    },
   ],
 })
 
@@ -101,11 +122,11 @@ router.beforeEach(async (to, from, next) => {
   console.log('Is logged in:', loggedIn)
   console.log('Token in localStorage:', localStorage.getItem('token')?.substring(0, 20) + '...')
 
-  // 登录页面：如果已登录则跳转到桌面
+  // 登录页面：如果已登录则跳转到iPadOS主屏幕
   if (to.path === '/login') {
     if (loggedIn) {
-      console.log('Already logged in, redirecting to desktop')
-      return next('/desktop')
+      console.log('Already logged in, redirecting to iPadOS home')
+      return next('/ipados')
     }
     console.log('Showing login page')
     return next()

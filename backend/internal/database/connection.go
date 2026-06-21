@@ -154,7 +154,11 @@ func Migrate() error {
 		&models.BackupRepo{},
 		&models.BackupTask{},
 		&models.Notification{},
-	)
+			// OAuth模型
+			&models.OAuthClient{},
+			&models.OAuthToken{},
+			&models.OAuthAuthorization{},
+		)
 
 	if err != nil {
 		return fmt.Errorf("migration failed: %w", err)

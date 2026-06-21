@@ -1,0 +1,957 @@
+package main
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+import (
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"log"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"net/http"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"os"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"path/filepath"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"nas-dashboard/internal/api"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"nas-dashboard/internal/database"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"nas-dashboard/internal/middleware"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"github.com/gin-gonic/gin"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	"gorm.io/gorm"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+func main() {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// 初始化数据库（非阻塞，失败时继续运行）
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	db, err := initDatabase()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	if err != nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		log.Printf("Warning: Failed to initialize database: %v", err)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		log.Println("Server will continue without database support")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// 初始化API处理器
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	api.InitAPI(db)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// 创建 Gin 路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	r := gin.Default()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// 配置 CORS
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	r.Use(middleware.CORS())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// 健康检查
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	r.GET("/health", func(c *gin.Context) {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		c.JSON(200, gin.H{"status": "ok"})
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	})
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// API 路由组
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	apiGroup := r.Group("/api")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 认证路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		apiGroup.POST("/auth/login", api.Login)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		apiGroup.POST("/auth/refresh", api.RefreshToken)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 系统初始化路由 (公开)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		apiGroup.GET("/system/init-status", api.GetInitStatus)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		apiGroup.POST("/system/initialize", api.InitializeSystem)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 监控路由 (需要认证)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		monitor := apiGroup.Group("/monitor")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		monitor.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					monitorAPI := api.GetMonitorAPI()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/cpu", api.GetCPU)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/memory", api.GetMemory)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/disk", api.GetDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/network", api.GetNetwork)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 扩展监控功能
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/processes", monitorAPI.GetProcesses)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/processes/:pid", monitorAPI.GetProcess)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.DELETE("/processes/:pid", monitorAPI.KillProcess)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/services", monitorAPI.GetServices)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/services/:name", monitorAPI.GetService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.POST("/services/:name/start", monitorAPI.StartService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.POST("/services/:name/stop", monitorAPI.StopService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.POST("/services/:name/restart", monitorAPI.RestartService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/temperature", monitorAPI.GetTemperature)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/events", monitorAPI.GetEvents)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/logs", monitorAPI.GetLogs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.POST("/logs/clear", monitorAPI.ClearLogs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.GET("/alerts", monitorAPI.GetAlerts)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.POST("/alerts", monitorAPI.CreateAlert)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.PUT("/alerts/:id", monitorAPI.UpdateAlert)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			monitor.DELETE("/alerts/:id", monitorAPI.DeleteAlert)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 功耗监控路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		power := apiGroup.Group("/power")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		power.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			power.GET("/current", api.GetPowerCurrent)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			power.GET("/history", api.GetPowerHistory)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			power.GET("/statistics", api.GetPowerStatistics)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			power.GET("/overview", api.GetPowerOverview)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 网络管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			network := apiGroup.Group("/network")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			network.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// 网络接口管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/interfaces", api.GetNetworkInterfaces)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/interfaces/ethernet", api.GetEthernetInterfaces)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/interfaces/wifi", api.GetWiFiInterfaces)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						// 接口配置管理（参数化路由）
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						network.GET("/interface/:interface/config", api.GetInterfaceConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						network.PUT("/interface/:interface/config", api.SetInterfaceConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						network.POST("/interface/:interface/restart", api.RestartInterface)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						// 通用接口操作路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+						network.POST("/interface/:interface/:action", api.ControlInterface)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// PPPoE管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/interface/:interface/pppoe", api.GetPPPoEConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.POST("/interface/:interface/pppoe", api.ConfigurePPPoE)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// 代理配置管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/proxy", api.GetProxyConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.POST("/proxy", api.SetProxyConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// Wi-Fi管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/wifi/scan", api.ScanWiFiNetworks)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.POST("/wifi/connect", api.ConnectToWiFi)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.POST("/wifi/disconnect", api.DisconnectWiFi)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/wifi/current", api.GetCurrentWiFiConnection)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// DNS管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.GET("/dns", api.GetDNSConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.POST("/dns", api.SetDNSConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// IP管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				network.PUT("/ip", api.UpdateIPConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 存储管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		storage := apiGroup.Group("/storage")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		storage.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/disks", api.GetDisks)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/disks/format", api.FormatDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/mount", api.MountDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/umount", api.UmountDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/smb", api.GetSMBShares)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/smb", api.CreateSMBShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.PUT("/smb/:name", api.UpdateSMBShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.DELETE("/smb/:name", api.DeleteSMBShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/usage", api.GetDiskUsage) // 获取指定路径的磁盘使用情况
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 高级磁盘管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/disks/:device/partitions", api.GetDiskPartitions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/disks/:device/partitions", api.CreateDiskPartition)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.DELETE("/disks/:device/partitions/:number", api.DeleteDiskPartition)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/disks/:device/smart", api.GetDiskSmart)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/disks/:device/test", api.RunDiskSmartTest)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/disks/:device/health", api.GetDiskHealth)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/disks/:device/benchmark", api.RunDiskBenchmark)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// RAID管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/raid", api.GetRAIDArrays)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/raid/:name", api.GetRAIDArray)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/raid", api.CreateRAID)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.DELETE("/raid/:name", api.DeleteRAID)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/raid/:name/add", api.AddDiskToRAID)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/raid/:name/remove", api.RemoveDiskFromRAID)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// LVM管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/lvm/pv", api.GetPhysicalVolumes)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/lvm/pv", api.CreatePhysicalVolume)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/lvm/vg", api.GetVolumeGroups)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/lvm/vg", api.CreateVolumeGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.DELETE("/lvm/vg/:name", api.DeleteVolumeGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.GET("/lvm/lv", api.GetLogicalVolumes)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.POST("/lvm/lv", api.CreateLogicalVolume)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storage.DELETE("/lvm/lv/:vg/:name", api.DeleteLogicalVolume)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 存储池管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			pools := storage.Group("/pools")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			storagePoolAPI := api.GetStoragePoolAPI()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.GET("", storagePoolAPI.GetPools)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("", storagePoolAPI.CreatePool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.GET("/:name", storagePoolAPI.GetPool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.PUT("/:name", storagePoolAPI.UpdatePool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.DELETE("/:name", storagePoolAPI.DeletePool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("/:name/disks", storagePoolAPI.AddDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.DELETE("/:name/disks/:device", storagePoolAPI.RemoveDisk)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.GET("/:name/branches", storagePoolAPI.GetPoolBranches)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("/:name/mount", storagePoolAPI.MountPool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("/:name/umount", storagePoolAPI.UmountPool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("/:name/balance", storagePoolAPI.BalancePool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				pools.POST("/:name/scan", storagePoolAPI.ScanPool)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 同步管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			syncAPI := api.NewSyncAPI(db)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			sync := storage.Group("/sync")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				sync.GET("/jobs", syncAPI.GetSyncJobs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				sync.POST("/jobs", syncAPI.CreateSyncJob)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				sync.POST("/jobs/:id/run", syncAPI.RunSyncJob)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 备份管理 (Restic)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			backupAPI := api.NewBackupAPI(db)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			backups := storage.Group("/backup")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.GET("/repos", backupAPI.GetRepos)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.POST("/repos", backupAPI.CreateRepo)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.GET("/tasks", backupAPI.GetTasks)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.POST("/tasks", backupAPI.CreateTask)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 配额管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			quota := storage.Group("/quota")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					quotaAPI := api.GetQuotaAPI()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				quota.GET("/users", quotaAPI.GetAllQuotas)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				quota.GET("/groups", quotaAPI.GetAllGroupQuotas)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				quota.GET("/report", quotaAPI.GetQuotaReport)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 服务管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		services := apiGroup.Group("/services")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		services.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.GET("", api.GetServices)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.POST("/:name/start", api.StartService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.POST("/:name/stop", api.StopService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.POST("/:name/restart", api.RestartService)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.POST("/:name/enable", api.EnableService)    // 启用服务（开机自启）
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			services.POST("/:name/disable", api.DisableService)   // 禁用服务
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// Docker 路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		docker := apiGroup.Group("/docker")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		docker.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/containers", api.GetContainers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.POST("/containers/:id/start", api.StartContainer)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.POST("/containers/:id/stop", api.StopContainer)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.POST("/containers/:id/restart", api.RestartContainer)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.DELETE("/containers/:id", api.RemoveContainer)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/containers/:id/logs", api.GetContainerLogs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/containers/:id/stats", api.GetContainerStats)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.POST("/containers/:id/exec", api.ExecInContainer)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/images", api.GetDockerImages)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.DELETE("/images/:id", api.RemoveImage)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.POST("/images/pull", api.PullImage)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/networks", api.GetDockerNetworks)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			docker.GET("/volumes", api.GetDockerVolumes)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 用户管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// Immich 路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			immich := apiGroup.Group("/immich")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			immich.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.GET("/users", api.GetImmichUsers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.GET("/users/:id", api.GetImmichUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.POST("/users", api.CreateImmichUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.PUT("/users/:id", api.UpdateImmichUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.DELETE("/users/:id", api.DeleteImmichUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.POST("/users/batch", api.BatchUpdateImmichUsers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				immich.POST("/users/sync", api.SyncImmichUsersWithSystemUsers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// Immich集成路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			immich.GET("/redirect", api.GetImmichRedirect)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			immich.GET("/user", api.ImmichUserFromToken)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		users := apiGroup.Group("/users")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		users.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.GET("", api.GetUsers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.POST("", api.CreateUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.PUT("/:username", api.UpdateUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.DELETE("/:username", api.DeleteUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.GET("/:username", api.GetUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// SSH 密钥管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.GET("/ssh-keys", api.GetSSHKeys)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.POST("/ssh-keys", api.AddKey)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.DELETE("/ssh-keys/:id", api.DeleteKey)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 当前用户相关
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.GET("/me", api.GetCurrentUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.POST("/me/password", api.ChangeCurrentUserPassword)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 用户配额管理
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.GET("/:username/quota", api.GetQuotaAPI().GetUserQuota)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			users.PUT("/:username/quota", api.GetQuotaAPI().SetUserQuota)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 系统组路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		groups := apiGroup.Group("/groups")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		groups.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			groups.GET("", api.GetGroups)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.POST("", api.CreateGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.GET("/:name", api.GetGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.PUT("/:name", api.UpdateGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.DELETE("/:name", api.DeleteGroup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.GET("/:name/members", api.GetGroupMembers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.POST("/:name/members", api.AddGroupMembers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				groups.DELETE("/:name/members/:user", api.RemoveGroupMember)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// SMB用户管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				smbUsers := apiGroup.Group("/smb")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				smbUsers.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.GET("/users", api.GetSMBUsers)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.POST("/users/:username/password", api.SetSMBPassword)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.DELETE("/users/:username/password", api.DeleteSMBPassword)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.POST("/users/:username/enable", api.EnableSMBUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.POST("/users/:username/disable", api.DisableSMBUser)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.GET("/users/:username/stats", api.GetSMBUserStats)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.GET("/sessions", api.GetSMBSessions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.DELETE("/sessions/:pid", api.DisconnectSMBSession)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					smbUsers.DELETE("/sessions", api.DisconnectAllSMBSessions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// 权限管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				permissions := apiGroup.Group("/permissions")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				permissions.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.GET("/shares", api.GetShares)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.POST("/shares", api.CreateShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.PUT("/shares/:name", api.UpdateShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.DELETE("/shares/:name", api.DeleteShare)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.GET("/shares/:name/permissions", api.GetSharePermissions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.PUT("/shares/:name/permissions", api.SetSharePermissions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.GET("/files", api.GetFilePermissions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.PUT("/files/permissions", api.SetFilePermissions)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.GET("/files/acl", api.GetFileACL)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					permissions.PUT("/files/acl", api.SetFileACL)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 系统信息路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			system := apiGroup.Group("/system")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			system.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				system.GET("/info", api.GetSystemInfo)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				system.GET("/hardware", api.GetHardwareDetails)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				system.GET("/power", api.GetPowerUsage)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				system.GET("/uptime", api.GetSystemUptime)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				system.GET("/ups/status", api.GetUPSStatus)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				// 系统操作路由（需要管理员权限）
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				operations := system.Group("/operations")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/restart", api.RestartSystem)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/shutdown", api.ShutdownSystem)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/cancel", api.CancelShutdown)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/reboot-immediate", api.RebootSystemImmediately)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/poweroff-immediate", api.PoweroffSystemImmediately)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/schedule-shutdown", api.ScheduleShutdown)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.POST("/schedule-restart", api.ScheduleRestart)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					operations.GET("/status", api.GetShutdownStatus)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 文件管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			files := apiGroup.Group("/files")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			files.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.POST("/list", api.ListFiles)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.GET("/info", api.GetFileInfo)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.GET("/download", api.DownloadFile)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.POST("/upload", api.UploadFile)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.POST("/directory", api.CreateDirectory)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.POST("/move", api.MoveFile)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				files.POST("/delete", api.DeleteFile)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 通知管理路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			notifications := apiGroup.Group("/notifications")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			notifications.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				notifications.GET("", api.GetNotifications)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				notifications.POST("/read/:id", api.MarkNotificationRead)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				notifications.POST("/read/all", api.MarkAllNotificationsRead)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				notifications.DELETE("/clear", api.ClearNotifications)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				notifications.POST("", api.CreateNotification)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 备份恢复路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			backups := apiGroup.Group("/backups")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			backups.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.GET("", api.GetBackups)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.POST("", api.CreateBackup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.GET("/:id", api.GetBackup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.DELETE("/:id", api.DeleteBackup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.POST("/restore", api.RestoreBackup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				backups.GET("/:id/download", api.DownloadBackup)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 系统配置路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			configs := apiGroup.Group("/configs")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			configs.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.GET("", api.GetConfigs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.GET("/public", api.GetPublicConfigs)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.GET("/:key", api.GetConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.POST("", api.SetConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.DELETE("/:key", api.DeleteConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				configs.POST("/bulk", api.BulkSetConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// 防火墙路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			firewall := apiGroup.Group("/security/firewall")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			firewall.Use(middleware.Auth())
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			{
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.GET("/rules", api.GetFirewallRules)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.POST("/rules", api.CreateFirewallRule)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.PUT("/rules/:id", api.UpdateFirewallRule)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.DELETE("/rules/:id", api.DeleteFirewallRule)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.POST("/apply", api.ApplyFirewallRules)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.GET("/config", api.GetFirewallConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				firewall.PUT("/config", api.SetFirewallConfig)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 托管前端静态文件
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		if _, err := os.Stat("static"); err == nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			r.StaticFS("/assets", http.Dir("static/assets"))
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		r.Static("/static", "./static")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			r.StaticFile("/favicon.svg", "static/favicon.svg")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			r.StaticFile("/icons.svg", "static/icons.svg")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			// SPA 路由：所有非 API 路由都返回 index.html
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			r.NoRoute(func(c *gin.Context) {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				path := c.Request.URL.Path
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				if !filepath.HasPrefix(path, "/api") && !filepath.HasPrefix(path, "/ws") {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+					c.File("static/index.html")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			})
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// WebSocket 路由
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		r.GET("/ws/monitor", middleware.Auth(), api.WSMonitor)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 启动服务器
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		port := "8888"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		certFile := "certs/server.crt"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		keyFile := "certs/server.key"
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		if _, err := os.Stat(certFile); err == nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			log.Printf("Server starting on https://0.0.0.0:%s (SSL Enabled)", port)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			if err := r.RunTLS("0.0.0.0:"+port, certFile, keyFile); err != nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				log.Fatal("Failed to start HTTPS server:", err)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		} else {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			log.Printf("Server starting on http://0.0.0.0:%s", port)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			if err := r.Run("0.0.0.0:"+port); err != nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+				log.Fatal("Failed to start HTTP server:", err)
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	// initDatabase 初始化数据库
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+	func initDatabase() (*gorm.DB, error) {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		log.Println("Initializing database...")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 加载数据库配置
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		cfg := database.LoadConfig()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 连接数据库
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		if err := database.Connect(cfg); err != nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			return nil, err
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 获取数据库连接
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		db := database.GetDB()
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// 运行迁移
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		if err := database.Migrate(); err != nil {
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+			return nil, err
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		log.Println("Database initialized successfully")
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		return db, nil
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+		// Immich安全登录路由 (需要认证)
+	}
+piGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)

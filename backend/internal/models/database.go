@@ -18,11 +18,19 @@ type User struct {
 	BaseModel
 	Username     string `gorm:"uniqueIndex;not null" json:"username"`
 	PasswordHash string `gorm:"not null" json:"-"`
+	Password     string `gorm:"-" json:"password,omitempty"` // 临时字段，用于API
 	Email        string `json:"email"`
 	DisplayName  string `json:"displayName"`
+	NickName     string `json:"nickName,omitempty"`
 	Role         string `gorm:"default:'user'" json:"role"` // admin, user
 	IsActive     bool   `gorm:"default:true" json:"isActive"`
+	Status       string `gorm:"default:'active'" json:"status"`
+	Groups  []string `gorm:"serializer:json" json:"groups,omitempty"`
 	LastLogin    *time.Time `json:"lastLogin,omitempty"`
+
+	// SSO相关字段
+	SSOProvider string `json:"ssoProvider,omitempty"` // SSO提供商名称（如google, github等）
+	SSOID       string `json:"ssoId,omitempty"`       // SSO提供商的用户ID
 
 	// 关联关系
 	SSHKeys      []SSHKey `gorm:"foreignKey:UserID" json:"sshKeys,omitempty"`
@@ -72,6 +80,7 @@ type BackupRecord struct {
 	FilePath     string    `gorm:"not null" json:"filePath"`
 	Size         int64     `json:"size"`
 	Status       string    `gorm:"default:'completed'" json:"status"` // completed, failed, in_progress
+	Groups  []string `gorm:"serializer:json" json:"groups,omitempty"`
 	CreatedBy    string    `json:"createdBy"`
 	Description  string    `json:"description"`
 	CompletedAt  *time.Time `json:"completedAt"`
@@ -88,6 +97,7 @@ type OperationLog struct {
 	UserAgent   string `json:"userAgent"`
 	Details     string `gorm:"type:text" json:"details"`
 	Status      string `gorm:"default:'success'" json:"status"` // success, failed
+	Groups  []string `gorm:"serializer:json" json:"groups,omitempty"`
 }
 
 // Plugin 插件模型

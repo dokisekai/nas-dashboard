@@ -58,6 +58,18 @@ func Login(c *gin.Context) {
 		return
 	}
 
+	// 设置session_token cookie用于SSO
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(
+		"session_token",
+		accessToken,
+		86400, // 24小时
+		"/",
+		"",
+		false, // secure (设为true如果使用HTTPS)
+		false, // httponly
+	)
+
 	c.JSON(http.StatusOK, LoginResponse{
 		Token:        accessToken,
 		RefreshToken: refreshToken,

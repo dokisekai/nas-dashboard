@@ -86,7 +86,7 @@ func isNetworkManagerAvailable() bool {
 // configureSystemdResolvedDNS 使用systemd-resolved配置DNS
 func configureSystemdResolvedDNS(config DNSConfig) error {
 	// 获取主连接名称
-	connectionName := "System wide DNS"
+	_ = "System wide DNS"
 
 	// 使用resolvectl命令设置DNS（Debian 12推荐方法）
 	var dnsServers []string

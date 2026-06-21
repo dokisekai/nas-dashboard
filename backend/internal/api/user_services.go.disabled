@@ -1,0 +1,776 @@
+package api
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/user"
+	"path/filepath"
+	"nas-dashboard/internal/models"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+// SystemUserService 系统用户服务
+type SystemUserService struct{}
+
+// CreateUser 创建系统用户
+func (s *SystemUserService) CreateUser(user models.User) error {
+	// 检查用户是否已存在
+	if _, err := user.Lookup(user.Username); err == nil {
+		return fmt.Errorf("user %s already exists", user.Username)
+	}
+
+	// 创建用户命令
+	cmd := exec.Command("useradd", "-m")
+	if user.Email != "" {
+		cmd.Args = append(cmd.Args, "-c", user.Email)
+	}
+	cmd.Args = append(cmd.Args, user.Username)
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to create user: %w, output: %s", err, string(output))
+	}
+
+	// 设置密码
+	if user.Password != "" {
+		if err := s.setUserPassword(user.Username, user.Password); err != nil {
+			return fmt.Errorf("failed to set password: %w", err)
+		}
+	}
+
+	// 添加到用户组
+	if len(user.Groups) > 0 {
+		for _, group := range user.Groups {
+			cmd := exec.Command("usermod", "-aG", group, user.Username)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				// 记录错误但不中断流程
+				fmt.Printf("Warning: failed to add user to group %s: %v, output: %s\n", group, err, string(output))
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateUser 更新系统用户
+func (s *SystemUserService) UpdateUser(username string, user models.User) error {
+	// 检查用户是否存在
+	if _, err := user.Lookup(username); err != nil {
+		return fmt.Errorf("user %s does not exist", username)
+	}
+
+	// 更新密码
+	if user.Password != "" {
+		if err := s.setUserPassword(username, user.Password); err != nil {
+			return fmt.Errorf("failed to update password: %w", err)
+		}
+	}
+
+	// 更新其他信息
+	if user.Email != "" || user.DisplayName != "" {
+		comment := user.Email
+		if user.DisplayName != "" {
+			if comment != "" {
+				comment = fmt.Sprintf("%s - %s", user.DisplayName, comment)
+			} else {
+				comment = user.DisplayName
+			}
+		}
+
+		cmd := exec.Command("usermod", "-c", comment, username)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to update user comment: %w, output: %s", err, string(output))
+		}
+	}
+
+	// 更新用户组
+	if len(user.Groups) > 0 {
+		for _, group := range user.Groups {
+			cmd := exec.Command("usermod", "-aG", group, username)
+			if output, err := cmd.CombinedOutput(); err != nil {
+				fmt.Printf("Warning: failed to add user to group %s: %v, output: %s\n", group, err, string(output))
+			}
+		}
+	}
+
+	return nil
+}
+
+// DeleteUser 删除系统用户
+func (s *SystemUserService) DeleteUser(username string) error {
+	// 检查用户是否存在
+	if _, err := user.Lookup(username); err != nil {
+		return fmt.Errorf("user %s does not exist", username)
+	}
+
+	// 删除用户（保留家目录）
+	cmd := exec.Command("userdel", username)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to delete user: %w, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// GetUsers 获取所有系统用户
+func (s *SystemUserService) GetUsers() ([]models.User, error) {
+	systemUsers, err := getSystemUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	var unifiedUsers []models.User
+	for _, sysUser := range systemUsers {
+		// 跳过系统用户（UID < 1000）
+		uid, err := strconv.Atoi(sysUser.UID)
+		if err != nil || uid < 1000 {
+			continue
+		}
+
+		unifiedUser := models.User{
+			Username:  sysUser.Username,
+			Name:      sysUser.Comment,
+			Email:     sysUser.Comment, // 假设comment字段包含邮箱
+			IsActive:  true,
+			Role:      "user",
+			CreatedAt: time.Now().Format(time.RFC3339),
+		}
+
+		// 获取用户组
+		groups, err := s.getUserGroups(sysUser.Username)
+		if err == nil {
+			unifiedUser.Groups = groups
+		}
+
+		unifiedUsers = append(unifiedUsers, unifiedUser)
+	}
+
+	return unifiedUsers, nil
+}
+
+// ValidateUser 验证用户密码
+func (s *SystemUserService) ValidateUser(username, password string) bool {
+	// 使用shadow文件验证
+	// 这里简化处理，实际应该使用更安全的方法
+	cmd := exec.Command("su", "-", username, "-c", "exit")
+	cmd.Stdin = strings.NewReader(password + "\n")
+	err := cmd.Run()
+	return err == nil
+}
+
+func (s *SystemUserService) setUserPassword(username, password string) error {
+	// 使用chpasswd命令设置密码
+	cmd := exec.Command("chpasswd")
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:%s", username, password))
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("chpasswd failed: %w, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+func (s *SystemUserService) getUserGroups(username string) ([]string, error) {
+	cmd := exec.Command("groups", username)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	// 输出格式: username : group1 group2 group3
+	parts := strings.Split(string(output), ":")
+	if len(parts) < 2 {
+		return []string{}, nil
+	}
+
+	groups := strings.Fields(strings.TrimSpace(parts[1]))
+	return groups, nil
+}
+
+// ImmichUserService Immich用户服务
+type ImmichUserService struct {
+	Config map[string]interface{}
+	client  *http.Client
+}
+
+// ImmichUserListResponse Immich用户列表响应
+type ImmichUserListResponse struct {
+	Users []map[string]interface{} `json:"users"`
+	Total int                  `json:"total"`
+}
+
+// CreateUser 在Immich中创建用户
+func (i *ImmichUserService) CreateUser(user models.User) error {
+	if !i.Config.Enabled {
+		return fmt.Errorf("Immich service is not enabled")
+	}
+
+	if i.client == nil {
+		i.client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	// 准备请求数据
+	requestData := map[string]interface{}{
+		"email":    user.Email,
+		"name":     user.DisplayName,
+		"password": user.Password,
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// 发送请求
+	req, err := http.NewRequest("POST", i.Config["apiUrl"].(string)+"/users", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", i.Config["apiKey"].(string))
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to create user: status %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// UpdateUser 更新Immich用户
+func (i *ImmichUserService) UpdateUser(username string, user models.User) error {
+	if !i.Config.Enabled {
+		return fmt.Errorf("Immich service is not enabled")
+	}
+
+	if i.client == nil {
+		i.client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	// 首先获取用户ID
+	userId, err := i.getUserIdByEmail(user.Email)
+	if err != nil {
+		return fmt.Errorf("failed to get user ID: %w", err)
+	}
+
+	// 准备更新数据
+	requestData := map[string]interface{}{
+		"name": user.DisplayName,
+	}
+
+	if user.Password != "" {
+		requestData["password"] = user.Password
+	}
+
+	if user.Role != "" {
+		requestData["role"] = user.Role
+	}
+
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	// 发送请求
+	req, err := http.NewRequest("PUT", i.Config["apiUrl"].(string)+"/users/"+userId, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", i.Config["apiKey"].(string))
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update user: status %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// DeleteUser 删除Immich用户
+func (i *ImmichUserService) DeleteUser(username string) error {
+	if !i.Config.Enabled {
+		return fmt.Errorf("Immich service is not enabled")
+	}
+
+	if i.client == nil {
+		i.client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	// 通过用户名获取用户（这里简化处理，实际需要先获取用户ID）
+	// 假设我们有用户邮箱或其他标识
+	users, err := i.GetUsers()
+	if err != nil {
+		return err
+	}
+
+	var userId string
+	for _, user := range users {
+		if user.DisplayName == username || user.Email == username {
+			userId = fmt.Sprintf("%d", user.ID)
+			break
+		}
+	}
+
+	if userId == "" {
+		return fmt.Errorf("user %s not found in Immich", username)
+	}
+
+	// 发送删除请求
+	req, err := http.NewRequest("DELETE", i.Config["apiUrl"].(string)+"/users/"+userId, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("x-api-key", i.Config["apiKey"].(string))
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to delete user: status %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// GetUsers 获取所有Immich用户
+func (i *ImmichUserService) GetUsers() ([]models.User, error) {
+	if !i.Config.Enabled {
+		return []models.User{}, nil
+	}
+
+	if i.client == nil {
+		i.client = &http.Client{Timeout: 30 * time.Second}
+	}
+
+	req, err := http.NewRequest("GET", i.Config["apiUrl"].(string)+"/users", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("x-api-key", i.Config["apiKey"].(string))
+
+	resp, err := i.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("failed to get users: status %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	var userListResponse ImmichUserListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&userListResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	var unifiedUsers []models.User
+	for _, immichUser := range userListResponse.Users {
+		unifiedUser := models.User{
+			Username:  immichUser["email"].(string), // 使用邮箱作为用户名
+			Email:     immichUser["email"].(string),
+			Name:      immichUser["name"].(string),
+			IsActive:  immichUser.IsActive,
+			Role:      immichUser.Role,
+			CreatedAt: immichUser.CreatedAt,
+			UpdatedAt: immichUser.UpdatedAt,
+		}
+
+		unifiedUsers = append(unifiedUsers, unifiedUser)
+	}
+
+	return unifiedUsers, nil
+}
+
+// ValidateUser 验证Immich用户
+func (i *ImmichUserService) ValidateUser(username, password string) bool {
+	// Immich不提供直接的用户验证API
+	// 这里需要通过登录API来验证
+	// 简化处理：返回true，假设用户存在
+	return true
+}
+
+func (i *ImmichUserService) getUserIdByEmail(email string) (string, error) {
+	users, err := i.GetUsers()
+	if err != nil {
+		return "", err
+	}
+
+	for _, user := range users {
+		if user.Email == email {
+			// 从用户列表中获取ID
+			// 这里需要实际的Immich用户ID字段
+			return user.Email, nil // 简化处理
+		}
+	}
+
+	return "", fmt.Errorf("user not found")
+}
+
+// DockerUserService Docker容器用户服务
+type DockerUserService struct {
+	// Docker连接信息
+	Host     string
+	CertPath string
+}
+
+// DockerUser Docker容器用户配置
+type DockerUser struct {
+	ContainerName string            `json:"containerName"`
+	ServiceType   string            `json:"serviceType"` // nextcloud, jellyfin, etc.
+	UserConfig   map[string]string `json:"userConfig"`
+}
+
+var dockerUsers []DockerUser
+
+// CreateUser 在Docker容器中创建用户
+func (d *DockerUserService) CreateUser(user models.User) error {
+	for _, dockerUser := range dockerUsers {
+		if err := d.createUserInContainer(dockerUser, user); err != nil {
+			// 记录错误但继续处理其他容器
+			fmt.Printf("Failed to create user in container %s: %v\n", dockerUser.ContainerName, err)
+		}
+	}
+	return nil
+}
+
+// UpdateUser 更新Docker容器用户
+func (d *DockerUserService) UpdateUser(username string, user models.User) error {
+	for _, dockerUser := range dockerUsers {
+		if err := d.updateUserInContainer(dockerUser, username, user); err != nil {
+			fmt.Printf("Failed to update user in container %s: %v\n", dockerUser.ContainerName, err)
+		}
+	}
+	return nil
+}
+
+// DeleteUser 删除Docker容器用户
+func (d *DockerUserService) DeleteUser(username string) error {
+	for _, dockerUser := range dockerUsers {
+		if err := d.deleteUserInContainer(dockerUser, username); err != nil {
+			fmt.Printf("Failed to delete user in container %s: %v\n", dockerUser.ContainerName, err)
+		}
+	}
+	return nil
+}
+
+// GetUsers 从Docker容器获取用户
+func (d *DockerUserService) GetUsers() ([]models.User, error) {
+	var allUsers []models.User
+	seenUsers := make(map[string]bool)
+
+	for _, dockerUser := range dockerUsers {
+		users, err := d.getUsersFromContainer(dockerUser)
+		if err != nil {
+			fmt.Printf("Failed to get users from container %s: %v\n", dockerUser.ContainerName, err)
+			continue
+		}
+
+		for _, user := range users {
+			if !seenUsers[user.Username] {
+				allUsers = append(allUsers, user)
+				seenUsers[user.Username] = true
+			}
+		}
+	}
+
+	return allUsers, nil
+}
+
+// ValidateUser 验证Docker容器用户
+func (d *DockerUserService) ValidateUser(username, password string) bool {
+	// 在任意一个容器中验证用户
+	for _, dockerUser := range dockerUsers {
+		if d.validateUserInContainer(dockerUser, username, password) {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DockerUserService) createUserInContainer(dockerUser DockerUser, user models.User) error {
+	// 根据服务类型执行不同的创建命令
+	switch dockerUser.ServiceType {
+	case "nextcloud":
+		return d.createNextcloudUser(dockerUser, user)
+	case "jellyfin":
+		return d.createJellyfinUser(dockerUser, user)
+	default:
+		return d.createGenericUser(dockerUser, user)
+	}
+}
+
+func (d *DockerUserService) createNextcloudUser(dockerUser DockerUser, user models.User) error {
+	// 使用occ命令创建Nextcloud用户
+	cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+		"php", "occ", "user:add",
+		"--password-from-env",
+		user.Username)
+
+	// 设置密码环境变量
+	cmd.Env = append(os.Environ(), fmt.Sprintf("OC_PASS=%s", user.Password))
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Nextcloud user creation failed: %w, output: %s", err, string(output))
+	}
+
+	// 设置用户显示名称和邮箱
+	if user.DisplayName != "" || user.Email != "" {
+		cmd = exec.Command("docker", "exec", dockerUser.ContainerName,
+			"php", "occ", "user:setting",
+			user.Username,
+			"displayname", user.DisplayName)
+
+		cmd.Run() // 忽略错误
+	}
+
+	return nil
+}
+
+func (d *DockerUserService) createJellyfinUser(dockerUser DockerUser, user models.User) error {
+	// Jellyfin需要通过API创建用户
+	// 这里简化处理，实际需要调用Jellyfin API
+	return fmt.Errorf("Jellyfin user creation not implemented")
+}
+
+func (d *DockerUserService) createGenericUser(dockerUser DockerUser, user models.User) error {
+	// 通用用户创建方法（在容器内使用useradd）
+	cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+		"useradd", "-m", user.Username)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("generic user creation failed: %w, output: %s", err, string(output))
+	}
+
+	// 设置密码
+	if user.Password != "" {
+		cmd = exec.Command("docker", "exec", dockerUser.ContainerName,
+			"bash", "-c",
+			fmt.Sprintf("echo '%s:%s' | chpasswd", user.Username, user.Password))
+		cmd.Run()
+	}
+
+	return nil
+}
+
+func (d *DockerUserService) updateUserInContainer(dockerUser DockerUser, username string, user models.User) error {
+	// 根据服务类型执行不同的更新命令
+	switch dockerUser.ServiceType {
+	case "nextcloud":
+		return d.updateNextcloudUser(dockerUser, username, user)
+	case "jellyfin":
+		return d.updateJellyfinUser(dockerUser, username, user)
+	default:
+		return d.updateGenericUser(dockerUser, username, user)
+	}
+}
+
+func (d *DockerUserService) updateNextcloudUser(dockerUser DockerUser, username string, user models.User) error {
+	// 更新密码
+	if user.Password != "" {
+		cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+			"php", "occ", "user:resetpassword",
+			username,
+			"--password-from-env")
+
+		cmd.Env = append(os.Environ(), fmt.Sprintf("OC_PASS=%s", user.Password))
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("Nextcloud password update failed: %w, output: %s", err, string(output))
+		}
+	}
+
+	// 更新显示名称
+	if user.DisplayName != "" {
+		cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+			"php", "occ", "user:setting",
+			username, "displayname", user.DisplayName)
+
+		cmd.Run() // 忽略错误
+	}
+
+	return nil
+}
+
+func (d *DockerUserService) updateJellyfinUser(dockerUser DockerUser, username string, user models.User) error {
+	return fmt.Errorf("Jellyfin user update not implemented")
+}
+
+func (d *DockerUserService) updateGenericUser(dockerUser DockerUser, username string, user models.User) error {
+	// 通用密码更新
+	if user.Password != "" {
+		cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+			"bash", "-c",
+			fmt.Sprintf("echo '%s:%s' | chpasswd", username, user.Password))
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("generic password update failed: %w, output: %s", err, string(output))
+		}
+	}
+
+	return nil
+}
+
+func (d *DockerUserService) deleteUserInContainer(dockerUser DockerUser, username string) error {
+	// 根据服务类型执行不同的删除命令
+	switch dockerUser.ServiceType {
+	case "nextcloud":
+		cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+			"php", "occ", "user:delete", username)
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("Nextcloud user deletion failed: %w, output: %s", err, string(output))
+		}
+		return nil
+
+	case "jellyfin":
+		return fmt.Errorf("Jellyfin user deletion not implemented")
+
+	default:
+		cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+			"userdel", username)
+
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("generic user deletion failed: %w, output: %s", err, string(output))
+		}
+		return nil
+	}
+}
+
+func (d *DockerUserService) getUsersFromContainer(dockerUser DockerUser) ([]models.User, error) {
+	switch dockerUser.ServiceType {
+	case "nextcloud":
+		return d.getNextcloudUsers(dockerUser)
+	case "jellyfin":
+		return d.getJellyfinUsers(dockerUser)
+	default:
+		return d.getGenericUsers(dockerUser)
+	}
+}
+
+func (d *DockerUserService) getNextcloudUsers(dockerUser DockerUser) ([]models.User, error) {
+	cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+		"php", "occ", "user:list", "--output=json")
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Nextcloud users: %w", err)
+	}
+
+	var users map[string]string
+	if err := json.Unmarshal(output, &users); err != nil {
+		return nil, fmt.Errorf("failed to parse Nextcloud users: %w", err)
+	}
+
+	var unifiedUsers []models.User
+	for username, displayName := range users {
+		unifiedUsers = append(unifiedUsers, models.User{
+			Username: username,
+			Name:     displayName,
+			IsActive: true,
+			Role:     "user",
+		})
+	}
+
+	return unifiedUsers, nil
+}
+
+func (d *DockerUserService) getJellyfinUsers(dockerUser DockerUser) ([]models.User, error) {
+	return nil, fmt.Errorf("Jellyfin user listing not implemented")
+}
+
+func (d *DockerUserService) getGenericUsers(dockerUser DockerUser) ([]models.User, error) {
+	cmd := exec.Command("docker", "exec", dockerUser.ContainerName,
+		"cat", "/etc/passwd")
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get users from container: %w", err)
+	}
+
+	users, err := parsePasswd(output)
+	if err != nil {
+		return nil, err
+	}
+
+	var unifiedUsers []models.User
+	for _, sysUser := range users {
+		uid, err := strconv.Atoi(sysUser.UID)
+		if err != nil || uid < 1000 {
+			continue
+		}
+
+		unifiedUsers = append(unifiedUsers, models.User{
+			Username: sysUser.Username,
+			Name:     sysUser.Comment,
+			IsActive: true,
+			Role:     "user",
+		})
+	}
+
+	return unifiedUsers, nil
+}
+
+func (d *DockerUserService) validateUserInContainer(dockerUser DockerUser, username, password string) bool {
+	// 简化处理：实际应该在各个容器中验证
+	return false
+}
+
+// AddDockerUser 添加Docker用户配置
+func AddDockerUser(containerName, serviceType string, config map[string]string) {
+	dockerUsers = append(dockerUsers, DockerUser{
+		ContainerName: containerName,
+		ServiceType:   serviceType,
+		UserConfig:    config,
+	})
+}
+
+// RemoveDockerUser 移除Docker用户配置
+func RemoveDockerUser(containerName string) {
+	for i, dockerUser := range dockerUsers {
+		if dockerUser.ContainerName == containerName {
+			dockerUsers = append(dockerUsers[:i], dockerUsers[i+1:]...)
+			break
+		}
+	}
+}
+
+// GetDockerUsers 获取Docker用户配置列表
+func GetDockerUsers() []DockerUser {
+	return dockerUsers
+}

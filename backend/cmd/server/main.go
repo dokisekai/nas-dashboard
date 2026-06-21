@@ -9,6 +9,7 @@ import (
 	"nas-dashboard/internal/api"
 	"nas-dashboard/internal/database"
 	"nas-dashboard/internal/middleware"
+	"nas-dashboard/internal/sso"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -22,14 +23,20 @@ func main() {
 		log.Println("Server will continue without database support")
 	}
 
-	// 初始化API处理器
-	api.InitAPI(db)
-
 	// 创建 Gin 路由
 	r := gin.Default()
 
+	// 初始化API处理器
+	api.InitAPI(db)
+
+	// 初始化SSO服务器
+	ssoServer := sso.NewSSOServer(db)
+
 	// 配置 CORS
 	r.Use(middleware.CORS())
+
+	// 加载HTML模板
+	r.LoadHTMLGlob("templates/*.html")
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
@@ -42,6 +49,12 @@ func main() {
 		// 认证路由
 		apiGroup.POST("/auth/login", api.Login)
 		apiGroup.POST("/auth/refresh", api.RefreshToken)
+		// Immich认证路由 (需要认证)
+		apiGroup.GET("/immich/auth-login", middleware.Auth(), api.ImmichAuthLogin)
+
+
+		// OAuth管理路由 (需要认证)
+		api.SetupOAuthRoutes(r, db)
 
 		// 系统初始化路由 (公开)
 		apiGroup.GET("/system/init-status", api.GetInitStatus)
@@ -244,21 +257,11 @@ func main() {
 			docker.GET("/volumes", api.GetDockerVolumes)
 		}
 
+
 		// 用户管理路由
 
-			// Immich 路由
-			immich := apiGroup.Group("/immich")
-			immich.Use(middleware.Auth())
-			{
-				immich.GET("/users", api.GetImmichUsers)
-				immich.GET("/users/:id", api.GetImmichUser)
-				immich.POST("/users", api.CreateImmichUser)
-				immich.PUT("/users/:id", api.UpdateImmichUser)
-				immich.DELETE("/users/:id", api.DeleteImmichUser)
-				immich.POST("/users/batch", api.BatchUpdateImmichUsers)
-				immich.POST("/users/sync", api.SyncImmichUsersWithSystemUsers)
-			}
-		users := apiGroup.Group("/users")
+
+	users := apiGroup.Group("/users")
 		users.Use(middleware.Auth())
 		{
 			users.GET("", api.GetUsers)
@@ -363,17 +366,6 @@ func main() {
 				files.POST("/delete", api.DeleteFile)
 			}
 
-			// 通知管理路由
-			notifications := apiGroup.Group("/notifications")
-			notifications.Use(middleware.Auth())
-			{
-				notifications.GET("", api.GetNotifications)
-				notifications.POST("/read/:id", api.MarkNotificationRead)
-				notifications.POST("/read/all", api.MarkAllNotificationsRead)
-				notifications.DELETE("/clear", api.ClearNotifications)
-				notifications.POST("", api.CreateNotification)
-			}
-
 			// 备份恢复路由
 			backups := apiGroup.Group("/backups")
 			backups.Use(middleware.Auth())
@@ -412,62 +404,89 @@ func main() {
 			}
 		}
 
-		// 托管前端静态文件
-		if _, err := os.Stat("static"); err == nil {
-			r.StaticFS("/assets", http.Dir("static/assets"))
-			r.StaticFile("/favicon.svg", "static/favicon.svg")
-			r.StaticFile("/icons.svg", "static/icons.svg")
-			
-			// SPA 路由：所有非 API 路由都返回 index.html
-			r.NoRoute(func(c *gin.Context) {
-				path := c.Request.URL.Path
-				if !filepath.HasPrefix(path, "/api") && !filepath.HasPrefix(path, "/ws") {
-					c.File("static/index.html")
-				}
-			})
+
+		// SSO/OIDC 路由（OAuth2/OIDC Provider）
+		// OIDC 标准端点（在根路径下，符合规范）
+		r.GET("/.well-known/openid-configuration", ssoServer.WellKnownHandler)    // OIDC发现端点
+		r.GET("/authorize", ssoServer.AuthorizeHandler)                          // 授权端点
+		r.GET("/callback", ssoServer.CallbackHandler)                             // 回调端点
+		r.POST("/token", ssoServer.TokenHandler)                                  // 令牌端点
+		r.GET("/userinfo", ssoServer.UserInfoHandler)                             // 用户信息端点
+		r.GET("/jwks", ssoServer.JWKSHandler)                                     // JWKS端点
+		r.POST("/revoke", ssoServer.RevokeTokenHandler)                          // 撤销令牌端点
+		r.POST("/introspect", ssoServer.IntrospectHandler)                       // 令牌内省端点
+
+		// /sso 前缀的路由（向后兼容）
+		sso := r.Group("/sso")
+		{
+			sso.GET("/authorize", ssoServer.AuthorizeHandler)                          // 授权端点
+			sso.GET("/callback", ssoServer.CallbackHandler)                             // 回调端点
+			sso.POST("/token", ssoServer.TokenHandler)                                  // 令牌端点
+			sso.GET("/userinfo", ssoServer.UserInfoHandler)                             // 用户信息端点
+			sso.GET("/.well-known/openid-configuration", ssoServer.WellKnownHandler)    // OIDC发现端点
+			sso.GET("/jwks", ssoServer.JWKSHandler)                                     // JWKS端点
+			sso.POST("/revoke", ssoServer.RevokeTokenHandler)                          // 撤销令牌端点
+			sso.POST("/introspect", ssoServer.IntrospectHandler)                       // 令牌内省端点
 		}
+	// 托管前端静态文件
+	if _, err := os.Stat("static"); err == nil {
+		r.StaticFS("/assets", http.Dir("static/assets"))
+		r.StaticFile("/favicon.svg", "static/favicon.svg")
+		r.StaticFile("/icons.svg", "static/icons.svg")
 
-		// WebSocket 路由
-		r.GET("/ws/monitor", api.WSMonitor)
-
-		// 启动服务器
-		port := "8888"
-		certFile := "certs/server.crt"
-		keyFile := "certs/server.key"
-
-		if _, err := os.Stat(certFile); err == nil {
-			log.Printf("Server starting on https://0.0.0.0:%s (SSL Enabled)", port)
-			if err := r.RunTLS("0.0.0.0:"+port, certFile, keyFile); err != nil {
-				log.Fatal("Failed to start HTTPS server:", err)
+		// SPA 路由：所有非 API 路由都返回 index.html
+		r.NoRoute(func(c *gin.Context) {
+			path := c.Request.URL.Path
+			if !filepath.HasPrefix(path, "/api") && !filepath.HasPrefix(path, "/ws") {
+				c.File("static/index.html")
 			}
-		} else {
-			log.Printf("Server starting on http://0.0.0.0:%s", port)
-			if err := r.Run("0.0.0.0:"+port); err != nil {
-				log.Fatal("Failed to start HTTP server:", err)
-			}
+		})
+	}
+
+	// WebSocket 路由
+	r.GET("/ws/monitor", api.WSMonitor)
+
+	// 启动服务器
+	port := "8888"
+	certFile := "certs/server.crt"
+	keyFile := "certs/server.key"
+
+	if _, err := os.Stat(certFile); err == nil {
+		log.Printf("Server starting on https://0.0.0.0:%s (SSL Enabled)", port)
+		if err := r.RunTLS("0.0.0.0:"+port, certFile, keyFile); err != nil {
+			log.Fatal("Failed to start HTTPS server:", err)
+		}
+	} else {
+		log.Printf("Server starting on http://0.0.0.0:%s", port)
+		if err := r.Run("0.0.0.0:"+port); err != nil {
+			log.Fatal("Failed to start HTTP server:", err)
 		}
 	}
+}
 
 	// initDatabase 初始化数据库
 	func initDatabase() (*gorm.DB, error) {
-		log.Println("Initializing database...")
+	log.Println("Initializing database...")
 
-		// 加载数据库配置
-		cfg := database.LoadConfig()
+	// 加载数据库配置
+	cfg := database.LoadConfig()
 
-		// 连接数据库
-		if err := database.Connect(cfg); err != nil {
-			return nil, err
-		}
-
-		// 获取数据库连接
-		db := database.GetDB()
-
-		// 运行迁移
-		if err := database.Migrate(); err != nil {
-			return nil, err
-		}
-
-		log.Println("Database initialized successfully")
-		return db, nil
+	// 连接数据库
+	if err := database.Connect(cfg); err != nil {
+		return nil, err
 	}
+
+	// 获取数据库连接
+	db := database.GetDB()
+
+	// 运行迁移
+	if err := database.Migrate(); err != nil {
+		return nil, err
+	}
+
+	log.Println("Database initialized successfully")
+
+	// Immich安全登录路由 (需要认证)
+
+	return db, nil
+}

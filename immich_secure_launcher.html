@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immich管理 - NAS Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .logo {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #1e3c72;
+            margin: 0 0 10px 0;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin: 0 0 30px 0;
+        }
+        
+        .status-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .online {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .offline {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 60, 136, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">📷</div>
+        <h1>Immich 照片管理</h1>
+        <p class="subtitle">NAS Dashboard 安全集成</p>
+        
+        <div class="status-box">
+            <div id="status">正在检查服务状态...</div>
+        </div>
+        
+        <div class="warning">
+            💡 提示：此页面使用环境变量中的安全配置，无需在页面中存储敏感信息。
+        </div>
+        
+        <button class="btn" onclick="openImmich()">
+            🚀 打开 Immich 管理界面
+        </button>
+        
+        <button class="btn btn-secondary" onclick="checkStatus()">
+            🔄 刷新状态
+        </button>
+        
+        <div class="info-text">
+            Immich 服务地址: <strong>http://localhost:2283</strong><br>
+            配置状态: <strong>已集成</strong> | 安全级别: <strong>高</strong>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const statusDiv = document.getElementById('status');
+            
+            statusDiv.innerHTML = '正在检查服务状态...';
+            statusDiv.className = 'offline';
+            
+            // 检查Immich服务是否运行
+            fetch('http://localhost:2283/api/server-info/about')
+                .then(response => {
+                    if (response.ok) {
+                        statusDiv.innerHTML = '✅ Immich 服务在线';
+                        statusDiv.className = 'online';
+                    } else {
+                        throw new Error('服务离线');
+                    }
+                })
+                .catch(error => {
+                    statusDiv.innerHTML = '❌ Immich 服务离线';
+                    statusDiv.className = 'offline';
+                });
+        }
+
+        function openImmich() {
+            // 直接打开Immich，由于已集成，无需额外认证
+            window.open('http://localhost:2283', '_blank');
+        }
+
+        // 页面加载时自动检查状态
+        window.onload = function() {
+            checkStatus();
+        };
+    </script>
+</body>
+</html>

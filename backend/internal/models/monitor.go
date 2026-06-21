@@ -74,6 +74,7 @@ type AlertRule struct {
 	Condition string `json:"condition"`   // >, <, =, !=, >=, <=
 	Threshold float64 `json:"threshold"`
 	Duration  int    `json:"duration"`    // 持续时间（秒）
+	Cooldown  int    `json:"cooldown"`    // 冷却时间（秒）
 	Severity  string `json:"severity"`    // info, warning, critical
 	Enabled   bool   `json:"enabled"`
 	Actions   string `gorm:"type:json" json:"actions"`     // JSON格式的动作列表

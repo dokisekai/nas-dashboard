@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Docker Manager 改进功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .feature-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        .feature-list li {
+            padding: 5px 0;
+            opacity: 0.9;
+        }
+        .feature-list li:before {
+            content: "✓ ";
+            color: #10b981;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            text-decoration: none;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .access-section {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐳 Docker管理界面改进完成</h1>
+        <p class="subtitle">现代化容器化管理平台 - v2.1.0</p>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-value" id="running-count">-</div>
+                <div class="stat-label">运行中容器</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🔴</div>
+                <div class="stat-value" id="stopped-count">-</div>
+                <div class="stat-label">已停止容器</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-value" id="images-count">-</div>
+                <div class="stat-label">镜像总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧹</div>
+                <div class="stat-value" id="unused-count">-</div>
+                <div class="stat-label">未使用镜像</div>
+            </div>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-title">🎨 界面改进</div>
+                <ul class="feature-list">
+                    <li>现代化设计风格</li>
+                    <li>实时统计仪表板</li>
+                    <li>智能搜索功能</li>
+                    <li>状态指示器动画</li>
+                    <li>响应式布局</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">🚀 功能增强</div>
+                <ul class="feature-list">
+                    <li>容器批量操作</li>
+                    <li>镜像清理功能</li>
+                    <li>快速启动/停止</li>
+                    <li>智能过滤搜索</li>
+                    <li>详情查看</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <div class="feature-title">⚡ 用户体验</div>
+                <ul class="feature-list">
+                    <li>流畅动画效果</li>
+                    <li>直观操作按钮</li>
+                    <li>即时状态反馈</li>
+                    <li>错误提示友好</li>
+                    <li>一键批量管理</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="access-section">
+            <h3>🎯 访问Docker管理界面</h3>
+            <p style="margin: 20px 0; opacity: 0.8;">点击下方按钮直接访问改进后的Docker管理界面</p>
+            <a href="http://localhost:5173/docker" class="button" target="_blank">本地访问 (5173)</a>
+            <a href="http://192.168.50.10:5173/docker" class="button" target="_blank">网络访问 (5173)</a>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; opacity: 0.6; font-size: 12px;">
+            改进完成日期: 2026年6月21日 | 版本: v2.1.0 | 状态: ✅ 完成并可用
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                // 登录获取token
+                const loginResponse = await fetch('http://localhost:8888/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin' })
+                });
+
+                if (!loginResponse.ok) {
+                    throw new Error('登录失败');
+                }
+
+                const { token } = await loginResponse.json();
+
+                // 获取容器数据
+                const containersResponse = await fetch('http://localhost:8888/api/docker/containers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                // 获取镜像数据
+                const imagesResponse = await fetch('http://localhost:8888/api/docker/images', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (containersResponse.ok) {
+                    const containersData = await containersResponse.json();
+                    const containers = containersData.containers || containersData || [];
+                    const running = containers.filter(c => c.state === 'running').length;
+                    const stopped = containers.filter(c => c.state !== 'running').length;
+
+                    document.getElementById('running-count').textContent = running;
+                    document.getElementById('stopped-count').textContent = stopped;
+                }
+
+                if (imagesResponse.ok) {
+                    const imagesData = await imagesResponse.json();
+                    const images = imagesData.images || imagesData || [];
+                    const unused = images.filter(img => !img.repoTags || img.repoTags.length === 0).length;
+
+                    document.getElementById('images-count').textContent = images.length;
+                    document.getElementById('unused-count').textContent = unused;
+                }
+
+            } catch (error) {
+                console.error('无法加载统计数据:', error);
+                document.getElementById('running-count').textContent = '?';
+                document.getElementById('stopped-count').textContent = '?';
+                document.getElementById('images-count').textContent = '?';
+                document.getElementById('unused-count').textContent = '?';
+            }
+        }
+
+        // 页面加载时获取统计数据
+        loadStats();
+    </script>
+</body>
+</html>

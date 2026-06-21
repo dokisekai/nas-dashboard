@@ -13,8 +13,8 @@ type Notification struct {
 	Persistent bool      `gorm:"default:false" json:"persistent"` // 是否持久化显示
 	UserID     *uint     `json:"userId,omitempty" gorm:"index"` // 关联用户ID（可选，全局通知为null）
 
-	// 关联
-	Rules []NotificationRule `json:"rules,omitempty" gorm:"foreignKey:NotificationID"`
+	// 通知规则（JSON格式存储）
+	Rules []NotificationRule `gorm:"serializer:json" json:"rules,omitempty"`
 }
 
 // NotificationRule 通知规则模型
@@ -37,8 +37,8 @@ type NotificationAction struct {
 	Config string `gorm:"type:text" json:"config"` // JSON格式的配置
 }
 
-// SystemEvent 系统事件（用于内部处理）
-type SystemEvent struct {
+// InternalEvent 内部系统事件（用于通知处理）
+type InternalEvent struct {
 	Type      string                 `json:"type"`
 	Source    string                 `json:"source"`
 	Severity  string                 `json:"severity"` // info, warning, critical

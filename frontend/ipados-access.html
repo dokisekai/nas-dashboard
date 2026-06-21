@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPadOS 26 访问测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .info-box {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .link-item {
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 10px 0;
+            display: block;
+            text-decoration: none;
+            color: white;
+            font-size: 18px;
+            transition: all 0.3s ease;
+        }
+        .link-item:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .online {
+            color: #10b981;
+        }
+        .feature-list {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+        .feature-item {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 iPadOS 26 界面</h1>
+
+        <div class="status online">
+            ✅ 前端服务器运行中
+        </div>
+
+        <div class="info-box">
+            <h2>访问地址</h2>
+            <a href="http://localhost:5181/" class="link-item">
+                🏠 主屏幕 - http://localhost:5181/
+            </a>
+            <a href="http://localhost:5181/ipados" class="link-item">
+                📱 iPadOS模式 - http://localhost:5181/ipados
+            </a>
+            <a href="http://localhost:5181/sso/login" class="link-item">
+                🔐 SSO登录 - http://localhost:5181/sso/login
+            </a>
+            <a href="http://192.168.50.10:5181/" class="link-item">
+                🌐 局域网访问 - http://192.168.50.10:5181/
+            </a>
+        </div>
+
+        <div class="info-box">
+            <h2>核心特性</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <span class="emoji">📱</span>
+                    <strong>应用列表墙</strong> - 15个NAS应用墙式展示
+                </div>
+                <div class="feature-item">
+                    <span class="emoji">🎨</span>
+                    <strong>三种视图</strong> - 网格/列表/瓷砖模式
+                </div>
+                <div class="feature-item">
+                    <span class="emoji">⚡</span>
+                    <strong>小组件系统</strong> - 时钟、天气、日历等
+                </div>
+                <div class="feature-item">
+                    <span class="emoji">🚀</span>
+                    <strong>程序坞</strong> - 底部悬浮应用Dock
+                </div>
+                <div class="feature-item">
+                    <span class="emoji">🔍</span>
+                    <strong>Spotlight搜索</strong> - 全局应用搜索
+                </div>
+                <div class="feature-item">
+                    <span class="emoji">⚙️</span>
+                    <strong>控制中心</strong> - 系统设置和控制
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h2>操作指南</h2>
+            <p style="text-align: left; line-height: 1.8;">
+                👆 <strong>点击应用</strong> - 直接打开应用<br>
+                ✏️ <strong>编辑模式</strong> - 批量选择和管理应用<br>
+                🔄 <strong>视图切换</strong> - 改变应用布局方式<br>
+                👈 <strong>左滑屏幕</strong> - 切换到应用库模式<br>
+                🔍 <strong>全局搜索</strong> - 快速找到任何应用
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 自动重定向到主屏幕
+        setTimeout(() => {
+            window.location.href = 'http://localhost:5181/';
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -24,6 +24,7 @@ type DiskIOHistory struct {
 	WriteBytes uint64
 	ReadCount  uint64
 	WriteCount uint64
+	IoTime     uint64 // 累计 IO 时间 (ms)
 }
 
 // NetIOHistory 网络 IO 历史统计

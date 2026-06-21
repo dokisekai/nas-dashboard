@@ -41,6 +41,10 @@ func InitAPI(db *gorm.DB) {
 			// 启动系统任务调度器
 			scheduler := NewScheduler(db)
 			scheduler.Start()
+
+			// 应用备份管理种子配置（config/backup-seed.json），
+			// 让新机器部署时自动获得预设的仓库 / 任务。
+			go seedBackupConfig(db)
 		}
 	})
 }

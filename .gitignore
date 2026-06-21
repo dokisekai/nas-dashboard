@@ -1,6 +1,16 @@
 # Binaries
 backend/server
 backend/nas-dashboard
+backend/nas-server
+backend/nas-server.*
+backend/main
+
+# Runtime data / secrets
+backend/nas-dashboard.db
+backend/*.db
+data/
+restic-repos/
+backend/static.bak.*/
 
 # Go
 *.sum

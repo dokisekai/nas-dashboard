@@ -58,6 +58,37 @@ func (api *SyncAPI) RunSyncJob(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Sync job started"})
 }
 
+// DeleteSyncJob 删除同步任务
+func (api *SyncAPI) DeleteSyncJob(c *gin.Context) {
+	id := c.Param("id")
+	if err := api.DB.Delete(&models.SyncJob{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Sync job deleted"})
+}
+
+// UpdateSyncJob 更新同步任务
+func (api *SyncAPI) UpdateSyncJob(c *gin.Context) {
+	id := c.Param("id")
+	var job models.SyncJob
+	if err := api.DB.First(&job, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
+		return
+	}
+	var update models.SyncJob
+	if err := c.ShouldBindJSON(&update); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := api.DB.Model(&job).Updates(update).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	api.DB.First(&job, id)
+	c.JSON(http.StatusOK, job)
+}
+
 func (api *SyncAPI) executeSync(job models.SyncJob) {
 	// 更新状态为运行中
 	api.DB.Model(&job).Update("status", "running")
@@ -81,7 +112,7 @@ func (api *SyncAPI) executeSync(job models.SyncJob) {
 	}
 
 	output, err := cmd.CombinedOutput()
-	
+
 	now := time.Now()
 	status := "completed"
 	lastError := ""
@@ -97,50 +128,3 @@ func (api *SyncAPI) executeSync(job models.SyncJob) {
 	})
 }
 
-// Backup API
-type BackupAPI struct {
-	DB *gorm.DB
-}
-
-func NewBackupAPI(db *gorm.DB) *BackupAPI {
-	return &BackupAPI{DB: db}
-}
-
-func (api *BackupAPI) GetRepos(c *gin.Context) {
-	var repos []models.BackupRepo
-	api.DB.Find(&repos)
-	c.JSON(http.StatusOK, repos)
-}
-
-func (api *BackupAPI) CreateRepo(c *gin.Context) {
-	var repo models.BackupRepo
-	if err := c.ShouldBindJSON(&repo); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 初始化 restic 仓库
-	// cmd := exec.Command("restic", "-r", repo.URL, "init")
-	// env := os.Environ()
-	// env = append(env, "RESTIC_PASSWORD="+repo.Password)
-	// ... 实际环境中需要更复杂的处理
-
-	api.DB.Create(&repo)
-	c.JSON(http.StatusCreated, repo)
-}
-
-func (api *BackupAPI) GetTasks(c *gin.Context) {
-	var tasks []models.BackupTask
-	api.DB.Preload("Repo").Find(&tasks)
-	c.JSON(http.StatusOK, tasks)
-}
-
-func (api *BackupAPI) CreateTask(c *gin.Context) {
-	var task models.BackupTask
-	if err := c.ShouldBindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	api.DB.Create(&task)
-	c.JSON(http.StatusCreated, task)
-}

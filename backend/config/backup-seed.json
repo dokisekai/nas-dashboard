@@ -1,0 +1,52 @@
+{
+  "_comment": "备份管理种子配置 — 用于全新部署时自动重建仓库与任务。修改后重启 backend 即生效（已存在记录不会被覆盖）。",
+  "_doc_password": "密码用 ${RESTIC_PASSWORD} 占位符，从 docker-compose 的 env 注入。生产环境请用 .env 文件而不是把明文写在这里。",
+  "repos": [
+    {
+      "name": "123pan-data",
+      "type": "rclone",
+      "url": "rclone:123pan:data",
+      "password": "${RESTIC_PASSWORD}",
+      "env": { "RCLONE_CONFIG": "/data/rclone.conf" },
+      "init": false,
+      "_doc": "123 网盘 data 仓库 — 备份主机 /data"
+    },
+    {
+      "name": "123pan-home",
+      "type": "rclone",
+      "url": "rclone:123pan:hserver",
+      "password": "${RESTIC_PASSWORD}",
+      "env": { "RCLONE_CONFIG": "/data/rclone.conf" },
+      "init": false,
+      "_doc": "123 网盘 home 仓库 — 备份主机 /home/hserver"
+    }
+  ],
+  "tasks": [
+    {
+      "name": "data-daily",
+      "repoName": "123pan-data",
+      "sourcePath": "/host/data",
+      "tags": "data,auto",
+      "excludes": "",
+      "retention": { "keep_daily": 7, "keep_weekly": 4 },
+      "autoPrune": true
+    },
+    {
+      "name": "home-daily",
+      "repoName": "123pan-home",
+      "sourcePath": "/host/home/hserver",
+      "tags": "home,auto",
+      "excludes": "",
+      "retention": { "keep_daily": 7, "keep_weekly": 4 },
+      "autoPrune": true
+    }
+  ],
+  "settings": {
+    "defaultHostname": "nas-dashboard",
+    "defaultExcludes": "",
+    "defaultTags": "auto",
+    "autoCheck": false,
+    "confirmPurge": true
+  },
+  "_webdav_doc": "WebDAV 凭据请在仪表盘的「设置」Tab 里填写并保存。保存后会自动写入容器内 /data/rclone.conf（对应主机 ./data/rclone.conf），不需要在这里手写。"
+}
